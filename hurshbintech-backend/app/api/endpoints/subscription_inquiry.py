@@ -271,19 +271,35 @@ async def delete_subscription_inquiry(
 )
 async def export_subscription_inquiries_csv(
     review_status: Optional[str] = Query(None),
+    inquiry_id: list[int] = Query(default=[]),
     db: AsyncSession = Depends(get_db),
     current_admin: User = Depends(get_current_admin),
 ):
     """
-    Admin: export PROCESSED public subscription inquiries as a downloadable CSV file.
-    The CSV contains all available fields for each processed inquiry record.
+    Admin: export public subscription inquiries as a downloadable CSV file.
+    
+    If inquiry_id list is provided, export only those specific inquiries.
+    Otherwise, export all PROCESSED inquiries (backward compatibility).
+    The CSV contains all available fields for each inquiry record.
     """
     # Export is intentionally restricted to processed records only.
     review_status = "PROCESSED"
+    
+    # Debug logging
+    print(f'[CSV EXPORT BACKEND] Received inquiry_ids: {inquiry_id}, Type: {type(inquiry_id)}, Count: {len(inquiry_id)}')
 
+    # Get all inquiries with PROCESSED status (up to 10000)
     inquiries = await subscription_crud.get_all_inquiries(
         db, review_status=review_status, skip=0, limit=10000
     )
+    
+    # Filter by specific inquiry IDs if provided
+    if inquiry_id and len(inquiry_id) > 0:
+        inquiry_id_set = set(inquiry_id)
+        inquiries_before = len(inquiries)
+        inquiries = [inq for inq in inquiries if inq.id in inquiry_id_set]
+        inquiries_after = len(inquiries)
+        print(f'[CSV EXPORT BACKEND] Filtered from {inquiries_before} to {inquiries_after} records')
 
     output = io.StringIO()
     writer = csv.writer(output)

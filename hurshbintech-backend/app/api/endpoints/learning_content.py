@@ -361,7 +361,8 @@ async def get_all_contents_admin(
     cached_data = await cache_service.get(cache_key)
     if cached_data:
         logger.debug(f"Cache HIT: {cache_key}")
-        return [LearningContentResponse(**item) for item in cached_data]
+        responses = [LearningContentResponse(**item) for item in cached_data]
+        return [convert_response_urls(r) for r in responses]
     
     logger.debug(f"Cache MISS: {cache_key}")
     contents = await learning_content_crud.get_all_learning_contents(db)
@@ -387,7 +388,8 @@ async def get_content_by_id_admin(
     cached_data = await cache_service.get(cache_key)
     if cached_data:
         logger.debug(f"Cache HIT: {cache_key}")
-        return LearningContentResponse(**cached_data)
+        response = LearningContentResponse(**cached_data)
+        return convert_response_urls(response)
     
     logger.debug(f"Cache MISS: {cache_key}")
     content = await learning_content_crud.get_learning_content_by_id(db, content_id)
@@ -468,7 +470,8 @@ async def get_all_contents_head(
     cached_data = await cache_service.get(cache_key)
     if cached_data:
         logger.debug(f"Cache HIT: {cache_key}")
-        return [LearningContentResponse(**item) for item in cached_data]
+        responses = [LearningContentResponse(**item) for item in cached_data]
+        return [convert_response_urls(r) for r in responses]
     
     logger.debug(f"Cache MISS: {cache_key}")
     contents = await learning_content_crud.get_all_learning_contents(db)
@@ -534,7 +537,8 @@ async def create_learning_content_trainer(
     new_content = await learning_content_crud.create_learning_content(
         db, content_data, current_trainer.id
     )
-    return LearningContentResponse.from_orm_with_users(new_content)
+    response = LearningContentResponse.from_orm_with_users(new_content)
+    return convert_response_urls(response)
 
 
 @router.get("/trainer", response_model=List[LearningContentResponse])
@@ -548,7 +552,8 @@ async def get_all_contents_trainer(
     cached_data = await cache_service.get(cache_key)
     if cached_data:
         logger.debug(f"Cache HIT: {cache_key}")
-        return [LearningContentResponse(**item) for item in cached_data]
+        responses = [LearningContentResponse(**item) for item in cached_data]
+        return [convert_response_urls(r) for r in responses]
     
     logger.debug(f"Cache MISS: {cache_key}")
     contents = await learning_content_crud.get_all_learning_contents(db)
@@ -595,7 +600,8 @@ async def update_content_trainer(
     # Invalidate learning content caches
     await cache_service.invalidate_learning_content(content_id)
 
-    return LearningContentResponse.from_orm_with_users(updated_content)
+    response = LearningContentResponse.from_orm_with_users(updated_content)
+    return convert_response_urls(response)
 
 
 # ============ COACH ENDPOINTS ============#

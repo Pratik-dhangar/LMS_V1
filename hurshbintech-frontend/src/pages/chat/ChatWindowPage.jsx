@@ -5,10 +5,10 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Send, 
-  Paperclip, 
+import {
+  ArrowLeft,
+  Send,
+  Paperclip,
   Smile,
   MoreVertical,
   Users,
@@ -68,7 +68,7 @@ const ChatWindowPage = () => {
   // Connect to chat when component mounts
   useEffect(() => {
     connectChat();
-    
+
     return () => {
       disconnectChat();
     };
@@ -90,17 +90,17 @@ const ChatWindowPage = () => {
     if (currentConversation && messages[currentConversation.id]?.length > 0) {
       // Only mark as read if there are unread messages from other users
       const unreadMessages = messages[currentConversation.id].filter(
-        msg => !msg.is_read && 
-               msg.sender_id !== currentUser?.id && 
-               !markedAsReadRef.current.has(msg.id)
+        msg => !msg.is_read &&
+          msg.sender_id !== currentUser?.id &&
+          !markedAsReadRef.current.has(msg.id)
       );
-      
+
       if (unreadMessages.length > 0) {
         const messageIds = unreadMessages.map(msg => msg.id);
-        
+
         // Mark these messages in our ref to prevent re-marking
         messageIds.forEach(id => markedAsReadRef.current.add(id));
-        
+
         markAsRead(currentConversation.id, messageIds);
       }
     }
@@ -139,7 +139,7 @@ const ChatWindowPage = () => {
   // Handle send message
   const handleSendMessage = async (e) => {
     e?.preventDefault();
-    
+
     if (!messageInput.trim() || !currentConversation) return;
 
     const content = messageInput.trim();
@@ -172,7 +172,7 @@ const ChatWindowPage = () => {
     }
 
     setUploadingFile(true);
-    
+
     try {
       await sendFileMessage(currentConversation.id, file);
       scrollToBottom();
@@ -207,8 +207,10 @@ const ChatWindowPage = () => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
-      // Fallback: open in new tab
-      window.open(fileUrl, '_blank');
+      // Fallback: open in new tab with proper URL conversion
+      const convertedUrl = getFileUrl(fileUrl);
+      console.log('[💬 CHAT FILE] Fallback view:', { original: fileUrl, final: convertedUrl });
+      window.open(convertedUrl, '_blank');
     }
   };
 
@@ -222,15 +224,15 @@ const ChatWindowPage = () => {
   // Get typing users names (excluding current user)
   const getTypingUsersNames = () => {
     if (!currentConversation || !typingUsers[currentConversation.id]) return [];
-    
+
     const typingSet = typingUsers[currentConversation.id];
     const typingArray = Array.from(typingSet).filter(id => id !== currentUser?.id);
-    
+
     // Get names from conversation members
     const names = currentConversation.members
       ?.filter(m => typingArray.includes(m.user_id))
       .map(m => m.user_name.split(' ')[0]) || [];
-    
+
     return names;
   };
 
@@ -297,7 +299,7 @@ const ChatWindowPage = () => {
 
             {/* Actions */}
             <div className="chat-window-actions">
-              <button 
+              <button
                 className="chat-window-menu-btn"
                 onClick={() => setShowChatInfo(!showChatInfo)}
                 title="Chat info"
@@ -310,7 +312,7 @@ const ChatWindowPage = () => {
                 <div className="chat-info-dropdown">
                   <div className="chat-info-header">
                     <h3>{currentConversation.type === 'DIRECT' ? 'Contact Info' : 'Group Info'}</h3>
-                    <button 
+                    <button
                       onClick={() => setShowChatInfo(false)}
                       className="chat-info-close"
                     >
@@ -376,8 +378,8 @@ const ChatWindowPage = () => {
           {/* Disappearing Messages Alert */}
           <div className="chat-alert-banner">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-              <path d="M12 8v4M12 16h.01"/>
+              <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+              <path d="M12 8v4M12 16h.01" />
             </svg>
             <span>Messages will disappear in 7 days</span>
           </div>

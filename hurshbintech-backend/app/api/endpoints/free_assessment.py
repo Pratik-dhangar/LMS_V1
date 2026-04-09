@@ -4,16 +4,18 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_admin, get_db
 from app.crud.free_assessment_crud import free_assessment_crud
-from app.models.user_model import User
+from app.models.user_model import User, UserRole
 from app.schemas.free_assessment import (
     FreeAssessmentCreate,
     FreeAssessmentListResponse,
     FreeAssessmentResponse,
 )
+from app.services.email_service import EmailService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -30,7 +32,54 @@ async def submit_free_assessment(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        return await free_assessment_crud.create_assessment(db, payload)
+        # Create the assessment in database
+        assessment = await free_assessment_crud.create_assessment(db, payload)
+        
+        # Send confirmation email to user/parent
+        parent_email = payload.mother_email or payload.father_email
+        parent_name = payload.mother_name or payload.father_name or "Parent"
+        
+        if parent_email:
+            try:
+                await EmailService.send_free_assessment_confirmation(
+                    recipient_email=parent_email,
+                    recipient_name=parent_name,
+                    child_name=payload.child_name,
+                )
+                logger.info(f"✓ Free assessment confirmation email sent to {parent_email}")
+            except Exception as email_error:
+                logger.error(f"✗ Failed to send confirmation email to {parent_email}: {str(email_error)}")
+        
+        # Send notification email to all active admins
+        try:
+            admin_result = await db.execute(
+                select(User).where(
+                    User.role == UserRole.ADMIN,
+                    User.is_active == True
+                )
+            )
+            admins = admin_result.scalars().all()
+            
+            for admin in admins:
+                if admin.email:
+                    try:
+                        await EmailService.send_free_assessment_submitted_to_admin(
+                            admin_email=admin.email,
+                            admin_name=admin.name,
+                            child_name=payload.child_name,
+                            parent_email=parent_email or "Not provided",
+                            parent_phone=payload.mother_contact or payload.father_contact,
+                            assessment_id=assessment.id,
+                        )
+                        logger.info(f"✓ Free assessment notification sent to admin {admin.name} ({admin.email})")
+                    except Exception as admin_email_error:
+                        logger.error(f"✗ Failed to send assessment notification to admin {admin.name}: {str(admin_email_error)}")
+        except Exception as admin_fetch_error:
+            # Log error but don't fail assessment creation
+            logger.error(f"Failed to fetch admins or send notifications: {str(admin_fetch_error)}")
+        
+        return assessment
+        
     except Exception as exc:
         logger.error("Error saving free assessment: %s", exc)
         raise HTTPException(

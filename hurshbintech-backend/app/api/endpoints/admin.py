@@ -324,13 +324,34 @@ async def update_head_profile(
         update_dict['message_box'] = message_box
 
     head_update = HeadUpdate(**update_dict)
-    updated_head = await user_crud.update_head(db, head_id, head_update)
+    
+    try:
+        updated_head = await user_crud.update_head(db, head_id, head_update)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Error updating head: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update head profile",
+        )
     
     # Update User record with contact_number
     if contact_number is not None:
-        updated_head.user.contact_number = contact_number
-        await db.commit()
-        await db.refresh(updated_head.user)
+        try:
+            updated_head.user.contact_number = contact_number
+            await db.commit()
+            await db.refresh(updated_head.user)
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error updating contact number: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to update contact number",
+            )
     
     # Handle reference files upload
     if reference_files:
@@ -894,13 +915,33 @@ async def update_coach_profile(
     
     coach_update = CoachUpdate(**update_dict)
 
-    updated_coach = await user_crud.update_coach(db, coach_id, coach_update)
+    try:
+        updated_coach = await user_crud.update_coach(db, coach_id, coach_update)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Error updating coach: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update coach profile",
+        )
     
     # Update User record with contact_number
     if contact_number is not None:
-        updated_coach.user.contact_number = contact_number
-        await db.commit()
-        await db.refresh(updated_coach.user)
+        try:
+            updated_coach.user.contact_number = contact_number
+            await db.commit()
+            await db.refresh(updated_coach.user)
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error updating contact number: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to update contact number",
+            )
     
     # Handle reference files upload
     if reference_files:
@@ -1892,6 +1933,9 @@ async def update_appointment_admin(
     # --- Normal status update ---
     updated = await coach_crud.update_appointment(db, appointment_id, appointment_update)
     new_status = updated.status.value
+    
+    # Re-fetch with relationships loaded to ensure coach.user is available
+    updated = await coach_crud.get_appointment_by_id(db, appointment_id)
 
     # --- Guest flow: VERIFICATION_PENDING → CONFIRMED (confirm payment, send session link) ---
     if updated.guest_name and previous_status == "VERIFICATION_PENDING" and new_status == "CONFIRMED":
@@ -1914,9 +1958,60 @@ async def update_appointment_admin(
                 appointment_id=updated.id,
                 session_link=guest_session_link,
             )
-            logger.info(f"[Admin] Confirmation email with session link sent to guest {updated.guest_email}")
+            logger.info(f"[Admin] ✓ Confirmation email with session link sent to guest {updated.guest_email}")
         except Exception as e:
-            logger.error(f"[Admin] Failed to send confirmation email to guest: {str(e)}", exc_info=True)
+            logger.error(f"[Admin] ✗ Failed to send confirmation email to guest: {str(e)}", exc_info=True)
+        
+        # Send appointment confirmation email to COACH for guest bookings too
+        logger.info(f"[Admin] Guest appointment confirmed - notifying coach")
+        if not updated.coach:
+            logger.warning(f"[Admin] Guest appointment {appointment_id} has no coach assigned")
+        elif not updated.coach.user:
+            logger.warning(f"[Admin] Coach {updated.coach_id} has no user record")
+        elif not updated.coach.user.email:
+            logger.warning(f"[Admin] Coach user has no email address")
+        else:
+            try:
+                logger.info(f"[Admin] Sending appointment confirmation email to coach {updated.coach.user.email} for guest booking {appointment_id}")
+                await EmailService.send_appointment_requested(
+                    recipient_email=updated.coach.user.email,
+                    recipient_name=updated.coach.user.name,
+                    client_name=updated.guest_name,
+                    scheduled_date=updated.scheduled_date.isoformat() if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+                    scheduled_time=updated.scheduled_time,
+                    session_type=updated.session_type,
+                    appointment_id=updated.id,
+                )
+                logger.info(f"[Admin] ✓ Appointment confirmation email sent to coach {updated.coach.user.email}")
+            except Exception as e:
+                logger.error(f"[Admin] ✗ Failed to send appointment confirmation email to coach: {str(e)}", exc_info=True)
+    
+    # --- Non-guest flow: Send email to COACH when admin confirms appointment ---
+    elif (not updated.guest_name and previous_status != "CONFIRMED" and new_status == "CONFIRMED"):
+        """When admin confirms a regular (non-guest) appointment, notify the coach"""
+        logger.info(f"[Admin] Non-guest appointment confirmed. Coach: {updated.coach}, User: {updated.user}, Previous: {previous_status}, New: {new_status}")
+        
+        if not updated.coach:
+            logger.warning(f"[Admin] Appointment {appointment_id} has no coach assigned")
+        elif not updated.coach.user:
+            logger.warning(f"[Admin] Coach {updated.coach_id} has no user record")
+        elif not updated.coach.user.email:
+            logger.warning(f"[Admin] Coach user has no email address")
+        else:
+            # All checks passed, send email (WITHOUT client details - only date, time, session type)
+            try:
+                logger.info(f"[Admin] Sending appointment confirmation email to coach {updated.coach.user.email}")
+                await EmailService.send_appointment_confirmed_to_coach(
+                    recipient_email=updated.coach.user.email,
+                    recipient_name=updated.coach.user.name,
+                    scheduled_date=updated.scheduled_date.strftime('%B %d, %Y') if isinstance(updated.scheduled_date, date) else str(updated.scheduled_date),
+                    scheduled_time=updated.scheduled_time,
+                    session_type=updated.session_type,
+                    appointment_id=updated.id,
+                )
+                logger.info(f"[Admin] ✓ Appointment confirmation email sent to coach {updated.coach.user.email} for appointment {appointment_id}")
+            except Exception as e:
+                logger.error(f"[Admin] ✗ Failed to send appointment confirmation email to coach: {str(e)}", exc_info=True)
 
     return AppointmentResponse(
         id=updated.id,

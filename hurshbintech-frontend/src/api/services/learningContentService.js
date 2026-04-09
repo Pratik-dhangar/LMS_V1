@@ -17,38 +17,63 @@ const learningContentService = {
 
   // Get file URL - handles S3 URLs, proxy URLs, local paths, and full URLs
   getFileUrl: (fileUrl) => {
-    if (!fileUrl) return '';
+    console.log('[🎬 VIEW CLICK] Initial fileUrl received:', fileUrl);
+
+    if (!fileUrl) {
+      console.warn('[🎬 VIEW CLICK] ❌ fileUrl is empty/null');
+      return '';
+    }
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
+    console.log('[🎬 VIEW CLICK] API Base URL:', apiBaseUrl);
+
     // If already a full URL, check if it's an old frontend-proxy S3 URL (e.g. :3001/s3/...)
     // and rewrite to current frontend origin before returning
     if (fileUrl.startsWith('http')) {
+      console.log('[🎬 VIEW CLICK] Case: Full HTTP URL');
       try {
         const urlObj = new URL(fileUrl);
         if (urlObj.pathname.startsWith('/s3/') &&
           !urlObj.hostname.includes('amazonaws.com') &&
           !urlObj.hostname.includes('neevcloud.com')) {
-          return `${window.location.origin}${urlObj.pathname}`;
+          const rewrittenUrl = `${window.location.origin}${urlObj.pathname}`;
+          console.log('[🎬 VIEW CLICK] ✅ Rewritten old frontend proxy URL:', rewrittenUrl);
+          return rewrittenUrl;
         }
-      } catch (_) { /* fall through */ }
+      } catch (e) {
+        console.error('[🎬 VIEW CLICK] Error parsing URL:', e);
+      }
+      console.log('[🎬 VIEW CLICK] ✅ Returning full HTTP URL as-is:', fileUrl);
       return fileUrl;
     }
+
     // Handle S3 URLs (s3://bucket/key) - convert to backend proxy for signed access
     if (fileUrl.startsWith('s3://')) {
+      console.log('[🎬 VIEW CLICK] Case: S3 URL');
       const parts = fileUrl.replace('s3://', '').split('/');
+      console.log('[🎬 VIEW CLICK] S3 parts:', parts);
       const key = parts.slice(1).join('/');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
-      return `${apiBaseUrl}/media/s3/${key}`;
+      const finalUrl = `${apiBaseUrl}/media/s3/${key}`;
+      console.log('[🎬 VIEW CLICK] ✅ Converted S3 URL to proxy:', { original: fileUrl, key, finalUrl });
+      return finalUrl;
     }
+
     // Handle backend proxy URLs (already have /api prefix from backend response)
     if (fileUrl.startsWith('/api/')) {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
+      console.log('[🎬 VIEW CLICK] Case: Already a proxy URL with /api/');
       const backendUrl = apiBaseUrl.replace('/api', '');
-      return `${backendUrl}${fileUrl}`;
+      const finalUrl = `${backendUrl}${fileUrl}`;
+      console.log('[🎬 VIEW CLICK] ✅ Returning proxy URL:', finalUrl);
+      return finalUrl;
     }
+
     // Handle other paths
+    console.log('[🎬 VIEW CLICK] Case: Other path');
     const cleanUrl = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
     const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
-    return `${backendUrl}${cleanUrl}`;
+    const finalUrl = `${backendUrl}${cleanUrl}`;
+    console.log('[🎬 VIEW CLICK] ✅ Returning final URL:', finalUrl);
+    return finalUrl;
   },
 
   // Admin APIs - for admin users

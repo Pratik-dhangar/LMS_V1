@@ -361,21 +361,20 @@
 
 .home-blogs-grid {
   display: grid;
-  gap: 2rem;
+  gap: 1.5rem;
   margin-bottom: 3rem;
   justify-content: center;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 350px));
 }
 
 @media (min-width: 640px) {
   .home-blogs-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 1024px) {
   .home-blogs-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
@@ -501,21 +500,20 @@
 
 .home-vlogs-grid {
   display: grid;
-  gap: 2rem;
+  gap: 1.5rem;
   margin-bottom: 3rem;
   justify-content: center;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 350px));
 }
 
 @media (min-width: 640px) {
   .home-vlogs-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 1024px) {
   .home-vlogs-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 

@@ -24,7 +24,7 @@ RUN echo "=== Checking index.html ===" && \
 
 # Accept build arguments for Vite
 ARG VITE_API_BASE_URL=https://hurshbin.com/api
-ARG VITE_WS_URL=wss://hurshbin.com/ws
+ARG VITE_WS_URL=wss://hurshbin.com
 ARG VITE_GOOGLE_CLIENT_ID
 
 ARG VITE_ENABLE_PWA=false
