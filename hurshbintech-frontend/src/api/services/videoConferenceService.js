@@ -43,6 +43,17 @@ const RTC_CONFIG = {
     rtcpMuxPolicy: 'require',
 };
 
+const normalizeWsBaseUrl = (rawUrl) => {
+    const wsUrl = (rawUrl || 'ws://localhost:8000')
+        .trim()
+        .replace(/^https:/, 'wss:')
+        .replace(/^http:/, 'ws:')
+        .replace(/\/+$/, '');
+
+    // Accept legacy values ending in /ws and normalize to host-only base URL.
+    return wsUrl.replace(/\/ws$/i, '');
+};
+
 class VideoConferenceService {
     constructor(wsUrl, sessionId, role, isObserver = false, targetRole = null) {
         this.wsUrl = wsUrl;
@@ -313,9 +324,7 @@ class VideoConferenceService {
      */
     connectWebSocket() {
         return new Promise((resolve, reject) => {
-            const wsUrl = this.wsUrl
-                .replace(/^https:/, 'wss:')
-                .replace(/^http:/, 'ws:');
+            const wsUrl = normalizeWsBaseUrl(this.wsUrl);
 
             const wsEndpoint = `${wsUrl}/ws/rtc/${this.sessionId}`;
             // console.log(`[VideoConference][${this.role}] Connecting to WebSocket:`, wsEndpoint);

@@ -70,7 +70,12 @@ class WhiteboardService {
             return;
         }
 
-        const wsUrl = this.wsUrl.replace('http', 'ws');
+        const wsUrl = (this.wsUrl || 'ws://localhost:8000')
+            .trim()
+            .replace(/^https:/, 'wss:')
+            .replace(/^http:/, 'ws:')
+            .replace(/\/+$/, '')
+            .replace(/\/ws$/i, '');
         const fullWsUrl = `${wsUrl}/ws/whiteboard/${this.sessionId}`;
 
         try {

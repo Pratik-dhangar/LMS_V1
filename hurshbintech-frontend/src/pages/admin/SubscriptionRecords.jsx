@@ -30,6 +30,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { getFileUrl } from "../../utils/urlHelper";
 import subscriptionService from "../../api/services/subscriptionService";
 import publicSubscriptionService from "../../api/services/publicSubscriptionService";
 import adminService from "../../api/services/adminService";
@@ -69,6 +70,9 @@ const SubscriptionRecords = () => {
   const [exportingCsv, setExportingCsv] = useState(false);
   const [updatingInquiry, setUpdatingInquiry] = useState(null);
   const [inquiriesPage, setInquiriesPage] = useState(1);
+
+  // ── Selection state for CSV export
+  const [selectedInquiryIds, setSelectedInquiryIds] = useState(new Set());
 
   // ── Appointment states
   const [appointments, setAppointments] = useState([]);
@@ -236,15 +240,52 @@ const SubscriptionRecords = () => {
   };
 
   const handleExportCsv = async () => {
+    if (selectedInquiryIds.size === 0) {
+      toast.warning("Please select at least one record to export");
+      return;
+    }
+
     setExportingCsv(true);
     try {
-      await publicSubscriptionService.exportCsv();
-      toast.success("Processed records CSV download started!");
+      const selectedIds = Array.from(selectedInquiryIds);
+      console.log('[EXPORT] Selected inquiry IDs:', selectedIds, 'Total count:', selectedIds.length);
+      await publicSubscriptionService.exportCsv(selectedIds);
+      toast.success(`CSV download started for ${selectedIds.length} record(s)!`);
+      // Clear selection after export
+      setSelectedInquiryIds(new Set());
     } catch (err) {
       toast.error("CSV export failed. Please try again.");
     } finally {
       setExportingCsv(false);
     }
+  };
+
+  // Toggle selection of a single inquiry
+  const handleToggleInquirySelection = (inquiryId) => {
+    setSelectedInquiryIds((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(inquiryId)) {
+        updated.delete(inquiryId);
+      } else {
+        updated.add(inquiryId);
+      }
+      return updated;
+    });
+  };
+
+  // Select/Deselect all visible inquiries on current page
+  const handleToggleSelectAllInquiries = () => {
+    setSelectedInquiryIds((prev) => {
+      if (prev.size === paginatedInquiries.length && paginatedInquiries.length > 0) {
+        // If all currently visible are selected, deselect all
+        return new Set();
+      } else {
+        // Otherwise, select all currently visible
+        const allIds = new Set(prev);
+        paginatedInquiries.forEach((inq) => allIds.add(inq.id));
+        return allIds;
+      }
+    });
   };
 
   // Switch to inquiries tab and load data lazily
@@ -814,16 +855,23 @@ const SubscriptionRecords = () => {
                     <option value="REVIEWED">Reviewed</option>
                     <option value="PROCESSED">Processed</option>
                   </select>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleExportCsv}
-                    disabled={exportingCsv}
-                    title="Export processed inquiries as CSV"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                  >
-                    <Download size={16} />
-                    {exportingCsv ? 'Exporting…' : 'Export CSV'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    {selectedInquiryIds.size > 0 && (
+                      <span style={{ fontSize: '0.9rem', color: '#6b7280', fontWeight: '500' }}>
+                        {selectedInquiryIds.size} selected
+                      </span>
+                    )}
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleExportCsv}
+                      disabled={exportingCsv || selectedInquiryIds.size === 0}
+                      title={selectedInquiryIds.size === 0 ? "Select records first" : "Export selected records as CSV"}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                    >
+                      <Download size={16} />
+                      {exportingCsv ? 'Exporting…' : 'Export CSV'}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -848,6 +896,15 @@ const SubscriptionRecords = () => {
                       <table className="table-primary">
                         <thead className="table-primary-header">
                           <tr>
+                            <th className="table-primary-th" style={{ width: '40px', textAlign: 'center' }}>
+                              <input
+                                type="checkbox"
+                                checked={paginatedInquiries.length > 0 && paginatedInquiries.every((inq) => selectedInquiryIds.has(inq.id))}
+                                onChange={handleToggleSelectAllInquiries}
+                                style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                                title={paginatedInquiries.length > 0 && paginatedInquiries.every((inq) => selectedInquiryIds.has(inq.id)) ? "Deselect all" : "Select all visible"}
+                              />
+                            </th>
                             <th className="table-primary-th table-primary-th-id">ID</th>
                             <th className="table-primary-th">Learner Name</th>
                             <th className="table-primary-th">Email</th>
@@ -868,6 +925,14 @@ const SubscriptionRecords = () => {
                         <tbody className="table-primary-body">
                           {paginatedInquiries.map((inq) => (
                             <tr key={inq.id} className="table-primary-row">
+                              <td className="table-primary-td" style={{ width: '40px', textAlign: 'center' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedInquiryIds.has(inq.id)}
+                                  onChange={() => handleToggleInquirySelection(inq.id)}
+                                  style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                                />
+                              </td>
                               <td className="table-primary-td table-primary-td-id">{inq.id}</td>
                               <td className="table-primary-td">{inq.learner_name}</td>
                               <td className="table-primary-td">{inq.email}</td>
@@ -892,15 +957,12 @@ const SubscriptionRecords = () => {
                               <td className="table-primary-td table-primary-td-center">
                                 {inq.payment_receipt_url ? (
                                   <a
-                                    href={
-                                      inq.payment_receipt_url.startsWith('s3://')
-                                        ? `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/media/s3/${encodeURIComponent(inq.payment_receipt_url.replace(/^s3:\/\/[^/]+\//, ''))}`
-                                        : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace('/api', '')}${inq.payment_receipt_url}`
-                                    }
+                                    href={getFileUrl(inq.payment_receipt_url)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="btn btn-primary"
                                     style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                                    onClick={() => console.log('[📄 SUBSCRIPTION RECEIPT] View:', { original: inq.payment_receipt_url, final: getFileUrl(inq.payment_receipt_url) })}
                                   >
                                     <ExternalLink size={12} /> View
                                   </a>
@@ -1057,15 +1119,12 @@ const SubscriptionRecords = () => {
                               <td className="table-primary-td table-primary-td-center">
                                 {apt.payment_receipt_url ? (
                                   <a
-                                    href={
-                                      apt.payment_receipt_url.startsWith('s3://')
-                                        ? `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'}/media/s3/${encodeURIComponent(apt.payment_receipt_url.replace(/^s3:\/\/[^/]+\//, ''))}`
-                                        : `${(import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api').replace('/api', '')}${apt.payment_receipt_url}`
-                                    }
+                                    href={getFileUrl(apt.payment_receipt_url)}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="btn btn-primary"
                                     style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                                    onClick={() => console.log('[📄 APPOINTMENT RECEIPT] View:', { original: apt.payment_receipt_url, final: getFileUrl(apt.payment_receipt_url) })}
                                   >
                                     <ExternalLink size={12} /> View
                                   </a>

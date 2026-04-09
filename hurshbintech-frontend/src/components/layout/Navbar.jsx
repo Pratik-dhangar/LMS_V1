@@ -111,15 +111,7 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal }) => {
               </button>
             )}
 
-            {/* Free Assessment - Only on landing page for non-logged-in users */}
-            {!user && location.pathname === "/" && (
-              <button
-                className="navbar-btn"
-                onClick={() => setShowAssessmentModal(true)}
-              >
-                Free Assessment
-              </button>
-            )}
+
 
             {/* Assigned Learning - for authenticated users */}
             {user && (
@@ -158,6 +150,15 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal }) => {
                 onClick={() => setShowSubscriptionModal(true)}
               >
                 Buy Learning Program
+              </button>
+            )}
+            {/* Free Assessment - Only on landing page for non-logged-in users */}
+            {!user && location.pathname === "/" && (
+              <button
+                className="navbar-btn"
+                onClick={() => setShowAssessmentModal(true)}
+              >
+                Free Assessment
               </button>
             )}
           </div>

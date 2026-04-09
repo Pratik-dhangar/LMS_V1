@@ -19,7 +19,7 @@ from pathlib import Path
 
 from app.core.deps import get_db, get_current_user
 from app.core.config import settings
-from app.models.user_model import User, Appointment, AppointmentStatus, CoachProfile
+from app.models.user_model import User, Appointment, AppointmentStatus, CoachProfile, UserRole
 from app.models.subscription import SubscriptionPackage
 from app.schemas.user import CoachResponse, AppointmentCreate, AppointmentResponse, AvailableSlotsResponse
 from app.schemas.guest_booking import GuestIntentResponse, GuestPaymentUploadResponse
@@ -293,30 +293,62 @@ async def book_appointment_with_coach(
     # Get current user's role
     user_role = current_user.role.value
     
-    # Create the appointment
-    appointment = await coach_crud.create_appointment(
-        db, appointment_data, current_user.id, user_role
-    )
-    
-    # Send email notification to coach about new appointment request
+    # Create the appointment with constraint violation handling
+    # The database has a unique constraint on (coach_id, scheduled_date, scheduled_time, status)
+    # to prevent double-booking race conditions
     try:
-        # Refresh coach object to ensure we have latest data with user relationship
-        await db.refresh(coach)
-        if coach and coach.user and coach.user.email:
-            await EmailService.send_appointment_requested(
-                recipient_email=coach.user.email,
-                recipient_name=coach.user.name,
-                client_name=current_user.name,
-                scheduled_date=appointment.scheduled_date.strftime('%B %d, %Y') if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
-                scheduled_time=appointment.scheduled_time,
-                session_type=appointment.session_type,
-                appointment_id=appointment.id,
+        appointment = await coach_crud.create_appointment(
+            db, appointment_data, current_user.id, user_role
+        )
+    except Exception as e:
+        # Handle unique constraint violations (double-booking attempts)
+        if "unique constraint" in str(e).lower() or "duplicate" in str(e).lower():
+            logger.warning(
+                f"Double-booking prevented for coach {coach_id} on {scheduled_date} at {scheduled_time}. "
+                f"User {current_user.id} was attempting to book a slot that was just taken."
             )
-    except Exception as email_error:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"The time slot {scheduled_time} on {scheduled_date} is no longer available. "
+                       f"Another user just booked it. Please select a different time slot.",
+            )
+        # Re-raise other exceptions
+        logger.error(f"Unexpected error creating appointment: {str(e)}")
+        raise
+    
+    # Send email notification to all admins about new appointment request
+    # NOTE: Coach will receive email ONLY when admin confirms the appointment
+    try:
+        # Fetch all active admin users
+        admin_result = await db.execute(
+            select(User).where(
+                User.role == UserRole.ADMIN,
+                User.is_active == True
+            )
+        )
+        admins = admin_result.scalars().all()
+        
+        # Send email to each admin
+        for admin in admins:
+            if admin.email:
+                try:
+                    await EmailService.send_appointment_requested_to_admin(
+                        admin_email=admin.email,
+                        admin_name=admin.name,
+                        client_name=current_user.name,
+                        coach_name=coach.user.name if coach and coach.user else "Unknown Coach",
+                        scheduled_date=appointment.scheduled_date.strftime('%B %d, %Y') if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+                        scheduled_time=appointment.scheduled_time,
+                        session_type=appointment.session_type,
+                        appointment_id=appointment.id,
+                    )
+                    logger.info(f"✓ Appointment notification sent to admin {admin.name} ({admin.email})")
+                except Exception as admin_email_error:
+                    logger.error(f"✗ Failed to send appointment notification to admin {admin.name}: {str(admin_email_error)}")
+    except Exception as admin_fetch_error:
         # Log error but don't fail appointment creation
-        import logging
-        logging.error(f"Failed to send email notification: {str(email_error)}")
-        print(f"Failed to send email notification: {str(email_error)}")
+        logger.error(f"Failed to fetch admins for notification: {str(admin_fetch_error)}")
+    
     
     # Manually serialize date fields for Pydantic v2 compatibility
     return AppointmentResponse(
@@ -517,7 +549,7 @@ async def verify_otp_and_create_guest_intent(
     """
     Create GUEST_INTENT appointment.
     OTP should already be verified in Step 1.
-    Guest will appear on coach dashboard for review/approval.
+    Guest will appear on admin dashboard for review/approval.
     No authentication required - uses OTP token instead.
     
     Flow:
@@ -525,7 +557,7 @@ async def verify_otp_and_create_guest_intent(
     2. Check coach exists
     3. Verify slot availability
     4. Create appointment with GUEST_INTENT status
-    5. Email coach with request details
+    5. Email admin with request details
     """
     email = email.lower().strip()
     
@@ -578,21 +610,37 @@ async def verify_otp_and_create_guest_intent(
     await db.commit()
     await db.refresh(appointment)
     
-    # Step 5: Email coach about guest request
+    # Step 5: Email notification to all admins about new guest appointment request
     try:
-        coach_user = coach.user
-        await EmailService.send_guest_intent_notification_to_coach(
-            coach_email=coach_user.email,
-            coach_name=coach_user.name,
-            guest_name=guest_name,
-            guest_email=email,
-            appointment_id=appointment.id,
-            scheduled_date=scheduled_date,
-            scheduled_time=scheduled_time
+        # Fetch all active admin users
+        admin_result = await db.execute(
+            select(User).where(
+                User.role == UserRole.ADMIN,
+                User.is_active == True
+            )
         )
-    except Exception as err:
-        # Log error but don't fail if email fails
-        logger.error(f"Failed to send guest intent notification email: {str(err)}", exc_info=True)
+        admins = admin_result.scalars().all()
+        
+        # Send email to each admin
+        for admin in admins:
+            if admin.email:
+                try:
+                    await EmailService.send_appointment_requested_to_admin(
+                        admin_email=admin.email,
+                        admin_name=admin.name,
+                        client_name=guest_name,
+                        coach_name=coach.user.name if coach and coach.user else "Unknown Coach",
+                        scheduled_date=scheduled_date.strftime('%B %d, %Y') if isinstance(scheduled_date, date) else str(scheduled_date),
+                        scheduled_time=scheduled_time,
+                        session_type=session_type,
+                        appointment_id=appointment.id,
+                    )
+                    logger.info(f"✓ Guest booking notification sent to admin {admin.name} ({admin.email})")
+                except Exception as admin_email_error:
+                    logger.error(f"✗ Failed to send guest booking notification to admin {admin.name}: {str(admin_email_error)}")
+    except Exception as admin_fetch_error:
+        # Log error but don't fail appointment creation
+        logger.error(f"Failed to fetch admins for guest booking notification: {str(admin_fetch_error)}")
     
     return GuestIntentResponse.from_orm(appointment)
 
@@ -739,24 +787,41 @@ async def guest_upload_payment(
     
     # Step 4: Update appointment
     appointment.payment_receipt_url = file_url
-    appointment.status = AppointmentStatus.VERIFICATION_PENDING  # Coach reviews
+    appointment.status = AppointmentStatus.VERIFICATION_PENDING  # Admin reviews payment
     appointment.upload_token = None  # Invalidate token
     appointment.upload_token_expires_at = None
     
     await db.commit()
     
-    # Step 5: Email coach
+    # Step 5: Email all admins about payment upload for review
     try:
         coach_user = appointment.coach.user
-        await EmailService.send_guest_payment_uploaded_notification_to_coach(
-            coach_email=coach_user.email,
-            coach_name=coach_user.name,
-            guest_name=appointment.guest_name,
-            appointment_id=appointment.id
+        admin_result = await db.execute(
+            select(User).where(
+                User.role == UserRole.ADMIN,
+                User.is_active == True
+            )
         )
-        logger.info(f"Payment upload notification sent to coach for appointment {appointment.id}")
-    except Exception as err:
-        logger.error(f"Failed to send payment notification email: {str(err)}", exc_info=True)
+        admins = admin_result.scalars().all()
+        
+        for admin in admins:
+            if admin.email:
+                try:
+                    await EmailService.send_payment_receipt_uploaded_notification_to_admin(
+                        admin_email=admin.email,
+                        admin_name=admin.name,
+                        client_name=appointment.guest_name,
+                        coach_name=coach_user.name,
+                        scheduled_date=appointment.scheduled_date.strftime('%B %d, %Y') if isinstance(appointment.scheduled_date, date) else str(appointment.scheduled_date),
+                        scheduled_time=appointment.scheduled_time,
+                        session_type=appointment.session_type,
+                        appointment_id=appointment.id,
+                    )
+                    logger.info(f"✓ Payment upload notification sent to admin {admin.name} ({admin.email})")
+                except Exception as admin_email_error:
+                    logger.error(f"✗ Failed to send payment upload notification to admin {admin.name}: {str(admin_email_error)}")
+    except Exception as admin_fetch_error:
+        logger.error(f"Failed to fetch admins for payment notification: {str(admin_fetch_error)}")
     
     return GuestPaymentUploadResponse(
         message="Payment uploaded successfully. Coach will review shortly.",
