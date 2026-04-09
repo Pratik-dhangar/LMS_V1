@@ -126,9 +126,9 @@ async def checkout(
         elif order_data.payment_method == "BANK_TRANSFER":
             payment_details = {
                 "bank_name": "HDFC Bank",
-                "account_number": "XXXX XXXX 1234",
-                "ifsc_code": "HDFC0001234",
-                "account_holder": "HurshBintech Pvt Ltd"
+                "account_number": "50200034124439",
+                "ifsc_code": "HDFC0000538",
+                "account_holder": "HurshBin"
             }
         
         # Send order created email with order details and payment instructions

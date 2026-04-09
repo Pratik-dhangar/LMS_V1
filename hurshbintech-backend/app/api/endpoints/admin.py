@@ -198,6 +198,18 @@ async def create_new_head(
     # Refresh the head object to load reference_data relationship
     await db.refresh(new_head, ['reference_data'])
     
+    # Send welcome email with auto-generated credentials
+    if new_head.user.email and hasattr(new_head, 'plaintext_passcode') and new_head.plaintext_passcode:
+        try:
+            await EmailService.send_welcome_credentials(
+                recipient_email=new_head.user.email,
+                recipient_name=new_head.user.name,
+                role="Head",
+                password=new_head.plaintext_passcode,
+            )
+        except Exception as email_exc:
+            logging.warning(f"Failed to send welcome email to head {new_head.user.email}: {email_exc}")
+    
     return HeadResponse.from_orm_with_user(new_head)
 
 
@@ -688,6 +700,18 @@ async def create_new_coach(
 
     # Refresh coach to get the reference_data relationship
     await db.refresh(new_coach, ['reference_data'])
+
+    # Send welcome email with auto-generated credentials
+    if new_coach.user.email and hasattr(new_coach, 'plaintext_passcode') and new_coach.plaintext_passcode:
+        try:
+            await EmailService.send_welcome_credentials(
+                recipient_email=new_coach.user.email,
+                recipient_name=new_coach.user.name,
+                role="Coach",
+                password=new_coach.plaintext_passcode,
+            )
+        except Exception as email_exc:
+            logging.warning(f"Failed to send welcome email to coach {new_coach.user.email}: {email_exc}")
 
     has_dedicated_column = await _has_dedicated_coach_column(db)
     
