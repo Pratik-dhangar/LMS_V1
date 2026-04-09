@@ -7,7 +7,12 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/chat/ChatContext';
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+const WS_URL = (import.meta.env.VITE_WS_URL || 'ws://localhost:8000')
+  .trim()
+  .replace(/^https:/, 'wss:')
+  .replace(/^http:/, 'ws:')
+  .replace(/\/+$/, '')
+  .replace(/\/ws$/i, '');
 const CHAT_WS_ENDPOINT = `${WS_URL}/api/chat/ws`;
 const RECONNECT_INTERVAL = 3000;
 const HEARTBEAT_INTERVAL = 30000;
