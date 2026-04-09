@@ -93,6 +93,10 @@ class Settings(BaseSettings):
     SENDER_NAME: str = "Hurshbintech"
     SENDER_EMAIL: str = "noreply@hurshbintech.com"
     ENABLE_EMAIL: bool = True  # Toggle email sending on/off
+    
+    # Email Assets (Images, QR Codes)
+    # These should point to your CDN or public S3 bucket URLs
+    UPI_QR_CODE_URL: str = "https://hurshbin.com/upi-qr.jpeg"  # Default UPI QR code image URL
 
     # Subscription Management Configuration
     SUBSCRIPTION_GRACE_PERIOD_DAYS: int = 7

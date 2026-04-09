@@ -89,13 +89,25 @@ const publicSubscriptionService = {
 
     /**
      * Admin: trigger CSV export download.
-     * Export is intentionally restricted to PROCESSED inquiries only.
+     * If inquiryIds are provided, export only those records.
+     * Otherwise, export all PROCESSED inquiries (backward compatibility).
      */
-    exportCsv: async () => {
+    exportCsv: async (inquiryIds = []) => {
         const baseURL =
             import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
         const token = localStorage.getItem('access_token');
-        const url = `${baseURL}/admin/subscription-inquiries/export?review_status=PROCESSED`;
+
+        // Build query URL with inquiry IDs
+        const params = new URLSearchParams();
+        params.append('review_status', 'PROCESSED');
+
+        if (inquiryIds && inquiryIds.length > 0) {
+            console.log('[CSV EXPORT] Selected IDs:', inquiryIds, 'Count:', inquiryIds.length);
+            inquiryIds.forEach((id) => params.append('inquiry_id', id));
+        }
+
+        const url = `${baseURL}/admin/subscription-inquiries/export?${params.toString()}`;
+        console.log('[CSV EXPORT] URL:', url);
 
         // Use fetch so we can attach the auth header and trigger a proper download
         const response = await fetch(url, {

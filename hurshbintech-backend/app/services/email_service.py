@@ -137,7 +137,7 @@ class EmailService:
                         <p>Please log in to your dashboard to accept or decline this appointment request.</p>
                         
                         <div style="text-align: center; margin: 25px 0;">
-                            <a href="https://hurshbin.lumesoftai.in:3001/" class="btn" style="color: white;">Go to Dashboard</a>
+                            <a href="{settings.FRONTEND_URL}/" class="btn" style="color: white;">Go to Dashboard</a>
                         </div>
                         
                         <p style="color: #666; font-size: 14px;">If you have any questions or need to contact the client, please use the Hurshbintech platform messaging system.</p>
@@ -157,6 +157,156 @@ class EmailService:
             subject=subject,
             html_body=html_body,
             email_type="appointment_requested",
+        )
+    
+    # Appointment Request Notification to Admin
+    @staticmethod
+    async def send_appointment_requested_to_admin(
+        admin_email: str,
+        admin_name: str,
+        client_name: str,
+        coach_name: str,
+        scheduled_date: str,
+        scheduled_time: str,
+        session_type: Optional[str] = None,
+        appointment_id: int = None,
+    ) -> bool:
+        """Send appointment request notification email to admin"""
+        
+        if not settings.ENABLE_EMAIL or not admin_email:
+            logger.warning(f"Email sending disabled or no admin email")
+            return False
+
+        subject = "New Appointment Booking - Admin Notification"
+        
+        session_type_display = session_type.replace('_', ' ').title() if session_type else "General Session"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #e3f2fd;
+                    }}
+                    .header {{
+                        background-color: #1976d2;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    h2 {{
+                        color: #2c3e50;
+                        margin: 0;
+                    }}
+                    p {{
+                        margin: 10px 0;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 30px;
+                        background-color: #1976d2;
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        margin-top: 20px;
+                        font-weight: 600;
+                    }}
+                    .info-box {{
+                        background-color: #f5f5f5;
+                        padding: 15px;
+                        border-left: 4px solid #1976d2;
+                        margin: 15px 0;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">New Appointment Booking</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">A new appointment has been requested</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{admin_name}</strong>,</p>
+                        <p>A new appointment has been booked in the system. Here are the details:</p>
+                        
+                        <div class="info-box">
+                            <table style="width: 100%; border-collapse: collapse; margin: 0; border: 1px solid #ddd;">
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Client Name:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{client_name}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Coach Name:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{coach_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Date:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{scheduled_date}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Time:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{scheduled_time}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Session Type:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{session_type_display}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Appointment ID:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;"><span style="font-family: monospace; background: #efefef; padding: 2px 6px; border-radius: 3px;">#{appointment_id}</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <p>You can monitor this appointment through the admin dashboard and take any necessary actions if required.</p>
+                        
+                        <div style="text-align: center; margin: 25px 0;">
+                            <a href="{settings.FRONTEND_URL}/admin" class="btn">Open Admin Dashboard</a>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px;"><strong>Status Update:</strong> The coach has been notified and will respond to the booking request soon.</p>
+                        
+                        <div class="footer">
+                            <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        return await EmailService._send_email(
+            recipient_email=admin_email,
+            recipient_name=admin_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="appointment_requested_to_admin",
         )
     
     # Appointment confirmation email (to user/client)
@@ -291,6 +441,316 @@ class EmailService:
             subject=subject,
             html_body=html_body,
             email_type="appointment_confirmed",
+        )
+
+    # Appointment Confirmation to Coach (WITHOUT client/guest details)
+    @staticmethod
+    async def send_appointment_confirmed_to_coach(
+        recipient_email: str,
+        recipient_name: str,
+        scheduled_date: str,
+        scheduled_time: str,
+        session_type: Optional[str] = None,
+        appointment_id: int = None,
+    ) -> bool:
+        """
+        Send appointment confirmation email to coach.
+        Shows ONLY: Date, Time, Session Type, Reference ID
+        Does NOT show: Client name, guest details
+        """
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
+            return False
+
+        subject = "New Appointment Confirmed - Your Session Details"
+        
+        session_type_display = session_type.replace('_', ' ').title() if session_type else "General Session"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #41A67E;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .details-box {{
+                        background-color: #f5f5f5;
+                        padding: 15px;
+                        border-left: 4px solid #41A67E;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    h2 {{
+                        color: #2c3e50;
+                        margin: 0;
+                    }}
+                    p {{
+                        margin: 10px 0;
+                    }}
+                    .detail-row {{
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 10px 0;
+                        border-bottom: 1px solid #e5e7eb;
+                    }}
+                    .detail-label {{
+                        font-weight: 600;
+                        color: #2c3e50;
+                        min-width: 120px;
+                    }}
+                    .detail-value {{
+                        color: #555;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">✓ Appointment Confirmed</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Your session is scheduled</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{recipient_name}</strong>,</p>
+                        <p>An appointment has been confirmed in your schedule. Here are the session details:</p>
+                        
+                        <div class="details-box">
+                            <div class="detail-row">
+                                <div class="detail-label">Session Date:</div>
+                                <div class="detail-value"><strong>{scheduled_date}</strong></div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Session Time:</div>
+                                <div class="detail-value"><strong>{scheduled_time}</strong></div>
+                            </div>
+                            <div class="detail-row">
+                                <div class="detail-label">Session Type:</div>
+                                <div class="detail-value"><strong>{session_type_display}</strong></div>
+                            </div>
+                            <div class="detail-row" style="border-bottom: none;">
+                                <div class="detail-label">Reference ID:</div>
+                                <div class="detail-value"><code style="background: #e5e7eb; padding: 4px 8px; border-radius: 3px;">#{appointment_id}</code></div>
+                            </div>
+                        </div>
+                        
+                        <p><strong>Preparation Tips:</strong></p>
+                        <ul style="color: #555; margin: 10px 0;">
+                            <li>Prepare your session materials and notes</li>
+                            <li>Test your video and audio setup</li>
+                            <li>Join a few minutes early if possible</li>
+                            <li>Ensure a quiet, distraction-free environment</li>
+                        </ul>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                            If you need to reschedule or have any questions, please contact the admin or use the Hurshbintech platform.
+                        </p>
+                        
+                        <div class="footer">
+                            <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="appointment_confirmed_to_coach",
+        )
+
+    # Admin Notification: Payment Receipt Uploaded
+    @staticmethod
+    async def send_payment_receipt_uploaded_notification_to_admin(
+        admin_email: str,
+        admin_name: str,
+        client_name: str,
+        coach_name: str,
+        scheduled_date: str,
+        scheduled_time: str,
+        session_type: Optional[str] = None,
+        appointment_id: int = None,
+    ) -> bool:
+        """
+        Send email to admin when payment receipt is uploaded.
+        Shows ONLY: Date, Time, Session Type, Appointment ID (no client/guest name in body)
+        """
+        
+        if not settings.ENABLE_EMAIL or not admin_email:
+            logger.warning(f"Email sending disabled or no admin email")
+            return False
+
+        subject = "Payment Receipt Uploaded - Admin Review Required"
+        
+        session_type_display = session_type.replace('_', ' ').title() if session_type else "General Session"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #e3f2fd;
+                    }}
+                    .header {{
+                        background-color: #FF9800;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .action-box {{
+                        background-color: #fff3cd;
+                        padding: 15px;
+                        border-radius: 6px;
+                        margin: 20px 0;
+                        border-left: 4px solid #FF9800;
+                    }}
+                    .details-table {{
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin: 20px 0;
+                    }}
+                    .details-table td {{
+                        padding: 12px;
+                        border: 1px solid #ddd;
+                    }}
+                    .details-table td:first-child {{
+                        font-weight: 600;
+                        color: #2c3e50;
+                        width: 30%;
+                        background-color: #f9f9f9;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 30px;
+                        background-color: #FF9800;
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        margin-top: 15px;
+                        font-weight: 600;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">💳 Payment Receipt Uploaded</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Action required: Review and confirm payment</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{admin_name}</strong>,</p>
+                        <p>A payment receipt has been uploaded for the following appointment. Please review and confirm payment.</p>
+                        
+                        <table class="details-table">
+                            <tr>
+                                <td>Requested Date:</td>
+                                <td><strong>{scheduled_date}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Requested Time:</td>
+                                <td><strong>{scheduled_time}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Session Type:</td>
+                                <td><strong>{session_type_display}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Coach Name:</td>
+                                <td><strong>{coach_name}</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Appointment ID:</td>
+                                <td><code style="background: #efefef; padding: 4px 8px; border-radius: 3px;">#{appointment_id}</code></td>
+                            </tr>
+                        </table>
+                        
+                        <div class="action-box">
+                            <strong style="display: block; margin-bottom: 8px; color: #FF9800;">⚠️ Action Required</strong>
+                            <p style="margin: 0; color: #333;">Please review the uploaded receipt and confirm the payment in your admin dashboard. Once confirmed, the coach will receive a confirmation email with session details.</p>
+                        </div>
+                        
+                        <div style="text-align: center;">
+                            <a href="{settings.FRONTEND_URL}/admin/appointments/{appointment_id}" class="btn">Review in Admin Panel</a>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                            This is an automated notification. Please ensure you review and approve all payments before confirming appointments.
+                        </p>
+                        
+                        <div class="footer">
+                            <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=admin_email,
+            recipient_name=admin_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="payment_receipt_uploaded_to_admin",
         )
 
     # Guest Appointment Confirmation with Session Link
@@ -1048,6 +1508,38 @@ class EmailService:
                         margin: 20px 0;
                         border-radius: 4px;
                     }}
+                    .payment-methods {{
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 20px;
+                        margin: 20px 0;
+                    }}
+                    .payment-method {{
+                        border: 1px solid #e5e7eb;
+                        border-radius: 8px;
+                        padding: 15px;
+                        background-color: #f9fafb;
+                        text-align: center;
+                    }}
+                    .qr-section {{
+                        padding: 10px;
+                    }}
+                    .qr-section img {{
+                        max-width: 150px;
+                        height: auto;
+                    }}
+                    .bank-section {{
+                        text-align: left;
+                        font-size: 13px;
+                    }}
+                    .bank-details {{
+                        background-color: white;
+                        padding: 10px;
+                        border-radius: 4px;
+                        font-family: monospace;
+                        margin: 5px 0;
+                        word-break: break-all;
+                    }}
                     .btn {{
                         display: inline-block;
                         padding: 12px 30px;
@@ -1086,8 +1578,7 @@ class EmailService:
                         
                         <div class="success-message">
                             <p style="margin: 0;"><strong>Great news!</strong> {coach_name} has approved your booking request. Now you just need to upload your payment screenshot.</p>
-                        </div>
-                        
+                        </div>                        
                         <p><strong>Upload Your Payment Receipt:</strong></p>
                         <p>Click the button below to upload your payment screenshot. This link is secure and unique to your booking.</p>
                         
@@ -3297,4 +3788,284 @@ class EmailService:
             subject=subject,
             html_body=html_body,
             email_type="final_progress_report",
+        )
+
+    # ========== FREE ASSESSMENT EMAILS ==========
+
+    @staticmethod
+    async def send_free_assessment_submitted_to_admin(
+        admin_email: str,
+        admin_name: str,
+        child_name: str,
+        parent_email: str,
+        parent_phone: Optional[str] = None,
+        assessment_id: int = None,
+    ) -> bool:
+        """Send notification to admin when a new free assessment is submitted"""
+        
+        if not settings.ENABLE_EMAIL or not admin_email:
+            logger.warning(f"Email sending disabled or no admin email")
+            return False
+
+        subject = f"New Free Assessment Submitted - {child_name}"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #e3f2fd;
+                    }}
+                    .header {{
+                        background-color: #1976d2;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .info-box {{
+                        background-color: #f5f5f5;
+                        padding: 15px;
+                        border-left: 4px solid #1976d2;
+                        margin: 15px 0;
+                    }}
+                    .btn {{
+                        display: inline-block;
+                        padding: 12px 30px;
+                        background-color: #1976d2;
+                        color: white !important;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        margin-top: 20px;
+                        font-weight: 600;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">📋 New Free Assessment Submitted</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">A new assessment is awaiting your review</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{admin_name}</strong>,</p>
+                        <p>A new free assessment has been submitted and is ready for your review.</p>
+                        
+                        <div class="info-box">
+                            <h3 style="margin-top: 0; color: #1976d2;">Child Information</h3>
+                            <table style="width: 100%; border-collapse: collapse; margin: 0; border: 1px solid #ddd;">
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Child Name:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{child_name}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Parent Email:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{parent_email}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Parent Phone:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{parent_phone or 'Not provided'}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Assessment ID:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;"><span style="font-family: monospace; background: #efefef; padding: 2px 6px; border-radius: 3px;">#{assessment_id}</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <p><strong>Next Steps:</strong></p>
+                        <ol>
+                            <li>Review the assessment details in the admin dashboard</li>
+                            <li>Contact the parent if any additional information is needed</li>
+                            <li>Prepare your response/evaluation</li>
+                            <li>Reach out to the parent with your assessment findings</li>
+                        </ol>
+                        
+                        <div style="text-align: center; margin: 25px 0;">
+                            <a href="{settings.FRONTEND_URL}/admin/free-assessments/{assessment_id}" class="btn">View Assessment Details</a>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px;">Please review this assessment at your earliest convenience and provide feedback to the parent.</p>
+                        
+                        <div class="footer">
+                            <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=admin_email,
+            recipient_name=admin_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="free_assessment_submitted_to_admin",
+        )
+
+    @staticmethod
+    async def send_free_assessment_confirmation(
+        recipient_email: str,
+        recipient_name: str,
+        child_name: str,
+    ) -> bool:
+        """Send welcome/confirmation message to user after free assessment submission"""
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
+            return False
+
+        subject = "Welcome to HurshBintech! - Assessment Received"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #f0f4ff;
+                    }}
+                    .header {{
+                        background-color: #41A67E;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .welcome-box {{
+                        background-color: #d1fae5;
+                        border-left: 4px solid #41A67E;
+                        padding: 15px;
+                        margin: 20px 0;
+                        border-radius: 4px;
+                    }}
+                    .welcome-box p {{
+                        margin: 0;
+                        color: #065f46;
+                    }}
+                    .info-box {{
+                        background-color: #f9fafb;
+                        border-left: 4px solid #41A67E;
+                        padding: 15px;
+                        margin: 15px 0;
+                    }}
+                    .info-box p {{
+                        margin: 8px 0;
+                        color: #555;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                    ul {{
+                        color: #555;
+                    }}
+                    ul li {{
+                        margin: 8px 0;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 28px;">Welcome to HurshBintech! 👋</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">Your assessment has been received</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{recipient_name}</strong>,</p>
+                        
+                        <div class="welcome-box">
+                            <p><strong>✓ Assessment Received Successfully!</strong></p>
+                            <p>We received your assessment for your child <strong>{child_name}</strong>.</p>
+                            <p>Wait for us to revert. Our admin will reach you soonest.</p>
+                            <p>Thank you</p>
+                        </div>
+                        
+                        <h3 style="color: #2c3e50; margin-top: 25px;">What Happens Next?</h3>
+                        <ul>
+                            <li><strong>Assessment Review:</strong> Our expert team will carefully review the information you provided</li>
+                            <li><strong>Evaluation:</strong> We will prepare a comprehensive assessment for your child</li>
+                            <li><strong>Contact:</strong> Our admin team will contact you shortly with the results and recommendations</li>
+                            <li><strong>Next Steps:</strong> We'll discuss personalized learning paths and programs suited for your child</li>
+                        </ul>
+                        
+                        <div class="info-box">
+                            <p><strong>📞 Contact Information</strong></p>
+                            <p>If you have any questions or need to provide additional information, please don't hesitate to contact us:</p>
+                            <p>
+                                📧 <strong>Email:</strong> support@hurshbintech.com<br>
+                                📱 <strong>WhatsApp:</strong> +91-8928765220
+                            </p>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 20px;">
+                            We appreciate you choosing HurshBintech for your child's developmental assessment. 
+                            We're committed to providing the best support and guidance.
+                        </p>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 15px;">
+                            <strong>Welcome to the HurshBintech family!</strong>
+                        </p>
+                        
+                        <div class="footer">
+                            <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="free_assessment_confirmation",
         )

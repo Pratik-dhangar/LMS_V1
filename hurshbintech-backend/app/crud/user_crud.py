@@ -293,6 +293,8 @@ async def create_head(db: AsyncSession, head_data: HeadCreate, created_by_admin_
 
 async def update_head(db: AsyncSession, head_id: int, head_update: HeadUpdate):
     """Update head profile"""
+    from sqlalchemy.exc import IntegrityError
+    
     head = await get_head_by_id(db, head_id)
     if not head:
         return None
@@ -305,15 +307,36 @@ async def update_head(db: AsyncSession, head_id: int, head_update: HeadUpdate):
         head.user.name = update_data.pop("name")
     
     if "email" in update_data:
-        head.user.email = update_data.pop("email")
+        new_email = update_data.pop("email")
+        # Check if email is already used by another user
+        if new_email != head.user.email:
+            existing_user_result = await db.execute(
+                select(User).where(
+                    User.email == new_email,
+                    User.id != head.user.id  # Exclude current user
+                )
+            )
+            if existing_user_result.scalar_one_or_none():
+                raise ValueError("This email address is already registered in the system.")
+        head.user.email = new_email
 
     # Update profile fields
     for field, value in update_data.items():
         setattr(head, field, value)
 
-    await db.commit()
-    await db.refresh(head)
-    return head
+    try:
+        await db.commit()
+        await db.refresh(head)
+        return head
+    except IntegrityError as e:
+        await db.rollback()
+        error_str = str(e)
+        if "email" in error_str.lower():
+            raise ValueError("Email already exists in the system")
+        elif "contact_number" in error_str.lower():
+            raise ValueError("Contact number already exists in the system")
+        else:
+            raise ValueError("Database constraint violation: Please check your input")
 
 
 async def delete_head(db: AsyncSession, head_id: int) -> str | bool:
@@ -464,6 +487,8 @@ async def create_trainer(db: AsyncSession, trainer_data: TrainerCreate, created_
 
 async def update_trainer(db: AsyncSession, trainer_id: int, trainer_update: TrainerUpdate):
     """Update trainer profile"""
+    from sqlalchemy.exc import IntegrityError
+    
     trainer = await get_trainer_by_id(db, trainer_id)
     if not trainer:
         return None
@@ -476,14 +501,35 @@ async def update_trainer(db: AsyncSession, trainer_id: int, trainer_update: Trai
         trainer.user.name = update_data.pop("name")
     
     if "email" in update_data:
-        trainer.user.email = update_data.pop("email")
+        new_email = update_data.pop("email")
+        # Check if email is already used by another user
+        if new_email != trainer.user.email:
+            existing_user_result = await db.execute(
+                select(User).where(
+                    User.email == new_email,
+                    User.id != trainer.user.id  # Exclude current user
+                )
+            )
+            if existing_user_result.scalar_one_or_none():
+                raise ValueError("This email address is already registered in the system.")
+        trainer.user.email = new_email
 
     for field, value in update_data.items():
         setattr(trainer, field, value)
 
-    await db.commit()
-    await db.refresh(trainer)
-    return trainer
+    try:
+        await db.commit()
+        await db.refresh(trainer)
+        return trainer
+    except IntegrityError as e:
+        await db.rollback()
+        error_str = str(e)
+        if "email" in error_str.lower():
+            raise ValueError("Email already exists in the system")
+        elif "contact_number" in error_str.lower():
+            raise ValueError("Contact number already exists in the system")
+        else:
+            raise ValueError("Database constraint violation: Please check your input")
 
 
 # Delete trainer
@@ -608,6 +654,8 @@ async def update_coach(
     db: AsyncSession, coach_id: int, coach_update: CoachUpdate
 ):
     """Update coach profile"""
+    from sqlalchemy.exc import IntegrityError
+    
     coach = await get_coach_by_id(db, coach_id)
     if not coach:
         return None
@@ -620,14 +668,35 @@ async def update_coach(
         coach.user.name = update_data.pop("name")
     
     if "email" in update_data:
-        coach.user.email = update_data.pop("email")
+        new_email = update_data.pop("email")
+        # Check if email is already used by another user
+        if new_email != coach.user.email:
+            existing_user_result = await db.execute(
+                select(User).where(
+                    User.email == new_email,
+                    User.id != coach.user.id  # Exclude current user
+                )
+            )
+            if existing_user_result.scalar_one_or_none():
+                raise ValueError("This email address is already registered in the system.")
+        coach.user.email = new_email
 
     for field, value in update_data.items():
         setattr(coach, field, value)
 
-    await db.commit()
-    await db.refresh(coach)
-    return coach
+    try:
+        await db.commit()
+        await db.refresh(coach)
+        return coach
+    except IntegrityError as e:
+        await db.rollback()
+        error_str = str(e)
+        if "email" in error_str.lower():
+            raise ValueError("Email already exists in the system")
+        elif "contact_number" in error_str.lower():
+            raise ValueError("Contact number already exists in the system")
+        else:
+            raise ValueError("Database constraint violation: Please check your input")
 
 
 async def delete_coach(db: AsyncSession, coach_id: int) -> str | bool:
@@ -824,6 +893,8 @@ async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_
 
 async def update_learner(db: AsyncSession, learner_id: int, learner_update: LearnerUpdate):
     """Update learner profile"""
+    from sqlalchemy.exc import IntegrityError
+    
     learner = await get_learner_by_id(db, learner_id)
     if not learner:
         return None
@@ -836,10 +907,32 @@ async def update_learner(db: AsyncSession, learner_id: int, learner_update: Lear
         learner.user.name = update_data.pop("name")
     
     if "email" in update_data:
-        learner.user.email = update_data.pop("email")
+        new_email = update_data.pop("email")
+        # Check if email is already used by another user
+        if new_email != learner.user.email:
+            existing_user_result = await db.execute(
+                select(User).where(
+                    User.email == new_email,
+                    User.id != learner.user.id  # Exclude current user
+                )
+            )
+            if existing_user_result.scalar_one_or_none():
+                raise ValueError("This email address is already registered in the system.")
+        learner.user.email = new_email
     
     if "contact_number" in update_data:
-        learner.user.contact_number = update_data.pop("contact_number")
+        new_contact = update_data.pop("contact_number")
+        # Check if contact number is already used by another user
+        if new_contact and new_contact != learner.user.contact_number:
+            existing_user_result = await db.execute(
+                select(User).where(
+                    User.contact_number == new_contact,
+                    User.id != learner.user.id  # Exclude current user
+                )
+            )
+            if existing_user_result.scalar_one_or_none():
+                raise ValueError("This phone number is already registered in the system.")
+        learner.user.contact_number = new_contact
 
     # Convert enum objects to their string values for database storage
     for field, value in update_data.items():
@@ -849,11 +942,21 @@ async def update_learner(db: AsyncSession, learner_id: int, learner_update: Lear
     for field, value in update_data.items():
         setattr(learner, field, value)
 
-    await db.commit()
-    await db.refresh(learner)
-    # Ensure user relationship is loaded after refresh
-    await db.refresh(learner.user)
-    return learner
+    try:
+        await db.commit()
+        await db.refresh(learner)
+        # Ensure user relationship is loaded after refresh
+        await db.refresh(learner.user)
+        return learner
+    except IntegrityError as e:
+        await db.rollback()
+        error_str = str(e)
+        if "email" in error_str.lower():
+            raise ValueError("Email already exists in the system")
+        elif "contact_number" in error_str.lower():
+            raise ValueError("Contact number already exists in the system")
+        else:
+            raise ValueError("Database constraint violation: Please check your input")
 
 
 # Delete learner
