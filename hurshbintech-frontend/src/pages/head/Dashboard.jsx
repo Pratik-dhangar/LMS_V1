@@ -14,7 +14,7 @@ const HeadDashboard = () => {
   const menuItems = [
     { id: '1', title: 'Manage Trainers', description: 'Register and manage HurshBin Trainers', icon: UserCog, onClick: () => navigate('/head/manage-trainers') },
     { id: '2', title: 'Manage Learners', description: 'View and manage learner profiles, assessments, and progress', icon: Users, onClick: () => navigate('/head/manage-learners') },
-    { id: '3', title: 'Manage Learnings', description: 'View and manage learner profiles, programs, and assessments', icon: BookOpen, onClick: () => navigate('/head/manage-sessions') },
+    { id: '3', title: 'Manage Learnings', description: 'View and manage ILP, HLP and HP', icon: BookOpen, onClick: () => navigate('/head/manage-sessions') },
     { id: '4', title: 'Manage Learner Subscriptions', description: 'Assign and manage learner subscriptions', icon: CreditCard, onClick: () => navigate('/head/subscriptions/learners') },
     { id: '5', title: 'Manage Learning Progress', description: 'View and analyze learner session reports and progress', icon: BarChart3, onClick: () => navigate('/head/reports') },
   ];
