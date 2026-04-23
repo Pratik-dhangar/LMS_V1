@@ -2,7 +2,7 @@
 
 ## Overview
 
-A WhatsApp-like real-time chat system integrated into the HurshBinTech application with the following features:
+A WhatsApp-like real-time chat system integrated into the HurshBin application with the following features:
 
 ### ✅ Features Implemented
 

@@ -627,7 +627,7 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
                         <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: '#7c1c1c', margin: 0 }}>
                             Comprehensive Skill Development Report
                         </h1>
-                        <p style={{ margin: '0.4rem 0 0', color: '#555', fontSize: '0.95rem' }}>HurshBinTech Learning Centre</p>
+                        <p style={{ margin: '0.4rem 0 0', color: '#555', fontSize: '0.95rem' }}>HurshBin Learning Centre</p>
                     </div>
 
                     {/* Basic Details */}
