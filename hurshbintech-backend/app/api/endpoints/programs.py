@@ -5,8 +5,7 @@ Base prefix: /api/head/programs
 
 Rules:
   - Only the head who created a program can read, update, or delete it.
-  - goal_ids are set at creation and cannot be updated (enforced by ProgramUpdateContent schema).
-  - content_ids are freely mutable.
+    - program structure (skills + sub-programs) and content can be updated.
   - Delete is a soft-delete (is_active = False) to keep historical session links intact.
 """
 
@@ -90,9 +89,7 @@ async def update_program(
     current_head: HeadProfile = Depends(get_current_head),
 ):
     """
-    Update a program's name, description, and/or content_ids.
-    goal_ids cannot be changed — they are locked at creation.
-    To use different goals, create a new program.
+    Update a program's name, learner, skill/sub-program structure, and content.
     """
     logger.info(f"Head {current_head.user_id} updating program {program_id}")
     program = await program_crud.update_program_content(

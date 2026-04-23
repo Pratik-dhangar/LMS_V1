@@ -42,6 +42,11 @@ class WhiteboardService {
         this.onExerciseClosed = null; // New callback for exercise closed by trainer
         this.onCommentUpdate = null; // New callback for comment updates
         this.onCommentsToggle = null; // New callback for comments tool toggle
+        this.onCalculatorOperation = null; // New callback for calculator operations
+        this.onCalculatorResult = null; // New callback for calculator results
+        this.onCalculatorClear = null; // New callback for calculator clear
+        this.onCalculatorPermission = null; // New callback for calculator permission changes
+        this.onCalculatorSync = null; // New callback for calculator state sync
         this._onWhiteboardRestore = null; // Internal callback holder
         this._restorationBuffer = null; // Buffer for restoration message if received before callback is set
 
@@ -366,6 +371,36 @@ class WhiteboardService {
                 case 'comments_toggle':
                     if (this.onCommentsToggle) {
                         this.onCommentsToggle(message.data);
+                    }
+                    break;
+
+                case 'calculator_operation':
+                    if (this.onCalculatorOperation) {
+                        this.onCalculatorOperation(message.data);
+                    }
+                    break;
+
+                case 'calculator_result':
+                    if (this.onCalculatorResult) {
+                        this.onCalculatorResult(message.data);
+                    }
+                    break;
+
+                case 'calculator_clear':
+                    if (this.onCalculatorClear) {
+                        this.onCalculatorClear();
+                    }
+                    break;
+
+                case 'calculator_permission':
+                    if (this.onCalculatorPermission) {
+                        this.onCalculatorPermission(message.data);
+                    }
+                    break;
+
+                case 'calculator_sync':
+                    if (this.onCalculatorSync) {
+                        this.onCalculatorSync(message.data);
                     }
                     break;
 

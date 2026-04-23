@@ -39,6 +39,7 @@ import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Emoji from '../common/Emoji';
 import Whiteboard from '../common/Whiteboard';
+import Calculator from '../common/Calculator';
 import { normalizeItem } from '../../utils/drawingSync';
 import Exercise from './Exercise';
 import YouTubePopup from '../common/YouTubePopup';
@@ -299,7 +300,8 @@ export const ToolAccessPanel = ({
         { key: 'select', label: 'Select', icon: '🔍' },
         { key: 'drag', label: 'Drag', icon: '👆' },
         { key: 'draw', label: 'Draw', icon: '✏️' },
-        { key: 'keyboard', label: 'Keyboard', icon: '⌨️' }
+        { key: 'keyboard', label: 'Keyboard', icon: '⌨️' },
+        { key: 'calculator', label: 'Calculator', icon: '🧮' }
     ];
 
     return (
@@ -1176,7 +1178,10 @@ export const setupInstructorWhiteboardCallbacks = ({
     setExerciseData,
     setBuckets,
     setErasePenTrigger,
-    setRedrawCanvasTrigger
+    setRedrawCanvasTrigger,
+    setCalculatorEnabled,
+    setRemoteCalculatorDisplay,
+    setRemoteCalculatorHistory
 }) => {
     if (!whiteboardService) return null;
 
@@ -1282,6 +1287,44 @@ export const setupInstructorWhiteboardCallbacks = ({
         };
     }
 
+    // Calculator updates from attendee
+    if (setRemoteCalculatorDisplay || setRemoteCalculatorHistory) {
+        whiteboardService.onCalculatorOperation = (data) => {
+            if (setCalculatorEnabled) setCalculatorEnabled(true);
+            if (setRemoteCalculatorDisplay && typeof data?.display !== 'undefined') {
+                setRemoteCalculatorDisplay(data.display);
+            }
+            if (setRemoteCalculatorHistory && Array.isArray(data?.history)) {
+                setRemoteCalculatorHistory(data.history);
+            }
+        };
+
+        whiteboardService.onCalculatorResult = (data) => {
+            if (setCalculatorEnabled) setCalculatorEnabled(true);
+            if (setRemoteCalculatorDisplay && typeof data?.result !== 'undefined') {
+                setRemoteCalculatorDisplay(String(data.result));
+            }
+            if (setRemoteCalculatorHistory && data?.calculation) {
+                setRemoteCalculatorHistory(prev => [...prev, data.calculation]);
+            }
+        };
+
+        whiteboardService.onCalculatorClear = () => {
+            if (setRemoteCalculatorDisplay) setRemoteCalculatorDisplay('0');
+            if (setRemoteCalculatorHistory) setRemoteCalculatorHistory([]);
+        };
+
+        whiteboardService.onCalculatorSync = (data) => {
+            if (setCalculatorEnabled) setCalculatorEnabled(true);
+            if (setRemoteCalculatorDisplay && typeof data?.display !== 'undefined') {
+                setRemoteCalculatorDisplay(data.display);
+            }
+            if (setRemoteCalculatorHistory && Array.isArray(data?.history)) {
+                setRemoteCalculatorHistory(data.history);
+            }
+        };
+    }
+
     // Return cleanup function
     return () => {
         if (whiteboardService) {
@@ -1293,6 +1336,10 @@ export const setupInstructorWhiteboardCallbacks = ({
             // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component — don't nullify
             whiteboardService.onFloatingAnimations = null;
             whiteboardService.onErasePen = null;
+            whiteboardService.onCalculatorOperation = null;
+            whiteboardService.onCalculatorResult = null;
+            whiteboardService.onCalculatorClear = null;
+            whiteboardService.onCalculatorSync = null;
         }
     };
 };
@@ -1312,6 +1359,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     setIsEyeBlinking,
     setFeedbackMessage,
     setWaitingMessage,
+    setCalculatorPermission,
     setFloatingAnimations,
     floatingAnimations,
     setCanvasItems,
@@ -1370,6 +1418,13 @@ export const setupAttendeeWhiteboardCallbacks = ({
     if (setLineWidth) {
         whiteboardService.onPenSizeUpdate = (data) => {
             applyRemotePenSize(data?.lineWidth);
+        };
+    }
+
+    // Calculator permission control from instructor
+    if (setCalculatorPermission) {
+        whiteboardService.onCalculatorPermission = (data) => {
+            setCalculatorPermission(Boolean(data?.enabled));
         };
     }
 
@@ -1704,6 +1759,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
         if (whiteboardService) {
             whiteboardService.onToolAccess = null;
             whiteboardService.onPenSizeUpdate = null;
+            whiteboardService.onCalculatorPermission = null;
             whiteboardService.onPromptUpdate = null;
             whiteboardService.onFeedbackMessage = null;
             whiteboardService.onWaitingMessage = null;
@@ -2032,25 +2088,33 @@ export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whitebo
     setToolAccess(updated);
 
     if (whiteboardService) {
-        whiteboardService.send('tool_access', {
-            toolName,
-            enabled: updated[toolName],
-            allPermissions: updated
-        });
-
-        if (toolName === 'drag' && updated.drag) {
-            whiteboardService.send('tool_access', {
-                toolName: 'select',
-                enabled: true,
-                allPermissions: updated
-            });
-        }
-
-        if (toolName === 'draw' && updated.draw && currentLineWidth !== null) {
-            whiteboardService.send('pen_size_update', {
-                lineWidth: currentLineWidth,
+        // Handle calculator tool separately (sends different message type)
+        if (toolName === 'calculator') {
+            whiteboardService.send('calculator_permission', {
+                enabled: updated[toolName],
                 timestamp: Date.now()
             });
+        } else {
+            whiteboardService.send('tool_access', {
+                toolName,
+                enabled: updated[toolName],
+                allPermissions: updated
+            });
+
+            if (toolName === 'drag' && updated.drag) {
+                whiteboardService.send('tool_access', {
+                    toolName: 'select',
+                    enabled: true,
+                    allPermissions: updated
+                });
+            }
+
+            if (toolName === 'draw' && updated.draw && currentLineWidth !== null) {
+                whiteboardService.send('pen_size_update', {
+                    lineWidth: currentLineWidth,
+                    timestamp: Date.now()
+                });
+            }
         }
     }
 
@@ -2993,6 +3057,12 @@ export const InstructorSessionPage = ({
     setShowStopwatch,
     stopwatch,
 
+    // Calculator
+    calculatorEnabled,
+    setCalculatorEnabled,
+    remoteCalculatorDisplay,
+    remoteCalculatorHistory,
+
     // Music
     musicOptions,
     toggleBackgroundMusic,
@@ -3319,6 +3389,10 @@ export const InstructorSessionPage = ({
                         toggleToolAccess={toggleToolAccess}
                         showStopwatch={showStopwatch}
                         setShowStopwatch={setShowStopwatch}
+                        calculatorEnabled={calculatorEnabled}
+                        setCalculatorEnabled={setCalculatorEnabled}
+                        remoteCalculatorDisplay={remoteCalculatorDisplay}
+                        remoteCalculatorHistory={remoteCalculatorHistory}
                         showExercise={showExercise}
                         setShowExercise={setShowExercise}
                         activeIcons={activeIcons}
@@ -3492,6 +3566,10 @@ export const WhiteboardTools = ({
     toggleToolAccess,
     showStopwatch,
     setShowStopwatch,
+    calculatorEnabled = false,
+    setCalculatorEnabled = () => { },
+    remoteCalculatorDisplay = null,
+    remoteCalculatorHistory = [],
     showExercise,
     setShowExercise,
     activeIcons,
@@ -3548,6 +3626,17 @@ export const WhiteboardTools = ({
     };
 
     const selectedItems = getSelectedItemDetails();
+
+    const handleCalculatorToggle = () => {
+        const nextEnabled = !calculatorEnabled;
+        setCalculatorEnabled(nextEnabled);
+        if (whiteboardService) {
+            whiteboardService.send('calculator_permission', {
+                enabled: nextEnabled,
+                timestamp: Date.now()
+            });
+        }
+    };
     return (
         <div className="session-whiteboard-tools w-full flex flex-wrap items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
             {/* Attendee Selected Content Display & Unselect Controls */}
@@ -3886,6 +3975,18 @@ export const WhiteboardTools = ({
                         <span className="hidden sm:inline">Stopwatch</span>
                     </button>
 
+                    {/* Calculator Tool Button */}
+                    <button
+                        onClick={handleCalculatorToggle}
+                        className={`${calculatorEnabled ? wbSmallBtnActive : wbSmallBtnBase}`}
+                        aria-expanded={calculatorEnabled}
+                        aria-controls="calculator-panel"
+                        title="Toggle calculator tool"
+                    >
+                        <Emoji emoji="🧮" size="base" />
+                        <span className="hidden sm:inline">Calculator</span>
+                    </button>
+
                     {[
                         { label: 'Good Job!', icon: '👍' },
                         { label: 'Wow!', icon: '🌟' },
@@ -3914,6 +4015,29 @@ export const WhiteboardTools = ({
                     })}
                 </div>
             </div>
+
+            {calculatorEnabled && (
+                <div
+                    id="calculator-panel"
+                    style={{
+                        position: 'fixed',
+                        right: '12px',
+                        bottom: '12px',
+                        zIndex: 120,
+                        width: 'min(360px, 92vw)',
+                        maxHeight: '75vh',
+                        overflowY: 'auto',
+                        padding: 'clamp(0.5rem, 1.5vw, 1rem)'
+                    }}
+                >
+                    <Calculator
+                        isInstructor={true}
+                        hasPermission={calculatorEnabled}
+                        remoteDisplay={remoteCalculatorDisplay}
+                        remoteHistory={remoteCalculatorHistory}
+                    />
+                </div>
+            )}
 
             {/* Session Notes - Only for Trainer */}
             {showSessionNotes && handleNotesChange && handleClearNotes && (

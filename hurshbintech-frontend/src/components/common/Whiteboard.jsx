@@ -653,7 +653,13 @@ const Whiteboard = ({
     const [isYoutubeMuted, setIsYoutubeMuted] = useState(false);
     const activeYoutubeMedia = inlineYoutube || (inlineMedia && inlineMedia.type === 'youtube' ? inlineMedia : null);
     const isYoutubeMinimized = Boolean(activeYoutubeMedia?.minimized);
-    const hasExpandedMedia = Boolean((inlineVideo && !isInlineVideoMinimized) || (activeYoutubeMedia && !isYoutubeMinimized));
+    const [inlinePdf, setInlinePdf] = useState(null); // { id, src, title }
+    const [isInlinePdfMinimized, setIsInlinePdfMinimized] = useState(false);
+    const hasExpandedMedia = Boolean(
+        (inlineVideo && !isInlineVideoMinimized) ||
+        (inlinePdf && !isInlinePdfMinimized) ||
+        (activeYoutubeMedia && !isYoutubeMinimized)
+    );
 
     // Image caching system for performance
     const imageCacheRef = useRef(new Map());
@@ -820,6 +826,35 @@ const Whiteboard = ({
                 return;
             }
 
+            // Check if it's a PDF - open in inline split mode (50/50)
+            const isPdf = fullUrl.toLowerCase().includes('.pdf') ||
+                content.content_type === 'pdf' ||
+                content.mime_type === 'application/pdf';
+
+            if (isPdf) {
+                const pdfData = {
+                    id: Date.now(),
+                    src: fullUrl,
+                    title: content.title || content.original_filename || 'PDF Document'
+                };
+
+                setInlineVideo(null);
+                setIsInlineVideoMinimized(false);
+                setInlinePdf(pdfData);
+                setIsInlinePdfMinimized(false);
+
+                whiteboardService?.sendMediaControl({
+                    action: 'pdf_split_open',
+                    mediaId: pdfData.id,
+                    mediaUrl: pdfData.src,
+                    src: pdfData.src,
+                    mediaType: 'pdf',
+                    title: pdfData.title,
+                    timestamp: Date.now()
+                });
+                return;
+            }
+
             // For non-video items, add to canvas
             const newItem = {
                 id: Date.now(),
@@ -858,7 +893,7 @@ const Whiteboard = ({
 
         canvas.addEventListener('touchDrop', handleTouchDrop);
         return () => canvas.removeEventListener('touchDrop', handleTouchDrop);
-    }, [isTrainer, whiteboardService, setCanvasItems, setInlineVideo]);
+    }, [isTrainer, whiteboardService, setCanvasItems, setInlineVideo, setInlinePdf]);
 
     // Pinch-to-resize gesture handler
     const handlePinchResize = useCallback((e, item) => {
@@ -1452,12 +1487,35 @@ const Whiteboard = ({
                 // If this is an inline video open command, handle inline split-video
                 const incomingMediaSrc = data?.src || data?.mediaUrl;
                 const incomingMediaId = data?.videoId || data?.mediaId;
+                const incomingMediaType = data?.mediaType || data?.type;
                 if (data && data.action === 'open' && incomingMediaSrc) {
-                    // Open inline split video for learners (suppress popup)
+                    // Open inline split media for learners (suppress popup)
                     if (!isTrainer) {
-                        setInlineVideo({ id: incomingMediaId || Date.now(), src: incomingMediaSrc });
-                        setIsInlineVideoMinimized(false);
+                        if (incomingMediaType === 'pdf') {
+                            setInlineVideo(null);
+                            setIsInlineVideoMinimized(false);
+                            setInlinePdf({
+                                id: incomingMediaId || Date.now(),
+                                src: incomingMediaSrc,
+                                title: data?.title || 'PDF Document'
+                            });
+                            setIsInlinePdfMinimized(false);
+                        } else {
+                            setInlinePdf(null);
+                            setIsInlinePdfMinimized(false);
+                            setInlineVideo({ id: incomingMediaId || Date.now(), src: incomingMediaSrc });
+                            setIsInlineVideoMinimized(false);
+                        }
                     }
+                } else if (data && data.action === 'pdf_split_open' && incomingMediaSrc) {
+                    setInlineVideo(null);
+                    setIsInlineVideoMinimized(false);
+                    setInlinePdf({
+                        id: incomingMediaId || Date.now(),
+                        src: incomingMediaSrc,
+                        title: data?.title || 'PDF Document'
+                    });
+                    setIsInlinePdfMinimized(false);
                 } else {
                     // Forward to MediaControlContext for other media control flows
                     try {
@@ -1485,6 +1543,13 @@ const Whiteboard = ({
                     if (inlineVideoRef.current) {
                         try { inlineVideoRef.current.pause(); } catch { /* ignore */ }
                     }
+                }
+                if (action === 'pdf_split_close') {
+                    setInlinePdf(null);
+                    setIsInlinePdfMinimized(false);
+                }
+                if (action === 'pdf_split_minimize_toggle') {
+                    setIsInlinePdfMinimized(Boolean(data.minimized));
                 }
 
                 if (!isTrainer && inlineVideoRef.current) {
@@ -2947,6 +3012,35 @@ const Whiteboard = ({
                 return;
             }
 
+            // Check if it's a PDF - open in inline split mode (50/50)
+            const isPdf = fullUrl.toLowerCase().includes('.pdf') ||
+                droppedData.type === 'pdf' ||
+                droppedData.mimeType === 'application/pdf';
+
+            if (isPdf) {
+                const pdfData = {
+                    id: Date.now(),
+                    src: fullUrl,
+                    title: droppedData.title || droppedData.originalFilename || 'PDF Document'
+                };
+
+                setInlineVideo(null);
+                setIsInlineVideoMinimized(false);
+                setInlinePdf(pdfData);
+                setIsInlinePdfMinimized(false);
+
+                whiteboardService?.sendMediaControl({
+                    action: 'pdf_split_open',
+                    mediaId: pdfData.id,
+                    mediaUrl: pdfData.src,
+                    src: pdfData.src,
+                    mediaType: 'pdf',
+                    title: pdfData.title,
+                    timestamp: Date.now()
+                });
+                return;
+            }
+
             // Check if dropped into a bucket
             const droppedBucket = buckets.find(bucket =>
                 isItemInBucket(x - 50, y - 50, 100, 100, bucket)
@@ -3183,6 +3277,30 @@ const Whiteboard = ({
             minimized: nextMinimized
         });
     }, [isTrainer, inlineVideo, isInlineVideoMinimized, whiteboardService]);
+
+    const handlePdfClose = useCallback(() => {
+        if (isTrainer && whiteboardService && inlinePdf) {
+            whiteboardService.sendMediaControl({
+                action: 'pdf_split_close',
+                mediaId: inlinePdf.id,
+                timestamp: Date.now()
+            });
+        }
+        setInlinePdf(null);
+        setIsInlinePdfMinimized(false);
+    }, [isTrainer, inlinePdf, whiteboardService]);
+
+    const handleInlinePdfMinimizeToggle = useCallback(() => {
+        if (!isTrainer || !inlinePdf || !whiteboardService) return;
+        const nextMinimized = !isInlinePdfMinimized;
+        setIsInlinePdfMinimized(nextMinimized);
+        whiteboardService.sendMediaControl({
+            action: 'pdf_split_minimize_toggle',
+            mediaId: inlinePdf.id,
+            minimized: nextMinimized,
+            timestamp: Date.now()
+        });
+    }, [isTrainer, inlinePdf, isInlinePdfMinimized, whiteboardService]);
 
     // YouTube split video handlers
     const handleYoutubeClose = useCallback(() => {
@@ -3901,6 +4019,56 @@ const Whiteboard = ({
                             >
                                 □
                             </button>
+                        )}
+                    </div>
+                )}
+
+                {inlinePdf && isInlinePdfMinimized && (
+                    <div className="minimized-media-pill">
+                        <span className="minimized-media-title">PDF Minimized</span>
+                        {isTrainer && (
+                            <button
+                                onClick={handleInlinePdfMinimizeToggle}
+                                className="video-control-btn"
+                                title="Restore PDF"
+                            >
+                                □
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {/* Inline PDF Section - shows when PDF is dropped (50% width) */}
+                {inlinePdf && (
+                    <div className={`whiteboard-split-video pdf-split-view ${isInlinePdfMinimized ? 'split-media-minimized-hidden' : ''}`}>
+                        <iframe
+                            src={inlinePdf.src}
+                            title={inlinePdf.title || 'PDF Document'}
+                            className="pdf-split-iframe"
+                        />
+
+                        {isTrainer && !isInlinePdfMinimized && (
+                            <div className="youtube-controls-container">
+                                <div className="youtube-controls-single-line">
+                                    <span className="youtube-title-text" title={inlinePdf.title || 'PDF Document'}>
+                                        {inlinePdf.title || 'PDF Document'}
+                                    </span>
+                                    <button
+                                        onClick={handleInlinePdfMinimizeToggle}
+                                        className="video-control-btn"
+                                        title="Minimize PDF"
+                                    >
+                                        _
+                                    </button>
+                                    <button
+                                        onClick={handlePdfClose}
+                                        className="video-control-btn video-close-btn"
+                                        title="Close PDF"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            </div>
                         )}
                     </div>
                 )}
