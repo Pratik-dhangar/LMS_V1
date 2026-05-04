@@ -117,6 +117,9 @@ export const useAttendeeSessionState = () => {
         keyboard: false
     });
 
+    // Calculator state (permission from instructor)
+    const [calculatorPermission, setCalculatorPermission] = useState(false);
+
     // Stopwatch (synced from instructor)
     const [stopwatchElapsedTime, setStopwatchElapsedTime] = useState(0);
     const [stopwatchIsRunning, setStopwatchIsRunning] = useState(false);
@@ -179,6 +182,7 @@ export const useAttendeeSessionState = () => {
         textBoxes, setTextBoxes,
         activeTextBoxId, setActiveTextBoxId,
         toolAccess, setToolAccess,
+        calculatorPermission, setCalculatorPermission,
         stopwatchElapsedTime, setStopwatchElapsedTime,
         stopwatchIsRunning, setStopwatchIsRunning,
         backgroundMusicPlaying, setBackgroundMusicPlaying,
@@ -209,6 +213,7 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
 
     const {
         setToolAccess,
+        setCalculatorPermission,
         setLineWidth,
         setRemoteSelectedItemIds,
         setKeyboardMode,
@@ -251,6 +256,12 @@ export const setupAttendeeWhiteboardListeners = (wbService, state) => {
                 ...data
             }));
         }
+    };
+
+    // Calculator permission from instructor
+    wbService.onCalculatorPermission = (data) => {
+        console.log('[AttendeeSession] 🧮 Calculator permission received:', data.enabled);
+        setCalculatorPermission(Boolean(data.enabled));
     };
 
     wbService.onPenSizeUpdate = (data) => {

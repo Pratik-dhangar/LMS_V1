@@ -248,6 +248,87 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
         ? learningGoals.filter(g => (selectedProgram.goal_ids || []).includes(g.id))
         : [];
 
+    const getProgramMetaText = (prog) => {
+        const skills = Array.isArray(prog?.skills) ? prog.skills : [];
+        const skillNames = skills
+            .map((skill) => (skill?.skill_name || '').trim())
+            .filter(Boolean);
+        const skillCount = skills.length;
+        const subProgramCount = (prog?.goal_ids || []).length;
+        const contentCount = (prog?.content_ids || []).length;
+
+        if (skillCount > 0) {
+            const skillLabel = skillNames.length > 0 ? skillNames.join(', ') : `${skillCount} skill(s)`;
+            return ` | Skill: ${skillLabel} — Sub-programs: ${subProgramCount}, Learning-Content: ${contentCount}`;
+        }
+
+        if (prog?.skill) {
+            return ` | Skill: ${prog.skill} — Sub-programs: ${subProgramCount}, Learning-Content: ${contentCount}`;
+        }
+
+        return ` — Sub-programs: ${subProgramCount}, Learning-Content: ${contentCount}`;
+    };
+
+    const renderSelectedProgramStructure = (prog) => {
+        if (!prog) return null;
+
+        const skills = Array.isArray(prog.skills) ? prog.skills : [];
+
+        if (skills.length > 0) {
+            return (
+                <div style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
+                    {skills.map((skill, index) => {
+                        const skillName = (skill?.skill_name || '').trim() || `Skill ${index + 1}`;
+                        const goalIds = Array.isArray(skill?.goal_ids) ? skill.goal_ids : [];
+                        const skillGoals = learningGoals
+                            .filter((goal) => goalIds.includes(goal.id))
+                            .map((goal) => goal.goal || goal.name || goal.title || `Goal #${goal.id}`);
+
+                        return (
+                            <div key={`${prog.id}-skill-${skill.skill_id || index}`} style={{ marginBottom: '0.35rem' }}>
+                                <div style={{ fontWeight: 600, color: '#92400e' }}>Skill - {skillName}</div>
+                                {skillGoals.length > 0 ? (
+                                    skillGoals.map((goalText, goalIndex) => (
+                                        <div key={`${prog.id}-skill-${index}-sub-${goalIndex}`} style={{ color: '#374151', fontSize: '0.875rem' }}>
+                                            Sub-program - {goalText}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ color: '#6b7280', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                                        No sub-programs under this skill
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        if (prog.skill || lockedGoals.length > 0) {
+            return (
+                <div style={{ marginTop: '0.5rem', marginLeft: '1rem' }}>
+                    {prog.skill && (
+                        <div style={{ fontWeight: 600, color: '#92400e' }}>Skill - {prog.skill}</div>
+                    )}
+                    {lockedGoals.length > 0 ? (
+                        lockedGoals.map((goal, index) => (
+                            <div key={`${prog.id}-fallback-sub-${index}`} style={{ color: '#374151', fontSize: '0.875rem' }}>
+                                Sub-program - {goal.goal || goal.name || goal.title || `Goal #${goal.id}`}
+                            </div>
+                        ))
+                    ) : (
+                        <div style={{ color: '#6b7280', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                            No sub-programs assigned
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        return null;
+    };
+
     if (loadingData) {
         return (
             <div className="app-modal-overlay">
@@ -416,7 +497,7 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                                             >
                                                                 {prog.name}
                                                                 <span className="dropdown-item-meta">
-                                                                    &nbsp;— {(prog.goal_ids || []).length} goal(s), {(prog.content_ids || []).length} content(s)
+                                                                    {getProgramMetaText(prog)}
                                                                 </span>
                                                             </div>
                                                         ))
@@ -428,9 +509,12 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                                 </div>
                                             )}
                                             {selectedProgram && (
-                                                <p className="form-helper-text" style={{ marginTop: '0.4rem' }}>
-                                                    ✅ Program &quot;<strong>{selectedProgram.name}</strong>&quot; selected.
-                                                </p>
+                                                <div className="form-helper-text" style={{ marginTop: '0.4rem' }}>
+                                                    <p>
+                                                        ✅ Program &quot;<strong>{selectedProgram.name}</strong>&quot; selected.
+                                                    </p>
+                                                    {renderSelectedProgramStructure(selectedProgram)}
+                                                </div>
                                             )}
                                         </>
                                     )}

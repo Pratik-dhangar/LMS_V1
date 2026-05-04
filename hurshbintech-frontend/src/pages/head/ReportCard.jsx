@@ -229,7 +229,7 @@ const ReportCard = () => {
                           <th className="table-primary-th">Last Session</th>
                           <th className="table-primary-th">Goals</th>
                           <th className="table-primary-th">Skill Development Graph </th>
-                          <th className="table-primary-th">The Comprehensive Skill Development Evaluation Report</th>
+                          <th className="table-primary-th">Comprehensive Skill Development Report</th>
                         </tr>
                       </thead>
                       <tbody className="table-primary-body">
@@ -289,7 +289,7 @@ const ReportCard = () => {
                                   </button>
                                 </div>
                               </td>
-                              {/*THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT */}
+                              {/*Comprehensive Skill Development Report */}
                               <td className="table-primary-td">
                                 {progReports.length === 0 ? (
                                   <button

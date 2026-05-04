@@ -7,6 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import Whiteboard from '../../components/common/Whiteboard';
+import Calculator from '../../components/common/Calculator';
 import Exercise from '../../components/session/Exercise';
 import { useMediaControl } from '../../context/MediaControlContext';
 import sessionService from '../../api/services/sessionService';
@@ -82,6 +83,7 @@ const GuestSession = () => {
     textBoxes, setTextBoxes,
     activeTextBoxId, setActiveTextBoxId,
     toolAccess, setToolAccess,
+    calculatorPermission,
     stopwatchElapsedTime, setStopwatchElapsedTime,
     stopwatchIsRunning, setStopwatchIsRunning,
     backgroundMusicPlaying,
@@ -832,6 +834,44 @@ const GuestSession = () => {
               inlineMedia={inlineMedia}
               setInlineMedia={setInlineMedia}
             />
+
+            {calculatorPermission && (
+              <div style={{ position: 'absolute', right: '12px', bottom: '12px', zIndex: 80, width: 'min(340px, 92vw)' }}>
+                <Calculator
+                  hasPermission={calculatorPermission}
+                  onCalculatorChange={(payload) => {
+                    if (!whiteboardService) return;
+
+                    if (payload.action === 'clear') {
+                      whiteboardService.send('calculator_clear', {
+                        timestamp: Date.now()
+                      });
+                      return;
+                    }
+
+                    if (payload.action === 'equals') {
+                      whiteboardService.send('calculator_result', {
+                        result: payload.result,
+                        calculation: payload.calculation,
+                        display: payload.display,
+                        history: payload.history || [],
+                        timestamp: Date.now()
+                      });
+                      return;
+                    }
+
+                    whiteboardService.send('calculator_operation', {
+                      action: payload.action,
+                      display: payload.display,
+                      previousValue: payload.previousValue,
+                      operation: payload.operation,
+                      history: payload.history || [],
+                      timestamp: Date.now()
+                    });
+                  }}
+                />
+              </div>
+            )}
           </div>
         </AttendeeWhiteboardSection>
       </div>

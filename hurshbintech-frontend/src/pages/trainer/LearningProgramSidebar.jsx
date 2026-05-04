@@ -41,30 +41,18 @@ const LearningProgramSidebar = ({
   // Get selected program name
   const selectedProgram = filteredLearningGoals.find(goal => goal.id === selectedProgramId);
 
-  const resolvedSkillNames = (() => {
-    const program = sessionInfo?.program || {};
+  const normalizedSkills = (() => {
+    const skills = sessionInfo?.program?.skills;
+    if (!Array.isArray(skills)) return [];
 
-    const fromProgramDescription = (program.skill || program.description || program.descrption || '').trim();
-    if (fromProgramDescription) return fromProgramDescription;
-
-    const candidateList =
-      program.skill_names ||
-      program.skills ||
-      program.goal_names ||
-      program.learning_goal_names ||
-      [];
-
-    if (Array.isArray(candidateList) && candidateList.length > 0) {
-      const names = candidateList
-        .map((item) => {
-          if (typeof item === 'string') return item.trim();
-          return (item?.goal || item?.name || item?.title || '').trim();
-        })
-        .filter(Boolean);
-      if (names.length > 0) return names.join(', ');
-    }
-
-    return '';
+    return skills.map((skill, index) => {
+      const rawGoalIds = Array.isArray(skill?.goal_ids) ? skill.goal_ids : [];
+      return {
+        skillId: skill?.skill_id ?? `skill-${index}`,
+        skillName: skill?.skill_name || `Skill ${index + 1}`,
+        goalIds: rawGoalIds.map((id) => Number(id)).filter((id) => Number.isFinite(id)),
+      };
+    });
   })();
   // State for editable transcript
   const [editableTranscript, setEditableTranscript] = useState(transcript || '');
@@ -150,52 +138,101 @@ const LearningProgramSidebar = ({
             <span>Program Name: {sessionInfo.program.name}</span>
           </div>
         )}
-        {resolvedSkillNames && (
-          <div style={{
-            margin: '2px auto 6px auto',
-            padding: '4px 8px',
-            backgroundColor: '#fff7ed',
-            borderLeft: '3px solid #f59e0b',
-            borderRadius: '4px',
-            fontSize: '11px',
-            color: '#9a3412',
-            fontWeight: 600,
-          }}>
-            Skill: {resolvedSkillNames}
-          </div>
-        )}
-
-        <div className="sidebar-section-title">Learning Goals</div>
-
+        {/* Program structure: Program name -> Skill -> Sub-program */}
         <div className="sidebar-scrollable">
           {isSearching ? (
             <div style={{ padding: '1rem', textAlign: 'center', color: '#999' }}>
               <div>🔄 Searching programs...</div>
             </div>
-          ) :
-            (
-              filteredLearningGoals.length > 0 ? (
-                filteredLearningGoals.map((goal, index) => {
-                  const goalText = goal.goal || goal.name || goal.title || 'Untitled';
+          ) : filteredLearningGoals.length > 0 ? (
+            (() => {
+              if (normalizedSkills.length > 0) {
+                return normalizedSkills.map((skill) => {
+                  const skillGoals = filteredLearningGoals.filter((goal) =>
+                    skill.goalIds.includes(Number(goal?.id))
+                  );
+
                   return (
-                    <div key={goal.id ?? index} className="sidebar-list-item">
-                      <input
-                        type="checkbox"
-                        className="sidebar-checkbox"
-                        checked={selectedProgramId === goal.id}
-                        onChange={() => handleProgramCheck(goal.id)}
-                      />
-                      <div className="sidebar-item-text"> {goalText}</div>
+                    <div key={`skill-${skill.skillId}`} style={{ marginBottom: '1rem' }}>
+                      <div style={{
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: '#fff7ed',
+                        borderLeft: '3px solid #f59e0b',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        color: '#9a3412',
+                        marginBottom: '0.5rem',
+                      }}>
+                        Skill - {skill.skillName}
+                      </div>
+
+                      <div style={{ marginLeft: '0.5rem' }}>
+                        {skillGoals.length > 0 ? (
+                          skillGoals.map((goal, goalIndex) => {
+                            const goalText = goal.goal || goal.name || goal.title || 'Untitled';
+                            return (
+                              <div key={goal.id ?? goalIndex} className="sidebar-list-item">
+                                <input
+                                  type="checkbox"
+                                  className="sidebar-checkbox"
+                                  checked={selectedProgramId === goal.id}
+                                  onChange={() => handleProgramCheck(goal.id)}
+                                />
+                                <div className="sidebar-item-text">Sub-program - {goalText}</div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div style={{ fontSize: '11px', color: '#999', padding: '0.5rem 0.75rem', fontStyle: 'italic' }}>
+                            No sub-programs under this skill
+                          </div>
+                        )}
+                      </div>
                     </div>
                   );
-                })
-              ) : learningGoalsSearch ? (
-                <div className="sidebar-empty-text" style={{ padding: '1rem', textAlign: 'center', color: '#999' }}>
-                  <div>🔍 No programs match "{learningGoalsSearch}"</div>
-                  <div style={{ fontSize: '12px', marginTop: '8px' }}>Try a different search term</div>
-                </div>
-              ) : null
-            )}
+                });
+              } else {
+                return (
+                  <div>
+                    {sessionInfo?.program?.skill && (
+                      <div style={{
+                        padding: '0.5rem 0.75rem',
+                        backgroundColor: '#fff7ed',
+                        borderLeft: '3px solid #f59e0b',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        color: '#9a3412',
+                        marginBottom: '0.5rem',
+                      }}>
+                        Skill - {sessionInfo.program.skill}
+                      </div>
+                    )}
+                    {filteredLearningGoals.map((goal, index) => {
+                      const goalText = goal.goal || goal.name || goal.title || 'Untitled';
+                      return (
+                        <div key={goal.id ?? index} className="sidebar-list-item">
+                          <input
+                            type="checkbox"
+                            className="sidebar-checkbox"
+                            checked={selectedProgramId === goal.id}
+                            onChange={() => handleProgramCheck(goal.id)}
+                          />
+                          <div className="sidebar-item-text">Sub-program - {goalText}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              }
+            })()
+          ) : learningGoalsSearch ? (
+            <div className="sidebar-empty-text" style={{ padding: '1rem', textAlign: 'center', color: '#999' }}>
+              <div>🔍 No programs match "{learningGoalsSearch}"</div>
+              <div style={{ fontSize: '12px', marginTop: '8px' }}>Try a different search term</div>
+            </div>
+          ) : null}
         </div>
 
         <div className="sidebar-section-title" style={{ marginTop: '1rem' }}>📊 Prompt Meter</div>

@@ -144,6 +144,7 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
                 "description": prog.skill,
                 "goal_ids": prog.goal_ids or [],
                 "content_ids": prog.content_ids or [],
+                "skills": prog.skills or [],
             }
     
     return SessionResponse(

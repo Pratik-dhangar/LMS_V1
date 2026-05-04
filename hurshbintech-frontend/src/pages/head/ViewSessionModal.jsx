@@ -55,75 +55,71 @@ const ViewSessionModal = ({ session, onClose }) => {
         ? (session.learning_goals || []).filter((goal) => selectedProgramGoalIds.includes(Number(goal.id)))
         : (session.learning_goals || []);
 
-    // Skills: use the previous sidebar-style resolver logic.
-    const resolvedSkillNames = (() => {
-        const fromProgramDescription = (program.skill || program.description || program.descrption || '').trim();
-        if (fromProgramDescription) return fromProgramDescription;
+    const normalizedSkills = Array.isArray(program.skills)
+        ? program.skills.map((skill, index) => {
+            const rawGoalIds = Array.isArray(skill?.goal_ids) ? skill.goal_ids : [];
+            return {
+                skillId: skill?.skill_id ?? `skill-${index}`,
+                skillName: skill?.skill_name || `Skill ${index + 1}`,
+                goalIds: rawGoalIds
+                    .map((id) => Number(id))
+                    .filter((id) => Number.isFinite(id)),
+            };
+        })
+        : [];
 
-        const candidateList =
-            program.skill_names ||
-            program.skills ||
-            program.goal_names ||
-            program.learning_goal_names ||
-            [];
+    const getGoalTitle = (goal) =>
+        (goal?.goal || goal?.name || goal?.title || '').trim();
 
-        if (Array.isArray(candidateList) && candidateList.length > 0) {
-            const names = candidateList
-                .map((item) => {
-                    if (typeof item === 'string') return item.trim();
-                    return (item?.goal || item?.name || item?.title || '').trim();
-                })
-                .filter(Boolean);
-            if (names.length > 0) return names.join(', ');
-        }
-
-        const descriptionsFromGoals = (session.learning_goals || [])
-            .map((goal) => (goal?.goal_description || '').trim())
-            .filter(Boolean);
-        if (descriptionsFromGoals.length > 0) return descriptionsFromGoals.join(', ');
-
-        return '';
-    })();
-
-    const selectedSkills = resolvedSkillNames ? [resolvedSkillNames] : [];
-
-    // Learning Goals should display selected program names (goal names).
-    const subPrograms = selectedProgramItems
-        .map((goal) => ({
-            id: goal?.id,
-            title: (goal?.goal || '').trim(),
+    const groupedProgramStructure = normalizedSkills.length > 0
+        ? normalizedSkills.map((skill) => ({
+            key: skill.skillId,
+            skillName: skill.skillName,
+            subPrograms: selectedProgramItems
+                .filter((goal) => skill.goalIds.includes(Number(goal?.id)))
+                .map((goal) => ({ id: goal?.id, title: getGoalTitle(goal) }))
+                .filter((item) => item.title),
         }))
-        .filter((item) => item.title);
+        : [
+            {
+                key: 'fallback-skill',
+                skillName: (program.skill || '').trim() || 'Skill',
+                subPrograms: selectedProgramItems
+                    .map((goal) => ({ id: goal?.id, title: getGoalTitle(goal) }))
+                    .filter((item) => item.title),
+            },
+        ];
 
     // Learning Content is all session-selected learning content.
     const selectedLearningContents = learningContents;
 
-    const renderSkills = () => {
-        if (selectedSkills.length === 0) {
-            return <p className="text-gray-500 text-center py-4">No skills assigned</p>;
-        }
-
-        return (
-            <div className="space-y-3">
-                {selectedSkills.map((description, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="font-semibold text-gray-900">{description || 'No description available'}</div>
-                    </div>
-                ))}
-            </div>
+    const renderProgramStructure = () => {
+        const hasAnySubProgram = groupedProgramStructure.some(
+            (item) => item.subPrograms && item.subPrograms.length > 0
         );
-    };
 
-    const renderSubPrograms = () => {
-        if (subPrograms.length === 0) {
+        if (!hasAnySubProgram) {
             return <p className="text-gray-500 text-center py-4">No sub-programs assigned</p>;
         }
 
         return (
             <div className="space-y-3">
-                {subPrograms.map((subProgram, index) => (
-                    <div key={subProgram.id || index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="font-semibold text-gray-900">{subProgram.title || 'Unnamed Learning Goals'}</div>
+                {groupedProgramStructure.map((group) => (
+                    <div key={group.key} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div className="font-semibold text-gray-900" style={{ marginBottom: '0.5rem' }}>
+                            Skill - {group.skillName}
+                        </div>
+                        {group.subPrograms.length > 0 ? (
+                            <div className="space-y-2">
+                                {group.subPrograms.map((subProgram, index) => (
+                                    <div key={subProgram.id || index} className="text-gray-700">
+                                        Sub-program - {subProgram.title}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-gray-500">No sub-programs under this skill</div>
+                        )}
                     </div>
                 ))}
             </div>
@@ -265,26 +261,18 @@ const ViewSessionModal = ({ session, onClose }) => {
                                         Program: {session.program.name}
                                     </span>
                                     <span style={{ fontSize: '0.78rem', color: '#b07320' }}>
-                                        — Skills: {(session.program.goal_ids || []).length}, Learning Goals: {(session.program.content_ids || []).length}
+                                        — Skills: {groupedProgramStructure.length}, Sub-programs: {selectedProgramItems.length}
                                     </span>
                                 </div>
                             </div>
                         )}
 
-                        {/* Learning Goals */}
+                        {/* Program Structure */}
                         <div className="mb-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <span>🎯</span> Learning Skills
+                                <span>🎯</span> Program Structure
                             </h3>
-                            {renderSkills()}
-                        </div>
-
-                        {/* Learning Content */}
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                                <span>📚</span> Learning Goals
-                            </h3>
-                            {renderSubPrograms()}
+                            {renderProgramStructure()}
                         </div>
 
                         {/* Learning Content */}

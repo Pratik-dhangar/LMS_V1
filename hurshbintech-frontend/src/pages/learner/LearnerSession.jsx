@@ -8,6 +8,7 @@ import sessionService from '../../api/services/sessionService';
 import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import Whiteboard from '../../components/common/Whiteboard';
+import Calculator from '../../components/common/Calculator';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import Emoji from '../../components/common/Emoji';
 import YouTubePopup from '../../components/common/YouTubePopup';
@@ -118,7 +119,9 @@ const LearnerSession = () => {
     trainerComments,
     setTrainerComments,
     isCommentsOpen,
-    setIsCommentsOpen
+    setIsCommentsOpen,
+    calculatorPermission,
+    setCalculatorPermission
   } = sessionState;
 
   // Canvas ref for denormalization
@@ -622,6 +625,7 @@ const LearnerSession = () => {
       setIsEyeBlinking,
       setFeedbackMessage,
       setWaitingMessage,
+      setCalculatorPermission,
       setFloatingAnimations,
       floatingAnimations,
       setCanvasItems,
@@ -1927,6 +1931,44 @@ const LearnerSession = () => {
             inlineMedia={sessionState.inlineMedia}
             setInlineMedia={sessionState.setInlineMedia}
           />
+
+          {calculatorPermission && (
+            <div style={{ position: 'absolute', right: '12px', bottom: '12px', zIndex: 80, width: 'min(340px, 92vw)' }}>
+              <Calculator
+                hasPermission={calculatorPermission}
+                onCalculatorChange={(payload) => {
+                  if (!whiteboardService) return;
+
+                  if (payload.action === 'clear') {
+                    whiteboardService.send('calculator_clear', {
+                      timestamp: Date.now()
+                    });
+                    return;
+                  }
+
+                  if (payload.action === 'equals') {
+                    whiteboardService.send('calculator_result', {
+                      result: payload.result,
+                      calculation: payload.calculation,
+                      display: payload.display,
+                      history: payload.history || [],
+                      timestamp: Date.now()
+                    });
+                    return;
+                  }
+
+                  whiteboardService.send('calculator_operation', {
+                    action: payload.action,
+                    display: payload.display,
+                    previousValue: payload.previousValue,
+                    operation: payload.operation,
+                    history: payload.history || [],
+                    timestamp: Date.now()
+                  });
+                }}
+              />
+            </div>
+          )}
 
           {/* Exercise Overlay - Displays question/answer on top of whiteboard */}
           <ExerciseOverlay
