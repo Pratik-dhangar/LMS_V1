@@ -464,6 +464,9 @@ const TrainerSession = () => {
     setBuckets: state.setBuckets,
     setErasePenTrigger: state.setErasePenTrigger,
     setRedrawCanvasTrigger: state.setRedrawCanvasTrigger,
+    setCalculatorEnabled: state.setCalculatorEnabled,
+    setRemoteCalculatorDisplay: state.setRemoteCalculatorDisplay,
+    setRemoteCalculatorHistory: state.setRemoteCalculatorHistory,
     setShowStopwatch: state.setShowStopwatch,
     setDatabaseSearchResults: state.setDatabaseSearchResults,
     setIsSearching: state.setIsSearching,
@@ -605,6 +608,10 @@ const TrainerSession = () => {
         showStopwatch={state.showStopwatch}
         setShowStopwatch={state.setShowStopwatch}
         stopwatch={stopwatch}
+        calculatorEnabled={state.calculatorEnabled}
+        setCalculatorEnabled={state.setCalculatorEnabled}
+        remoteCalculatorDisplay={state.remoteCalculatorDisplay}
+        remoteCalculatorHistory={state.remoteCalculatorHistory}
         musicOptions={MUSIC_OPTIONS}
         toggleBackgroundMusic={handlers.toggleBackgroundMusic}
         selectedMusic={state.selectedMusic}

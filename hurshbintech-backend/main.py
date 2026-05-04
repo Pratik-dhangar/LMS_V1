@@ -124,7 +124,7 @@ async def lifespan(app: FastAPI):
 
 # Initialize FastAPI app with lifespan
 app = FastAPI(
-    title="HurshBinTech API",
+    title="HurshBin API",
     version="1.0.0",
     description="User management system with role-based authentication",
     lifespan=lifespan

@@ -4,6 +4,7 @@ import { Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import programService from '../../api/services/programService';
 import headService from '../../api/services/headService';
+import learningGoalsService from '../../api/services/learningGoalsService';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/Table.css';
 
@@ -14,6 +15,7 @@ const ManagePrograms = () => {
     const [deletingId, setDeletingId] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [learnerNameById, setLearnerNameById] = useState({});
+    const [learningGoalNameById, setLearningGoalNameById] = useState({});
 
     useEffect(() => {
         fetchPrograms();
@@ -22,9 +24,10 @@ const ManagePrograms = () => {
     const fetchPrograms = async () => {
         try {
             setLoading(true);
-            const [programsResult, learnersResult] = await Promise.allSettled([
+            const [programsResult, learnersResult, goalsResult] = await Promise.allSettled([
                 programService.getPrograms(),
                 headService.getLearnersForSessionScheduling(),
+                learningGoalsService.head.getAll(),
             ]);
 
             if (programsResult.status !== 'fulfilled') {
@@ -43,6 +46,18 @@ const ManagePrograms = () => {
                 setLearnerNameById(learnerMap);
             } else {
                 setLearnerNameById({});
+            }
+
+            if (goalsResult.status === 'fulfilled') {
+                const goalMap = {};
+                (goalsResult.value || []).forEach((goal) => {
+                    if (goal?.id != null) {
+                        goalMap[String(goal.id)] = String(goal?.goal || goal?.name || goal?.title || `Goal #${goal.id}`);
+                    }
+                });
+                setLearningGoalNameById(goalMap);
+            } else {
+                setLearningGoalNameById({});
             }
         } catch (error) {
             toast.error('Failed to load programs');
@@ -74,13 +89,85 @@ const ManagePrograms = () => {
         (program) => {
             const normalizedSearch = searchTerm.toLowerCase();
             const learnerName = getProgramLearnerName(program);
+
+            const skillText = Array.isArray(program?.skills) && program.skills.length > 0
+                ? program.skills.map((skill) => String(skill?.skill_name || '')).join(' ')
+                : String(program?.skill || program?.description || '');
+
+            const subProgramText = Array.isArray(program?.skills) && program.skills.length > 0
+                ? program.skills
+                    .flatMap((skill) => (skill?.goal_ids || []).map((id) => learningGoalNameById[String(id)] || ''))
+                    .join(' ')
+                : (program?.goal_ids || [])
+                    .map((id) => learningGoalNameById[String(id)] || '')
+                    .join(' ');
+
             return (
                 program.name?.toLowerCase().includes(normalizedSearch) ||
-                (program.skill || program.description || '').toLowerCase().includes(normalizedSearch) ||
+                skillText.toLowerCase().includes(normalizedSearch) ||
+                subProgramText.toLowerCase().includes(normalizedSearch) ||
                 learnerName.toLowerCase().includes(normalizedSearch)
             );
         }
     );
+
+    const renderProgramStructure = (program) => {
+        const skills = Array.isArray(program?.skills) ? program.skills : [];
+
+        if (skills.length > 0) {
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {skills.map((skill, skillIndex) => {
+                        const skillName = String(skill?.skill_name || `Skill ${skillIndex + 1}`);
+                        const subPrograms = (skill?.goal_ids || [])
+                            .map((goalId) => learningGoalNameById[String(goalId)] || `Goal #${goalId}`);
+
+                        return (
+                            <div key={`${program.id}-skill-${skill?.skill_id || skillIndex}`} style={{ lineHeight: 1.4 }}>
+                                <div style={{ fontWeight: 600, color: '#92400e' }}>
+                                    Skill - {skillName}
+                                </div>
+                                {subPrograms.length > 0 ? (
+                                    subPrograms.map((subProgram, idx) => (
+                                        <div key={`${program.id}-sub-${skillIndex}-${idx}`} style={{ color: '#374151', fontSize: '0.875rem' }}>
+                                            Sub-program - {subProgram}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ color: '#6b7280', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                                        No sub-programs under this skill
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        const fallbackSkill = String(program?.skill || program?.description || 'Skill');
+        const fallbackSubPrograms = (program?.goal_ids || [])
+            .map((goalId) => learningGoalNameById[String(goalId)] || `Goal #${goalId}`);
+
+        return (
+            <div style={{ lineHeight: 1.4 }}>
+                <div style={{ fontWeight: 600, color: '#92400e' }}>
+                    Skill - {fallbackSkill}
+                </div>
+                {fallbackSubPrograms.length > 0 ? (
+                    fallbackSubPrograms.map((subProgram, idx) => (
+                        <div key={`${program.id}-fallback-sub-${idx}`} style={{ color: '#374151', fontSize: '0.875rem' }}>
+                            Sub-program - {subProgram}
+                        </div>
+                    ))
+                ) : (
+                    <div style={{ color: '#6b7280', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                        No sub-programs assigned
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const handleEdit = (programId) => {
         navigate(`/head/edit-program/${programId}`);
@@ -147,7 +234,7 @@ const ManagePrograms = () => {
                                 <div style={{ flex: 1, marginRight: '1rem' }}>
                                     <input
                                         type="text"
-                                        placeholder="Search programs by name, description, or learner..."
+                                        placeholder="Search programs by name, skill, sub-program, or learner..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="modern-form-input"
@@ -184,7 +271,7 @@ const ManagePrograms = () => {
                                             <thead className="table-primary-header">
                                                 <tr>
                                                     <th className="table-primary-th">Program Name</th>
-                                                    <th className="table-primary-th">Learning Skill</th>
+                                                    <th className="table-primary-th">Program Structure</th>
                                                     <th className="table-primary-th">Learner Name </th>
                                                     <th className="table-primary-th" style={{ textAlign: 'center' }}>Learning Goals</th>
                                                     <th className="table-primary-th" style={{ textAlign: 'center' }}>Learning Content</th>
@@ -200,9 +287,7 @@ const ManagePrograms = () => {
                                                             </span>
                                                         </td>
                                                         <td className="table-primary-td">
-                                                            {program.skills && program.skills.length > 0
-                                                                ? program.skills.map(s => s.skill_name).join(', ')
-                                                                : (program.skill || program.description || '-')}
+                                                            {renderProgramStructure(program)}
                                                         </td>
                                                         <td className="table-primary-td">
                                                             {getProgramLearnerName(program) || '-'}

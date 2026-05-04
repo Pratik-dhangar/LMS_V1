@@ -53,6 +53,9 @@ export const useInstructorEffects = ({
     setBuckets,
     setErasePenTrigger,
     setRedrawCanvasTrigger,
+    setCalculatorEnabled,
+    setRemoteCalculatorDisplay,
+    setRemoteCalculatorHistory,
     setShowStopwatch,
     setDatabaseSearchResults,
     setIsSearching,
@@ -185,9 +188,12 @@ export const useInstructorEffects = ({
             setBuckets,
             setErasePenTrigger,
             setRedrawCanvasTrigger,
+            setCalculatorEnabled,
+            setRemoteCalculatorDisplay,
+            setRemoteCalculatorHistory,
         });
         return cleanupCallbacks;
-    }, [whiteboardService, floatingAnimations, setRemoteSelectedItemIds, setFloatingAnimations, setExerciseData, setBuckets, setErasePenTrigger, setRedrawCanvasTrigger]);
+    }, [whiteboardService, floatingAnimations, setRemoteSelectedItemIds, setFloatingAnimations, setExerciseData, setBuckets, setErasePenTrigger, setRedrawCanvasTrigger, setCalculatorEnabled, setRemoteCalculatorDisplay, setRemoteCalculatorHistory]);
 
     // 7. Auto-show stopwatch when content ends
     useEffect(() => {

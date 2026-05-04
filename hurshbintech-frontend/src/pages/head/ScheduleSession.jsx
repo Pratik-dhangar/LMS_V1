@@ -267,6 +267,27 @@ const ScheduleSession = () => {
     ? programList.find((p) => p.id === selectedProgramId) || null
     : null;
 
+  const getProgramMetaText = (prog) => {
+    const skills = Array.isArray(prog?.skills) ? prog.skills : [];
+    const skillCount = skills.length;
+    const skillNames = skills
+      .map((skill) => (skill?.skill_name || '').trim())
+      .filter(Boolean);
+
+    const subProgramCount = (prog?.goal_ids || []).length;
+
+    if (skillCount > 0) {
+      const skillLabel = skillNames.length > 0 ? skillNames.join(', ') : `${skillCount} skill(s)`;
+      return ` | Skill: ${skillLabel} — Sub-programs: ${subProgramCount}, Learning-Content: ${(prog?.content_ids || []).length}`;
+    }
+
+    if (prog?.skill) {
+      return ` | Skill: ${prog.skill} — Sub-programs: ${subProgramCount}, Learning-Content: ${(prog?.content_ids || []).length}`;
+    }
+
+    return ` — Sub-programs: ${subProgramCount}, Learning-Content: ${(prog?.content_ids || []).length}`;
+  };
+
   // Goals resolved for read-only display when a program is active
   const lockedGoals = selectedProgram
     ? learningGoals.filter((g) => (selectedProgram.goal_ids || []).includes(g.id))
@@ -737,8 +758,7 @@ const ScheduleSession = () => {
                               >
                                 {prog.name}
                                 <span className="dropdown-item-meta">
-                                  {(prog.skill) ? ` | Skill: ${prog.skill}` : ''}
-                                  &nbsp;—  Learning Goals : {(prog.goal_ids || []).length}, Learning-Content : {(prog.content_ids || []).length}
+                                  {getProgramMetaText(prog)}
                                 </span>
                               </div>
                             ))

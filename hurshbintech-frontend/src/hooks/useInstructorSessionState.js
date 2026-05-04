@@ -77,6 +77,9 @@ export const useInstructorSessionState = (role = 'trainer') => {
     const [showExercise, setShowExercise] = useState(false);
     const [exerciseData, setExerciseData] = useState({ question: '', answer: '' });
     const [showStopwatch, setShowStopwatch] = useState(false);
+    const [calculatorEnabled, setCalculatorEnabled] = useState(false);
+    const [remoteCalculatorDisplay, setRemoteCalculatorDisplay] = useState(null);
+    const [remoteCalculatorHistory, setRemoteCalculatorHistory] = useState([]);
     const [activeIcons, setActiveIcons] = useState({});
     const [isWaitActive, setIsWaitActive] = useState(false);
     const [showInfoBar, setShowInfoBar] = useState(true);
@@ -216,6 +219,12 @@ export const useInstructorSessionState = (role = 'trainer') => {
         setExerciseData,
         showStopwatch,
         setShowStopwatch,
+        calculatorEnabled,
+        setCalculatorEnabled,
+        remoteCalculatorDisplay,
+        setRemoteCalculatorDisplay,
+        remoteCalculatorHistory,
+        setRemoteCalculatorHistory,
         activeIcons,
         setActiveIcons,
         isWaitActive,

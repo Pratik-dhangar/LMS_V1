@@ -1852,9 +1852,9 @@ export const generateLearnerProgressReportPDF = async (form, { signatureImage = 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(15);
     doc.setTextColor(...BROWN);
-    doc.text('THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT', pageW / 2, y, { align: 'center' });
+    doc.text('Comprehensive Skill Development Report', pageW / 2, y, { align: 'center' });
     // Add underline
-    const reportTextWidth = doc.getTextWidth('THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT');
+    const reportTextWidth = doc.getTextWidth('Comprehensive Skill Development Report');
     const reportLineX1 = pageW / 2 - reportTextWidth / 2;
     const reportLineX2 = pageW / 2 + reportTextWidth / 2;
     doc.setDrawColor(...BROWN);

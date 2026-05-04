@@ -635,6 +635,30 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                                     await other_conn.websocket.send_json(message)
                                 except Exception as e:
                                     logger.error(f"[WHITEBOARD] Error sending background_music_volume to {other_role}: {e}")
+                elif message.get("type") in ["calculator_operation", "calculator_result", "calculator_clear", "calculator_permission", "calculator_sync"]:
+                    # Handle calculator events (operations, results, permissions)
+                    logger.info(f"[WHITEBOARD] Calculator event from {role}: {message.get('type')}")
+                    # Forward to appropriate participants (not persisted to database)
+                    role_mapping = {
+                        "trainer": ["learner", "observer"],
+                        "learner": ["trainer"],
+                        "coach": ["client", "guest"],
+                        "client": ["coach"],
+                        "guest": ["coach"],
+                        "observer": []  # Observer is read-only
+                    }
+                    
+                    other_roles = role_mapping.get(role, [])
+                    if session_id in whiteboard_connections:
+                        for other_role in other_roles:
+                            if other_role in whiteboard_connections[session_id]:
+                                other_conn = whiteboard_connections[session_id][other_role]
+                                if other_conn.is_alive:
+                                    try:
+                                        logger.debug(f"[WHITEBOARD] Forwarding {message.get('type')} to {other_role}")
+                                        await other_conn.websocket.send_json(message)
+                                    except Exception as e:
+                                        logger.error(f"[WHITEBOARD] Error sending {message.get('type')} to {other_role}: {e}")
                 else:
                     # Persist whiteboard events to database before forwarding
                     await persist_whiteboard_event(message, session_id, role)

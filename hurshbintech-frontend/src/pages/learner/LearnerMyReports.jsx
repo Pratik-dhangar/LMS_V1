@@ -286,10 +286,10 @@ const LearnerMyReports = () => {
                                     </div>
                                 </div>
 
-                                {/*THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT Card */}
+                                {/*Comprehensive Skill Development Report Card */}
                                 <div style={{ ...sectionCard, marginTop: '1.25rem' }}>
                                     <div style={{ ...sectionHeader('#7c1c1c'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                                        <span>📄 The Comprehensive Skill Development Evaluation Report</span>
+                                        <span>📄 Comprehensive Skill Development Report</span>
                                         {/* Filter Controls */}
                                         <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                             {/* Head/Coach Tabs */}
