@@ -161,6 +161,11 @@ export const useInstructorSessionState = (options = {}) => {
         keyboard: false
     });
 
+    // Calculator state
+    const [calculatorEnabled, setCalculatorEnabled] = useState(false);
+    const [remoteCalculatorDisplay, setRemoteCalculatorDisplay] = useState(null);
+    const [remoteCalculatorHistory, setRemoteCalculatorHistory] = useState([]);
+
     // Exercise state
     const [showExercise, setShowExercise] = useState(false);
 
@@ -301,6 +306,11 @@ export const useInstructorSessionState = (options = {}) => {
 
         // Tool access
         participantToolAccess, setParticipantToolAccess,
+
+        // Calculator
+        calculatorEnabled, setCalculatorEnabled,
+        remoteCalculatorDisplay, setRemoteCalculatorDisplay,
+        remoteCalculatorHistory, setRemoteCalculatorHistory,
 
         // Exercise
         showExercise, setShowExercise,
@@ -794,6 +804,73 @@ export const setupInstructorCommentListener = (whiteboardService, setAttendeeCom
     return () => {
         if (whiteboardService) {
             whiteboardService.onCommentUpdate = null;
+        }
+    };
+};
+
+/**
+ * Grant calculator permission to attendee
+ * Allows the attendee to use the calculator tool
+ * 
+ * @param {Object} whiteboardService - WhiteboardService instance
+ * @param {boolean} enabled - Enable or disable calculator
+ * @param {Function} setCalculatorEnabled - State setter for calculator enabled state
+ */
+export const toggleCalculatorPermission = (whiteboardService, enabled, setCalculatorEnabled) => {
+    if (!whiteboardService) return;
+
+    setCalculatorEnabled(enabled);
+    whiteboardService.send('calculator_permission', {
+        enabled,
+        timestamp: Date.now()
+    });
+
+    console.log(`[Instructor] Calculator permission: ${enabled}`);
+};
+
+/**
+ * Setup listener for calculator operations from attendee
+ * Displays real-time calculator operations in instructor's view
+ * 
+ * @param {Object} whiteboardService - WhiteboardService instance
+ * @param {Function} setRemoteCalculatorDisplay - State setter for calculator display
+ * @param {Function} setRemoteCalculatorHistory - State setter for calculator history
+ */
+export const setupInstructorCalculatorListener = (whiteboardService, setRemoteCalculatorDisplay, setRemoteCalculatorHistory) => {
+    if (!whiteboardService) {
+        return () => { };
+    }
+
+    const calculatorOperationCallback = (data) => {
+        console.log('[InstructorSession] 🧮 Calculator operation:', data);
+        setRemoteCalculatorDisplay(data.display);
+        if (data.history && data.history.length > 0) {
+            setRemoteCalculatorHistory(data.history);
+        }
+    };
+
+    const calculatorClearCallback = () => {
+        console.log('[InstructorSession] 🧮 Calculator cleared by attendee');
+        setRemoteCalculatorDisplay('0');
+        setRemoteCalculatorHistory([]);
+    };
+
+    const calculatorSyncCallback = (state) => {
+        console.log('[InstructorSession] 🧮 Calculator sync:', state);
+        setRemoteCalculatorDisplay(state.display);
+        setRemoteCalculatorHistory(state.history || []);
+    };
+
+    whiteboardService.onCalculatorOperation = calculatorOperationCallback;
+    whiteboardService.onCalculatorClear = calculatorClearCallback;
+    whiteboardService.onCalculatorSync = calculatorSyncCallback;
+
+    // Return cleanup function
+    return () => {
+        if (whiteboardService) {
+            whiteboardService.onCalculatorOperation = null;
+            whiteboardService.onCalculatorClear = null;
+            whiteboardService.onCalculatorSync = null;
         }
     };
 };

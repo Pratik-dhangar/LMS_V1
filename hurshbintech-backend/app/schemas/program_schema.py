@@ -33,12 +33,15 @@ class ProgramCreate(BaseModel):
 
 class ProgramUpdateContent(BaseModel):
     """
-    Update a program. Intentionally excludes goal_ids to enforce the lock.
-    Only name, description, and content_ids can be changed.
+    Update a program.
+    Supports updating learner, skill structure, goal_ids, and content_ids.
     """
     name: Optional[str] = Field(None, min_length=1, max_length=255)
+    learner_id: Optional[int] = None
     skill: Optional[str] = None
     description: Optional[str] = None  # Deprecated alias for backward compatibility
+    goal_ids: Optional[List[int]] = None
+    skills: Optional[List[SkillWithGoals]] = None
     content_ids: Optional[List[int]] = None
 
 

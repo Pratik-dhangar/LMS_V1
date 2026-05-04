@@ -276,7 +276,7 @@ const CoachManageLearningReports = () => {
                                                 <tr>
                                                     <th className="table-primary-th">Sr. No.</th>
                                                     <th className="table-primary-th">Learner Name</th>
-                                                    <th className="table-primary-th">The Comprehensive Skill Development Evaluation Report</th>
+                                                    <th className="table-primary-th">Comprehensive Skill Development Report</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="table-primary-body">
@@ -288,7 +288,7 @@ const CoachManageLearningReports = () => {
                                                             <td className="table-primary-td">
                                                                 <div className="table-primary-cell-name-text">{learner.learner_name}</div>
                                                             </td>
-                                                            {/*THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT — always has reports since row is only shown when ≥1 exist */}
+                                                            {/*Comprehensive Skill Development Report — always has reports since row is only shown when ≥1 exist */}
                                                             <td className="table-primary-td">
                                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                                                     {progReports.map(r => (

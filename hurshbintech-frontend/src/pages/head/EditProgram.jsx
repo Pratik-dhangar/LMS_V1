@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { Search } from "lucide-react";
 import headService from "../../api/services/headService";
 import learningGoalsService from "../../api/services/learningGoalsService";
+import learningSkillsService from "../../api/services/learningSkillsService";
 import learningContentService from "../../api/services/learningContentService";
 import programService from "../../api/services/programService";
 import "../../styles/ManageUsersLayout.css";
@@ -21,6 +22,7 @@ const EditProgram = () => {
     const [learners, setLearners] = useState([]);
     const [learner, setLearner] = useState(null);
     const [learningGoals, setLearningGoals] = useState([]);
+    const [learningSkills, setLearningSkills] = useState([]);
     const [contents, setContents] = useState([]);
     const [showLearnerDropdown, setShowLearnerDropdown] = useState(false);
 
@@ -33,9 +35,10 @@ const EditProgram = () => {
     const [formData, setFormData] = useState({
         name: "",
         skill: "",
-        goal_ids: [], // Skills (now editable)
-        content_ids: [], // Learning Goals (editable)
-        learner_id: null, // Now editable
+        goal_ids: [],
+        skills: [],
+        content_ids: [],
+        learner_id: null,
     });
 
     useEffect(() => {
@@ -64,8 +67,9 @@ const EditProgram = () => {
             const programData = await programService.getProgramById(parseInt(programId));
 
             // Fetch learning goals, contents, and learners in parallel
-            const [goalsData, contentsData, learnersData] = await Promise.all([
+            const [goalsData, skillsData, contentsData, learnersData] = await Promise.all([
                 learningGoalsService.head.getAll(),
+                learningSkillsService.head.getAll(),
                 learningContentService.head.getAll(),
                 headService.getLearnersForSessionScheduling(),
             ]);
@@ -83,6 +87,7 @@ const EditProgram = () => {
 
             setLearners(learnersData || []);
             setLearningGoals(goalsData || []);
+            setLearningSkills(skillsData || []);
             setContents(contentsData || []);
 
             // Populate form data with existing program data
@@ -90,6 +95,7 @@ const EditProgram = () => {
                 name: programData.name || "",
                 skill: programData.skill || programData.description || "",
                 goal_ids: programData.goal_ids || [],
+                skills: programData.skills || [],
                 content_ids: programData.content_ids || [],
                 learner_id: programData.learner_id,
             });
@@ -109,14 +115,6 @@ const EditProgram = () => {
             learner.id?.toString().includes(searchTerm.learner)
     );
 
-    const filteredGoals = learningGoals.filter(
-        (goal) =>
-            goal.goal?.toLowerCase().includes(searchTerm.goal.toLowerCase()) ||
-            goal.goal_description
-                ?.toLowerCase()
-                .includes(searchTerm.goal.toLowerCase())
-    );
-
     const filteredContents = contents.filter(
         (content) =>
             content.title?.toLowerCase().includes(searchTerm.content.toLowerCase()) ||
@@ -124,6 +122,14 @@ const EditProgram = () => {
             content.content_type
                 ?.toLowerCase()
                 .includes(searchTerm.content.toLowerCase())
+    );
+
+    const filteredGoals = learningGoals.filter(
+        (goal) =>
+            goal.goal?.toLowerCase().includes(searchTerm.goal.toLowerCase()) ||
+            goal.goal_description
+                ?.toLowerCase()
+                .includes(searchTerm.goal.toLowerCase())
     );
 
     const getSelectedLearnerName = () => {
@@ -142,21 +148,44 @@ const EditProgram = () => {
         setSearchTerm((prev) => ({ ...prev, learner: "" }));
     };
 
-    const handleGoalToggle = (goalId) => {
-        setFormData((prev) => ({
-            ...prev,
-            goal_ids: prev.goal_ids.includes(goalId)
-                ? prev.goal_ids.filter((id) => id !== goalId)
-                : [...prev.goal_ids, goalId],
-        }));
-    };
-
     const handleContentToggle = (contentId) => {
         setFormData((prev) => ({
             ...prev,
             content_ids: prev.content_ids.includes(contentId)
                 ? prev.content_ids.filter((id) => id !== contentId)
                 : [...prev.content_ids, contentId],
+        }));
+    };
+
+    const handleSkillToggle = (skillId, skillName) => {
+        setFormData((prev) => {
+            const skillExists = prev.skills.find((s) => Number(s.skill_id) === Number(skillId));
+            if (skillExists) {
+                return {
+                    ...prev,
+                    skills: prev.skills.filter((s) => Number(s.skill_id) !== Number(skillId)),
+                };
+            }
+            return {
+                ...prev,
+                skills: [...prev.skills, { skill_id: skillId, skill_name: skillName, goal_ids: [] }],
+            };
+        });
+    };
+
+    const handleSkillSubProgramToggle = (skillId, goalId) => {
+        setFormData((prev) => ({
+            ...prev,
+            skills: prev.skills.map((skill) => {
+                if (Number(skill.skill_id) !== Number(skillId)) return skill;
+                const goalIds = Array.isArray(skill.goal_ids) ? skill.goal_ids : [];
+                return {
+                    ...skill,
+                    goal_ids: goalIds.includes(goalId)
+                        ? goalIds.filter((id) => id !== goalId)
+                        : [...goalIds, goalId],
+                };
+            }),
         }));
     };
 
@@ -209,6 +238,59 @@ const EditProgram = () => {
         return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
     };
 
+    const resolveGoalNameById = (goalId) => {
+        const goal = learningGoals.find((item) => Number(item.id) === Number(goalId));
+        return goal?.goal || goal?.name || goal?.title || `Goal #${goalId}`;
+    };
+
+    const renderProgramStructure = () => {
+        const skills = Array.isArray(formData.skills) ? formData.skills : [];
+
+        if (skills.length > 0) {
+            return (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    {skills.map((skill, skillIndex) => {
+                        const skillName = (skill?.skill_name || "").trim() || `Skill ${skillIndex + 1}`;
+                        const goalIds = Array.isArray(skill?.goal_ids) ? skill.goal_ids : [];
+                        return (
+                            <div key={`skill-${skill?.skill_id || skillIndex}`} style={{ padding: "0.75rem", border: "1px solid #e5e7eb", borderRadius: "0.5rem", background: "#f9fafb" }}>
+                                <div style={{ fontWeight: 600, color: "#92400e" }}>Skill - {skillName}</div>
+                                {goalIds.length > 0 ? (
+                                    goalIds.map((goalId, goalIndex) => (
+                                        <div key={`skill-${skillIndex}-goal-${goalIndex}`} style={{ color: "#374151", fontSize: "0.875rem", marginTop: "0.2rem" }}>
+                                            Sub-program - {resolveGoalNameById(goalId)}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div style={{ color: "#6b7280", fontSize: "0.875rem", fontStyle: "italic", marginTop: "0.2rem" }}>
+                                        No sub-programs under this skill
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        if (formData.goal_ids.length > 0) {
+            return (
+                <div style={{ padding: "0.75rem", border: "1px solid #e5e7eb", borderRadius: "0.5rem", background: "#f9fafb" }}>
+                    {formData.skill && (
+                        <div style={{ fontWeight: 600, color: "#92400e" }}>Skill - {formData.skill}</div>
+                    )}
+                    {formData.goal_ids.map((goalId, idx) => (
+                        <div key={`goal-${idx}`} style={{ color: "#374151", fontSize: "0.875rem", marginTop: "0.2rem" }}>
+                            Sub-program - {resolveGoalNameById(goalId)}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        return <p className="empty-state">No program structure available</p>;
+    };
+
     const handleSaveProgram = async (e) => {
         e.preventDefault();
 
@@ -220,22 +302,29 @@ const EditProgram = () => {
             toast.error("Please select a learner");
             return;
         }
-        if (formData.goal_ids.length === 0) {
+        if (formData.skills.length === 0) {
             toast.error("Please select at least one skill");
             return;
         }
+        const hasSubPrograms = formData.skills.some((skill) => (skill.goal_ids || []).length > 0);
+        if (!hasSubPrograms) {
+            toast.error("Please select at least one sub-program for any selected skill");
+            return;
+        }
         if (formData.content_ids.length === 0) {
-            toast.error("Please select at least one sub-program");
+            toast.error("Please select at least one learning content");
             return;
         }
 
         try {
             setSavingProgram(true);
+            const allGoalIds = Array.from(new Set(formData.skills.flatMap((skill) => skill.goal_ids || [])));
             const updated = await programService.updateProgram(parseInt(programId), {
                 name: formData.name.trim(),
-                skill: formData.skill.trim() || null,
                 learner_id: parseInt(formData.learner_id),
-                goal_ids: formData.goal_ids,
+                skill: formData.skill.trim() || null,
+                goal_ids: allGoalIds,
+                skills: formData.skills,
                 content_ids: formData.content_ids,
             });
 
@@ -365,67 +454,116 @@ const EditProgram = () => {
                         </div>
 
                         <div className="modern-form-section" style={{ marginTop: "1.5rem" }}>
-                            <h2 className="modern-form-section-title">Select Programs</h2>
+                            <h2 className="modern-form-section-title">Edit Skills & Sub-Programs</h2>
                             <p className="modern-form-section-description">
-                                Choose one or more programs for this session.
+                                Add/remove skills and add/remove sub-programs under each selected skill.
                             </p>
-                            <div className="search-container">
+
+                            <div className="search-container" style={{ marginBottom: "0.75rem" }}>
                                 <Search className="search-icon" />
                                 <input
                                     type="text"
-                                    placeholder="Search goals by name or description..."
+                                    placeholder="Search sub-programs by name or description..."
                                     value={searchTerm.goal}
                                     onChange={(e) => setSearchTerm((prev) => ({ ...prev, goal: e.target.value }))}
                                     className="search-input"
                                 />
                             </div>
-                            {learningGoals.length === 0 ? (
-                                <p className="empty-state">No learning goals available</p>
+
+                            {learningSkills.length === 0 ? (
+                                <p className="empty-state">No learning skills available</p>
                             ) : (
                                 <div className="table-primary-container">
-                                    <div className="table-primary-wrapper">
-                                        <table className="table-primary">
-                                            <thead className="table-primary-header">
-                                                <tr>
-                                                    <th className="table-primary-th table-primary-th-center" style={{ width: "60px" }}>Select</th>
-                                                    <th className="table-primary-th">Goal</th>
-                                                    <th className="table-primary-th">Description</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="table-primary-body">
-                                                {filteredGoals.length > 0 ? (
-                                                    filteredGoals.map((goal) => {
-                                                        const checked = formData.goal_ids.includes(goal.id);
-                                                        return (
-                                                            <tr key={goal.id} className={checked ? "row-selected" : ""}>
-                                                                <td className="table-primary-td table-primary-td-center">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={checked}
-                                                                        onChange={() => handleGoalToggle(goal.id)}
-                                                                    />
-                                                                </td>
-                                                                <td className="table-primary-td">{goal.goal}</td>
-                                                                <td className="table-primary-td">{goal.goal_description || "-"}</td>
-                                                            </tr>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <tr>
-                                                        <td className="table-primary-td" colSpan="3">No goals found</td>
-                                                    </tr>
+                                    {learningSkills.map((skill) => {
+                                        const selectedSkill = formData.skills.find(
+                                            (s) => Number(s.skill_id) === Number(skill.id)
+                                        );
+                                        return (
+                                            <div
+                                                key={skill.id}
+                                                style={{
+                                                    border: "1px solid #e5e7eb",
+                                                    borderRadius: "0.5rem",
+                                                    marginBottom: "0.75rem",
+                                                    background: "#fff",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: "0.75rem",
+                                                        padding: "0.75rem",
+                                                        borderBottom: selectedSkill ? "1px solid #f1f5f9" : "none",
+                                                        background: selectedSkill ? "#fef3e2" : "#f8fafc",
+                                                    }}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!selectedSkill}
+                                                        onChange={() => handleSkillToggle(skill.id, skill.skill_name)}
+                                                    />
+                                                    <div style={{ fontWeight: 600, color: "#92400e" }}>
+                                                        Skill - {skill.skill_name}
+                                                    </div>
+                                                </div>
+
+                                                {selectedSkill && (
+                                                    <div style={{ padding: "0.75rem" }}>
+                                                        <div style={{ fontSize: "0.875rem", marginBottom: "0.5rem", color: "#475569" }}>
+                                                            Select sub-programs for this skill:
+                                                        </div>
+                                                        <div style={{ display: "grid", gap: "0.5rem" }}>
+                                                            {filteredGoals.length > 0 ? (
+                                                                filteredGoals.map((goal) => {
+                                                                    const checked = (selectedSkill.goal_ids || []).includes(goal.id);
+                                                                    return (
+                                                                        <label
+                                                                            key={goal.id}
+                                                                            style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}
+                                                                        >
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={checked}
+                                                                                onChange={() =>
+                                                                                    handleSkillSubProgramToggle(skill.id, goal.id)
+                                                                                }
+                                                                            />
+                                                                            <div>
+                                                                                <div style={{ color: "#1f2937", fontWeight: 500 }}>
+                                                                                    Sub-program - {goal.goal}
+                                                                                </div>
+                                                                                <div style={{ color: "#64748b", fontSize: "0.8rem" }}>
+                                                                                    {goal.goal_description || "-"}
+                                                                                </div>
+                                                                            </div>
+                                                                        </label>
+                                                                    );
+                                                                })
+                                                            ) : (
+                                                                <div className="empty-state">No sub-programs found for your search</div>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
+
+                            <div style={{ marginTop: "0.75rem" }}>
+                                <div className="modern-form-section-description" style={{ marginBottom: "0.25rem" }}>
+                                    Selected structure preview:
+                                </div>
+                                {renderProgramStructure()}
+                            </div>
                         </div>
 
                         <div className="modern-form-section" style={{ marginTop: "1.5rem" }}>
-                            <h2 className="modern-form-section-title">Select Learning Goals</h2>
+                            <h2 className="modern-form-section-title">Select Learning Content</h2>
                             <p className="modern-form-section-description">
-                                Update the sub-programs for this program.
+                                Update learning content for this program.
                             </p>
                             <div className="search-container">
                                 <Search className="search-icon" />

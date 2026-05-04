@@ -438,7 +438,7 @@ const AdminManageLearners = () => {
                                                 <th className="table-primary-th">Passcode</th>
                                                 <th className="table-primary-th">Start Date</th>
                                                 <th className="table-primary-th">Skill Development Graph </th>
-                                                <th className="table-primary-th">The Comprehensive Skill Development Evaluation Report</th>
+                                                <th className="table-primary-th">Comprehensive Skill Development Report</th>
                                                 {showSessionRecordingsColumn && (
                                                     <th className="table-primary-th">Session Recordings</th>
                                                 )}
@@ -528,7 +528,7 @@ const AdminManageLearners = () => {
                                                             📈 View Reports
                                                         </button>
                                                     </td>
-                                                    {/*THE COMPREHENSIVE SKILL DEVELOPMENT EVALUATION REPORT */}
+                                                    {/*Comprehensive Skill Development Report */}
                                                     <td className="table-primary-td">
                                                         {(() => {
                                                             const progReports = progressReportsMap[learner.user_id] || [];

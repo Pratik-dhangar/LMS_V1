@@ -74,7 +74,7 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal }) => {
         <div className="navbar-brand">
           <h1 className="navbar-title" onClick={() => handleNavigate("/")} >
             {location.pathname !== "/" && <Home className="w-5 h-5" />}
-            HurshBinTech
+            HurshBin
           </h1>
 
           <div className="navbar-nav navbar-nav-desktop">
