@@ -30,10 +30,10 @@ const BookAppointmentForm = () => {
   });
   const [previewImage, setPreviewImage] = useState(null);
 
-  const sessionTypes = [
-    { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min', fee: 2000 },
-    { value: 'extended', label: 'Extended Session', duration: '90 min', fee: 3000 },
-  ];
+  // const sessionTypes = [
+  //   { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min', fee: 1500 },
+  //   { value: 'Assessment ', label: 'Assessment', duration: '90 min', fee: 2700 },
+  // ];
 
   const formatDateToIso = (dateObj) => {
     const year = dateObj.getFullYear();
