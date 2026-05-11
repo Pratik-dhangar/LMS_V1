@@ -390,7 +390,7 @@ const Home = () => {
 
         </div>
 
-        <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR SERVICES!</h1>
+        <h1 className="home-hero-title">WELCOME TO HURSHBIN CHILD DEVELOPMENT LEARNING & BEHAVIOUR MODIFICATION SERVICES!</h1>
         <h2 className="home-hero-subtitle"> We stand with families having children facing delays & difficulties by creating optimum learning opportunities!</h2>
       </section>
 
