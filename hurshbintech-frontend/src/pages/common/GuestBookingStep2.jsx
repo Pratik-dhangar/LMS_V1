@@ -42,8 +42,8 @@ const GuestBookingStep2 = () => {
   });
 
  const sessionTypes = [
-    { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min', fee: 1500 },
-    { value: 'Assessment ', label: 'Assessment', duration: '90 min', fee: 2700 },
+    { value: 'Online consultation', label: 'Online consultation', duration: '60 min', fee: 1800 },
+    { value: 'Offline consultation /functional assessment ', label: 'Offline consultation /functional assessment', duration: '90 min', fee: 2700 },
   ];
 
   // Auto-select session type when coach has a dedicated package

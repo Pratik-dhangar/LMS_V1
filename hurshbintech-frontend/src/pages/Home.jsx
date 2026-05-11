@@ -757,7 +757,7 @@ const Home = () => {
 
         {/* Instagram */}
         <a
-          href="https://www.instagram.com/binal_all_about_happychildhood?igsh=b3BtMjk2MjMyNnQz"
+          href="https://www.instagram.com/hurshbin_cdlabs_mumbai?igsh=cjMyeG1weG10OTFq"
           target="_blank"
           rel="noopener noreferrer"
           className="instagram-float-btn"
