@@ -49,6 +49,7 @@ from app.api.endpoints.sessions import router as sessions_router
 from app.api.endpoints.session_notes import router as session_notes_router
 from app.api.endpoints.session_ws import router as session_ws_router
 from app.api.endpoints.vlogs import router as vlogs_router
+from app.api.endpoints.gallery import router as gallery_router
 from app.api.endpoints.websocket import router as websocket_router
 from app.api.endpoints.products import router as products_router
 from app.api.endpoints.store import router as store_router
@@ -221,6 +222,7 @@ app.include_router(learning_goals_router, prefix="/api")
 app.include_router(learning_skills_router, prefix="/api")
 app.include_router(learning_content_router, prefix="/api/content")
 app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
+app.include_router(gallery_router, prefix="/api/gallery", tags=["gallery"])
 app.include_router(blogs_router, prefix="/api", tags=["blogs"])
 app.include_router(about_us_router, prefix="/api", tags=["about-us"])
 app.include_router(contact_router, prefix="/api", tags=["contact"])

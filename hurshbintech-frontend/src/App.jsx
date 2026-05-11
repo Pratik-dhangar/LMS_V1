@@ -25,6 +25,8 @@ import ManageCoaches from './pages/admin/ManageCoaches';
 import ManageVlogs from './pages/admin/ManageVlogs';
 import EditVlog from './pages/admin/EditVlog';
 import ManageBlogs from './pages/admin/ManageBlogs';
+import ManageGallery from './pages/admin/ManageGallery';
+import EditGallery from './pages/admin/EditGallery';
 import CreateEditBlog from './pages/admin/CreateEditBlog';
 import AdminAboutUs from './pages/admin/AdminAboutUs';
 import AdminAssignedTrainings from './pages/admin/AdminAssignedTrainings';
@@ -101,6 +103,7 @@ import BlogList from './pages/common/BlogList';
 import BlogDetail from './pages/common/BlogDetail';
 import VlogList from './pages/common/VlogList';
 import VlogDetail from './pages/common/VlogDetail';
+import GalleryList from './pages/common/GalleryList';
 import AssignedTrainingsList from './pages/common/AssignedTrainingsList';
 import TrainingDetailView from './pages/common/TrainingDetailView';
 import ProfileAndOrderHistory from './pages/common/ProfileAndOrderHistory';
@@ -353,6 +356,22 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <EditVlog />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/gallery"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ManageGallery />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/gallery/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <EditGallery />
               </ProtectedRoute>
             }
           />
@@ -908,6 +927,9 @@ function AppRoutes() {
           <Route path="/vlogs" element={<VlogList />} />
           <Route path="/vlogs/:id" element={<VlogDetail />} />
 
+          {/* Public Gallery Routes */}
+          <Route path="/gallery" element={<GalleryList />} />
+
           {/* Assigned Trainings Routes */}
           <Route
             path="/assigned-trainings"
@@ -976,7 +998,6 @@ function AppRoutes() {
     </MediaControlProvider>
   );
 }
-
 function App() {
   // Register PWA Service Worker
   useEffect(() => {
