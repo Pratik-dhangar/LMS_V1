@@ -1,0 +1,113 @@
+/* Admin Edit Gallery Styles */
+.admin-edit-gallery-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #f5f6fa;
+}
+
+.admin-edit-gallery-main {
+    flex: 1;
+    padding: 2rem;
+}
+
+.admin-edit-gallery-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.admin-edit-gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 3px solid #2c3e50;
+}
+
+.admin-edit-gallery-title {
+    font-size: 2rem;
+    color: #2c3e50;
+    margin: 0;
+    font-weight: 700;
+}
+
+.admin-edit-gallery-form {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+}
+
+.admin-edit-gallery-section {
+    margin-bottom: 2rem;
+}
+
+.admin-edit-gallery-section:last-child {
+    margin-bottom: 0;
+}
+
+.admin-edit-gallery-section-title {
+    font-size: 1.25rem;
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    border-left: 4px solid #ffc107;
+    padding-left: 1rem;
+}
+
+.admin-edit-gallery-error {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #f5c6cb;
+}
+
+.btn-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-spinner {
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Form Fields */
+.form-hint {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
+
+.form-required {
+    color: #dc3545;
+}
+
+@media (max-width: 768px) {
+    .admin-edit-gallery-main {
+        padding: 1rem;
+    }
+
+    .admin-edit-gallery-form {
+        padding: 1rem;
+    }
+
+    .admin-edit-gallery-title {
+        font-size: 1.5rem;
+    }
+}

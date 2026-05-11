@@ -8,6 +8,7 @@ import aboutUsService from '../api/services/aboutUsService';
 import bookingService from '../api/services/bookingService';
 import blogService from '../api/services/blogService';
 import vlogService from '../api/services/vlogService';
+import galleryService from '../api/services/galleryService';
 import DOMPurify from 'dompurify';
 import { getFileUrl } from '../utils/urlHelper';
 import '../styles/pages/Home.css';
@@ -23,9 +24,11 @@ const Home = () => {
   const [featuredCoach, setFeaturedCoach] = useState(null);
   const [blogs, setBlogs] = useState([]);
   const [vlogs, setVlogs] = useState([]);
+  const [galleries, setGalleries] = useState([]);
   const [loadingCoach, setLoadingCoach] = useState(false);
   const [loadingBlogs, setLoadingBlogs] = useState(false);
   const [loadingVlogs, setLoadingVlogs] = useState(false);
+  const [loadingGalleries, setLoadingGalleries] = useState(false);
   const [visibleSections, setVisibleSections] = useState(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
@@ -34,6 +37,7 @@ const Home = () => {
   const sectionRefs = useRef({});
   const blogsRef = useRef(null);
   const vlogsRef = useRef(null);
+  const galleryRef = useRef(null);
   const coachRef = useRef(null);
   const fetchFnsRef = useRef({});
 
@@ -106,6 +110,22 @@ const Home = () => {
     }
   }, [vlogs.length]);
 
+  // Lazy load galleries when section becomes visible
+  const fetchGalleries = useCallback(async () => {
+    if (galleries.length > 0) return; // Already loaded
+
+    try {
+      setLoadingGalleries(true);
+      const response = await galleryService.getPublicGalleries({ page: 1, per_page: 6 });
+      setGalleries(response.galleries || []);
+    } catch (err) {
+      console.error('Error fetching galleries:', err);
+      setGalleries([]);
+    } finally {
+      setLoadingGalleries(false);
+    }
+  }, [galleries.length]);
+
   // Load critical content on mount
   useEffect(() => {
     let cancelled = false;
@@ -140,8 +160,8 @@ const Home = () => {
 
   // Keep fetch functions in a ref so the observer effect doesn't re-run when they change
   useEffect(() => {
-    fetchFnsRef.current = { fetchFeaturedCoach, fetchBlogs, fetchVlogs };
-  }, [fetchFeaturedCoach, fetchBlogs, fetchVlogs]);
+    fetchFnsRef.current = { fetchFeaturedCoach, fetchBlogs, fetchVlogs, fetchGalleries };
+  }, [fetchFeaturedCoach, fetchBlogs, fetchVlogs, fetchGalleries]);
 
   // Intersection Observer for lazy loading below-the-fold content
   useEffect(() => {
@@ -165,6 +185,9 @@ const Home = () => {
           }
           if (entry.target === vlogsRef.current) {
             fetchFnsRef.current.fetchVlogs();
+            if (entry.target === galleryRef.current) {
+              fetchFnsRef.current.fetchGalleries();
+            }
           }
         }
       });
@@ -173,7 +196,7 @@ const Home = () => {
     const observer = new IntersectionObserver(observerCallback, observerOptions);
 
     // Observe lazy load sections
-    const refs = [coachRef.current, blogsRef.current, vlogsRef.current].filter(Boolean);
+    const refs = [coachRef.current, blogsRef.current, vlogsRef.current, galleryRef.current].filter(Boolean);
     refs.forEach(ref => observer.observe(ref));
 
     return () => {
@@ -382,6 +405,10 @@ const Home = () => {
             Vlogs
           </button>
           <span className="hero-nav-divider">|</span>
+          <button onClick={() => navigate('/gallery')} className="hero-nav-link">
+            Gallery
+          </button>
+          <span className="hero-nav-divider">|</span>
           <button onClick={() => scrollToSection('about-section')} className="hero-nav-link">
             About Us
           </button>
@@ -460,6 +487,7 @@ const Home = () => {
                       {featuredCoach.name?.charAt(0).toUpperCase()}
                     </div>
                   </div>
+
 
                   {/* Coach Details */}
                   <div className="custom-coach-content">
@@ -757,7 +785,7 @@ const Home = () => {
 
         {/* Instagram */}
         <a
-          href="https://www.instagram.com/binal_all_about_happychildhood?igsh=b3BtMjk2MjMyNnQz"
+          href="https://www.instagram.com/hurshbin_cdlabs_mumbai?igsh=cjMyeG1weG10OTFq"
           target="_blank"
           rel="noopener noreferrer"
           className="instagram-float-btn"
