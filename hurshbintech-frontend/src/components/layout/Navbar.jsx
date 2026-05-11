@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LogOut, LogIn, Menu, X, Home, Video, Mail } from "lucide-react";
+import { LogOut, LogIn, Menu, X, Home, Video, Mail, Hexagon } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import '../../styles/components/layout/Navbar.css';
@@ -73,8 +73,7 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal }) => {
       <div className="navbar-container">
         <div className="navbar-brand">
           <h1 className="navbar-title" onClick={() => handleNavigate("/")} >
-            {location.pathname !== "/" && <Home className="w-5 h-5" />}
-            HurshBin
+            <img src="/Logo2.png" alt="HurshBin Logo" className="logo-wrapper" />
           </h1>
 
           <div className="navbar-nav navbar-nav-desktop">
@@ -142,6 +141,7 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal }) => {
                 Buy Learning Material
               </button>
             )}
+
 
             {/* Buy Learning Program - Only visible on landing page when NOT logged in */}
             {!user && location.pathname === "/" && (

@@ -8,12 +8,14 @@
 }
 
 .home-hero {
-  background: linear-gradient(rgba(92, 30, 30, 0.75), rgba(92, 30, 30, 0.75)), url('../../assets/hero.jpg') center/cover no-repeat;
+  /* background: linear-gradient(#5c1e1efd, #5c1e1ee0); */
+  background: #4d1919;
   color: white;
   text-align: center;
+  margin-top: 0.5rem;
   padding: .5rem 5.5rem;
-  border-bottom-left-radius: 1rem;
-  border-bottom-right-radius: 1rem;
+  border-radius: 1rem;
+
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
   min-height: 300px;
   height: auto;
