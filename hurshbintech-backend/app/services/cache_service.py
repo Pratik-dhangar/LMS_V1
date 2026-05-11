@@ -58,6 +58,8 @@ class CacheService:
         self.TTL_BLOG_DETAIL = 1800       # 30 minutes for individual blog
         self.TTL_VLOGS_LIST = 900         # 15 minutes for vlog listings
         self.TTL_VLOG_DETAIL = 1800       # 30 minutes for individual vlog
+        self.TTL_GALLERY_LIST = 900       # 15 minutes for gallery listings
+        self.TTL_GALLERY_DETAIL = 1800    # 30 minutes for individual gallery photo
         self.TTL_ABOUT_US = 3600          # 1 hour for about us page
         self.TTL_ORDER = 600              # 10 minutes for order data
         self.TTL_SUBSCRIPTION_PACKAGES = 3600  # 1 hour for subscription packages
@@ -372,6 +374,14 @@ class CacheService:
         """Cache key for individual vlog"""
         return f"vlogs:detail:{vlog_id}"
     
+    def key_gallery_list(self, filters_hash: str) -> str:
+        """Cache key for gallery list with filters"""
+        return f"gallery:list:{filters_hash}"
+    
+    def key_gallery_detail(self, gallery_id: int) -> str:
+        """Cache key for individual gallery photo"""
+        return f"gallery:detail:{gallery_id}"
+    
     def key_about_us(self, language: str = "en") -> str:
         """Cache key for about us page by language"""
         return f"about_us:page:{language}"
@@ -462,6 +472,16 @@ class CacheService:
         await self.delete(self.key_vlog_detail(vlog_id))
         await self.invalidate_vlogs()
         logger.info(f"Invalidated vlog cache: {vlog_id}")
+    
+    async def invalidate_gallery(self, gallery_id: Optional[int] = None):
+        """Invalidate gallery cache (all or specific)"""
+        if gallery_id:
+            await self.delete(self.key_gallery_detail(gallery_id))
+            await self.delete_pattern("gallery:list:*")
+            logger.info(f"Invalidated gallery cache: {gallery_id}")
+        else:
+            await self.delete_pattern("gallery:list:*")
+            logger.info("Invalidated gallery list cache")
     
     async def invalidate_about_us(self):
         """Invalidate all about us page caches (all languages)"""

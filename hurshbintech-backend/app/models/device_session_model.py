@@ -5,7 +5,7 @@ Enforces single-device active session constraint
 
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import backref, relationship
 from app.db.session import Base
 
 
@@ -38,7 +38,10 @@ class DeviceSession(Base):
     deactivated_at = Column(DateTime, nullable=True)  # When was this session deactivated?
     
     # Relationships
-    user = relationship("User", backref="device_sessions")
+    user = relationship(
+        "User",
+        backref=backref("device_sessions", passive_deletes=True, cascade="all, delete-orphan"),
+    )
 
     def __repr__(self):
         return f"<DeviceSession(user_id={self.user_id}, device_id={self.device_id}, is_active={self.is_active})>"
