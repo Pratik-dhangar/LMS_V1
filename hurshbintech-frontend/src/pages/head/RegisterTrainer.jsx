@@ -96,8 +96,6 @@ const RegisterTrainer = () => {
 
     if (!formData.date_of_joining) {
       newErrors.date_of_joining = "Date of joining is required";
-    } else if (new Date(formData.date_of_joining) > new Date()) {
-      newErrors.date_of_joining = "Date of joining cannot be in the future";
     }
 
     if (!formData.address.trim()) {
