@@ -295,11 +295,9 @@ const EditLearner = () => {
       newErrors.dob = "Date of birth cannot be in the future";
     }
 
-    // Start Date is required
+    // Assessment date is required (future dates allowed)
     if (!formData.date_of_assessment) {
       newErrors.date_of_assessment = "Date of assessment is required";
-    } else if (new Date(formData.date_of_assessment) > new Date()) {
-      newErrors.date_of_assessment = "Assessment date cannot be in the future";
     }
 
     // DLB Concerns Checklist is required (at least one item)
