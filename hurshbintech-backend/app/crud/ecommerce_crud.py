@@ -172,8 +172,8 @@ async def generate_order_number(db: AsyncSession) -> str:
 
 
 async def create_order(
-    db: AsyncSession, user_id: int, order_data: OrderCreate, cart_items: List[CartItem]
-) -> Order:
+    db: AsyncSession, user_id: Optional[int], order_data: OrderCreate, cart_items: List[CartItem]
+) -> tuple[Order, List[dict]]:
     """Create order from cart items"""
     # Calculate totals
     subtotal = sum(item.line_total for item in cart_items)
@@ -202,6 +202,8 @@ async def create_order(
     )
     db.add(new_order)
     await db.flush()
+
+    created_items_response: List[dict] = []
     
     # Create order items from cart items
     for cart_item in cart_items:
@@ -220,6 +222,18 @@ async def create_order(
             line_total=cart_item.line_total
         )
         db.add(order_item)
+        await db.flush()
+        created_items_response.append(
+            {
+                "id": order_item.id,
+                "product_id": order_item.product_id,
+                "product_name": order_item.product_name,
+                "quantity": order_item.quantity,
+                "unit_price": order_item.unit_price,
+                "discount_percentage": order_item.discount_percentage,
+                "line_total": order_item.line_total,
+            }
+        )
         
         # STOCK MANAGEMENT: Decrement product stock by order quantity
         previous_stock = product.stock_quantity
@@ -254,7 +268,7 @@ async def create_order(
         .options(selectinload(Order.items))
         .where(Order.id == new_order.id)
     )
-    return result.scalar_one()
+    return result.scalar_one(), created_items_response
 
 
 async def get_order_by_id(db: AsyncSession, order_id: UUID) -> Optional[Order]:
@@ -267,6 +281,25 @@ async def get_order_by_id(db: AsyncSession, order_id: UUID) -> Optional[Order]:
             joinedload(Order.payment_receipt)
         )
         .where(Order.id == order_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_order_by_tracking_id(db: AsyncSession, tracking_id: str) -> Optional[Order]:
+    """
+    Get order by tracking_id (order_number or guest_token)
+    Used for public order tracking (no authentication required)
+    """
+    result = await db.execute(
+        select(Order)
+        .options(
+            selectinload(Order.items),
+            joinedload(Order.user),
+            joinedload(Order.payment_receipt)
+        )
+        .where(
+            (Order.order_number == tracking_id) | (Order.guest_token == tracking_id)
+        )
     )
     return result.scalar_one_or_none()
 
@@ -372,7 +405,7 @@ async def update_order_status(
 # Payment Receipt CRUD
 async def create_payment_receipt(
     db: AsyncSession, order_id: UUID, s3_path: str, file_name: str, 
-    file_size: int, file_type: str, user_id: int
+    file_size: int, file_type: str, user_id: Optional[int]
 ) -> PaymentReceipt:
     """Upload payment receipt for order"""
     receipt = PaymentReceipt(

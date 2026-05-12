@@ -3,15 +3,16 @@
 import hashlib
 import json
 import logging
+import secrets
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, get_current_admin, get_db
+from app.core.deps import get_current_user, get_current_admin, get_db, get_current_user_optional
 from app.core.config import settings
 from app.crud import ecommerce_crud, vendor_crud
 from app.models.user_model import User
@@ -19,7 +20,7 @@ from app.models.ecommerce_model import OrderStatus
 from app.schemas.ecommerce import (
     OrderCreate, OrderResponse, OrderCreateResponse, OrderListResponse,
     PaymentReceiptResponse, OrderApprove, OrderReject, OrderApprovalResponse,
-    OrderWithUserResponse, OrderAuditLogList
+    OrderWithUserResponse, OrderAuditLogList, AdminOrderListResponse
 )
 from app.utils.s3_utils import convert_s3_url_to_proxy, s3_key_to_proxy
 from app.utils.file_handler import upload_file
@@ -82,38 +83,119 @@ def _build_order_response(order) -> dict:
 async def checkout(
     order_data: OrderCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    """Create order from cart (checkout)"""
-    current_user_id = current_user.id
-    current_user_email = current_user.email
-    current_user_name = current_user.name
+    """Create order from cart (checkout) - supports both registered and guest users"""
+    is_guest = current_user is None
+    current_user_id = current_user.id if current_user else None
+    current_user_email = current_user.email if current_user else None
+    current_user_name = current_user.name if current_user else None
 
-    # Get cart with items
-    cart = await ecommerce_crud.get_cart_with_items(db, current_user_id)
-    
-    if not cart or not cart.items:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
-    
-    # Verify stock availability for all items
-    for item in cart.items:
-        if not item.product.stock_available:
+    # Validate required fields based on user type
+    if is_guest:
+        # Guest user must provide name, email, and contact_number
+        if not order_data.name or not order_data.email or not order_data.contact_number:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Product '{item.product.name}' is out of stock"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Name, email, and contact number are required for guest checkout"
             )
-        if item.product.stock_quantity < item.quantity:
+    else:
+        # Registered user - email is optional, will use account email if not provided
+        if not order_data.email:
+            order_data.email = current_user_email
+
+    # Get cart items based on user type
+    if is_guest:
+        # Guest users: accept items from request payload
+        if not order_data.items or len(order_data.items) == 0:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Insufficient stock for '{item.product.name}'. Only {item.product.stock_quantity} available."
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cart cannot be empty. Please add items before checkout."
             )
+        
+        # Fetch product details and build cart items
+        from collections import namedtuple
+        from app.models.ecommerce_model import Product
+        from sqlalchemy import select
+        
+        GuestCartItem = namedtuple('GuestCartItem', ['product_id', 'quantity', 'unit_price', 'discount_percentage', 'line_total'])
+        
+        cart_items = []
+        for guest_item in order_data.items:
+            # Fetch product from database
+            product_result = await db.execute(
+                select(Product).where(Product.id == UUID(guest_item.product_id))
+            )
+            product = product_result.scalar_one_or_none()
+            
+            if not product:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Product not found: {guest_item.product_id}"
+                )
+            if not product.stock_available:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Product '{product.name}' is out of stock"
+                )
+            if product.stock_quantity < guest_item.quantity:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Insufficient stock for '{product.name}'. Only {product.stock_quantity} available."
+                )
+            
+            # Build cart item with product details
+            unit_price = product.price
+            discount_percentage = product.discount_percentage
+            line_total = float(unit_price * guest_item.quantity)
+            
+            cart_item = GuestCartItem(
+                product_id=UUID(guest_item.product_id),
+                quantity=guest_item.quantity,
+                unit_price=unit_price,
+                discount_percentage=discount_percentage,
+                line_total=line_total
+            )
+            cart_items.append(cart_item)
+        cart = None  # No database cart for guests
+    else:
+        # Registered users: get cart from database
+        cart = await ecommerce_crud.get_cart_with_items(db, current_user_id)
+        
+        if not cart or not cart.items:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
+        
+        # Verify stock availability for all items
+        for item in cart.items:
+            if not item.product.stock_available:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Product '{item.product.name}' is out of stock"
+                )
+            if item.product.stock_quantity < item.quantity:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Insufficient stock for '{item.product.name}'. Only {item.product.stock_quantity} available."
+                )
+        cart_items = cart.items
     
     try:
         # Create order
-        order = await ecommerce_crud.create_order(db, current_user_id, order_data, cart.items)
+        order, created_items_response = await ecommerce_crud.create_order(db, current_user_id, order_data, cart_items)
+        
+        # For guest users, store their information and generate guest token
+        if is_guest:
+            guest_token = secrets.token_urlsafe(48)
+            order.customer_name = order_data.name
+            order.customer_email = order_data.email
+            order.customer_contact_number = order_data.contact_number
+            order.guest_token = guest_token
+            await db.commit()
+            await db.refresh(order)
         
         # Clear cart after order creation
-        await ecommerce_crud.clear_cart(db, cart.id)
+        if cart:
+            await ecommerce_crud.clear_cart(db, cart.id)
         
         # Generate payment details based on method
         payment_details = {}
@@ -132,15 +214,16 @@ async def checkout(
             }
         
         # Send order created email with order details and payment instructions
-        recipient_email = order_data.email or current_user_email
-        recipient_name = current_user_name
+        recipient_email = order_data.email
+        recipient_name = order_data.name if is_guest else current_user_name
         
-        logger.info(f"Checkout: Order created {order.order_number} for user {current_user_id}")
+        user_type = "Guest" if is_guest else f"User {current_user_id}"
+        logger.info(f"Checkout: Order created {order.order_number} for {user_type}")
         logger.info(f"Checkout: Email being sent to - {recipient_email}, Name - {recipient_name}")
         
         # Validate email before sending
         if not recipient_email:
-            logger.error(f"Checkout: No email found for user {current_user_id}. order_data.email={order_data.email}, current_user.email={current_user_email}")
+            logger.error(f"Checkout: No email found. is_guest={is_guest}, order_data.email={order_data.email}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email is required for checkout. Please provide an email address."
@@ -149,14 +232,17 @@ async def checkout(
         # Prepare items for email
         order_items = [
             {
-                "product_name": item.product_name,
-                "quantity": item.quantity,
-                "unit_price": float(item.unit_price),
-                "line_total": float(item.line_total),
-                "discount_percentage": item.discount_percentage
+                "product_name": item["product_name"],
+                "quantity": item["quantity"],
+                "unit_price": float(item["unit_price"]),
+                "line_total": float(item["line_total"]),
+                "discount_percentage": item["discount_percentage"]
             }
-            for item in order.items
+            for item in created_items_response
         ]
+        
+        # Generate tracking link
+        tracking_link = f"{settings.FRONTEND_URL}/order/track/{order.guest_token if is_guest else order.order_number}"
         
         await EmailService.send_order_created(
             recipient_email=recipient_email,
@@ -170,11 +256,59 @@ async def checkout(
             payment_method=order_data.payment_method,
             upi_details=payment_details if order_data.payment_method == "UPI_QR" else None,
             bank_details=payment_details if order_data.payment_method == "BANK_TRANSFER" else None,
+            tracking_link=tracking_link
         )
         
         logger.info(f"Checkout: Order confirmation email sent successfully to {recipient_email}")
         
         # Build response
+        items_response = created_items_response
+        
+        return {
+            "order_id": order.id,
+            "order_number": order.order_number,
+            "status": order.status.value if isinstance(order.status, OrderStatus) else order.status,
+            "total_amount": order.total_amount,
+            "payment_method": order.payment_method.value if hasattr(order.payment_method, 'value') else order.payment_method,
+            "payment_details": payment_details,
+            "items": items_response,
+            "delivery_address": order.delivery_address,
+            "created_at": order.created_at,
+            "guest_token": order.guest_token if is_guest else None
+        }
+    except Exception as e:
+        await db.rollback()
+        error_msg = f"Checkout: Error creating order"
+        if current_user_id:
+            error_msg += f" for user {current_user_id}"
+        error_msg += f": {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create order: {str(e)}"
+        )
+
+
+@router.get("/track/{tracking_id}")
+async def track_order(
+    tracking_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Track order by order_number or guest_token
+    Public endpoint - no authentication required
+    """
+    try:
+        # Try to find order by order_number or guest_token
+        order = await ecommerce_crud.get_order_by_tracking_id(db, tracking_id)
+        
+        if not order:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Order not found. Please check your tracking ID."
+            )
+        
+        # Build response with order details
         items_response = [
             {
                 "id": item.id,
@@ -189,26 +323,30 @@ async def checkout(
         ]
         
         return {
-            "order_id": order.id,
+            "order_id": str(order.id),
             "order_number": order.order_number,
             "status": order.status.value if isinstance(order.status, OrderStatus) else order.status,
-            "total_amount": order.total_amount,
             "payment_method": order.payment_method.value if hasattr(order.payment_method, 'value') else order.payment_method,
-            "payment_details": payment_details,
-            "items": items_response,
+            "subtotal": float(order.subtotal),
+            "discount_total": float(order.discount_total),
+            "total_amount": float(order.total_amount),
             "delivery_address": order.delivery_address,
+            "delivery_city": order.delivery_city,
+            "delivery_pincode": order.delivery_pincode,
+            "rejection_reason": order.rejection_reason,
+            "items": items_response,
             "created_at": order.created_at
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        await db.rollback()
-        logger.error(f"Checkout: Error creating order for user {current_user_id}: {str(e)}", exc_info=True)
+        logger.error(f"Error tracking order with ID {tracking_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create order: {str(e)}"
+            detail="Failed to retrieve order details"
         )
 
 
-@router.get("", response_model=OrderListResponse)
 async def get_orders(
     status: Optional[str] = None,
     page: int = 1,
@@ -344,16 +482,21 @@ async def upload_payment_receipt(
     order_id: UUID,
     receipt: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    guest_token: Optional[str] = Query(None)
 ):
     """Upload payment receipt for order"""
     # Verify order exists and belongs to user
     order = await ecommerce_crud.get_order_by_id(db, order_id)
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    
-    if order.user_id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+
+    if order.user_id is None:
+        if not guest_token or order.guest_token != guest_token:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
+    else:
+        if not current_user or order.user_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized")
     
     # Verify order status is CREATED or PAYMENT_REJECTED (for reupload)
     if order.status not in [OrderStatus.CREATED, OrderStatus.PAYMENT_REJECTED]:
@@ -411,7 +554,7 @@ async def upload_payment_receipt(
     # Create payment receipt record
     try:
         payment_receipt = await ecommerce_crud.create_payment_receipt(
-            db, order_id, s3_path, receipt.filename, len(contents), file_type, current_user.id
+            db, order_id, s3_path, receipt.filename, len(contents), file_type, current_user.id if current_user else None
         )
         
         # Update order status to PAYMENT_UPLOADED and clear rejection reason if it was rejected
@@ -441,7 +584,7 @@ async def upload_payment_receipt(
 
 
 # Admin endpoints
-@router.get("/admin/orders", response_model=OrderListResponse)
+@router.get("/admin/orders", response_model=AdminOrderListResponse)
 async def get_admin_orders(
     status: Optional[str] = None,
     page: int = 1,
@@ -475,8 +618,11 @@ async def get_admin_orders(
             "order_number": order.order_number,
             "status": order.status.value if isinstance(order.status, OrderStatus) else order.status,
             "user_id": order.user_id,
-            "user_name": order.user.name if order.user else "Unknown",
+            "user_name": order.user.name if order.user else order.customer_name or "Unknown",
             "user_email": order.user.email if order.user else None,
+            "customer_name": order.customer_name,
+            "customer_contact_number": order.customer_contact_number,
+            "guest_token": order.guest_token,
             "payment_method": order.payment_method.value if hasattr(order.payment_method, 'value') else order.payment_method,
             "subtotal": order.subtotal,
             "discount_total": order.discount_total,

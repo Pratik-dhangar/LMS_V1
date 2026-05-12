@@ -1,4 +1,13 @@
+import axios from 'axios';
 import axiosInstance from '../../axios';
+
+const publicAxios = axios.create({
+    baseURL: axiosInstance.defaults.baseURL,
+    timeout: axiosInstance.defaults.timeout,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+});
 
 /**
  * Order Service - Order and payment management
@@ -9,9 +18,10 @@ const orderService = {
      * @param {Object} orderData - { delivery_address, delivery_city, delivery_pincode, payment_method }
      * @returns {Promise} - Order details with payment instructions
      */
-    checkout: async (orderData) => {
+    checkout: async (orderData, isGuestCheckout = false) => {
         try {
-            const response = await axiosInstance.post('/orders/checkout', orderData);
+            const client = isGuestCheckout ? publicAxios : axiosInstance;
+            const response = await client.post('/orders/checkout', orderData);
             return response.data;
         } catch (error) {
             console.error('Error during checkout:', error);
@@ -57,17 +67,38 @@ const orderService = {
     },
 
     /**
+     * Track order by tracking ID (order_number or guest_token)
+     * Public endpoint - no authentication required
+     * @param {string} trackingId - Order number or guest token
+     * @returns {Promise} - Order details
+     */
+    getOrderByTrackingId: async (trackingId) => {
+        try {
+            const response = await publicAxios.get(`/orders/track/${trackingId}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching order by tracking ID:', error);
+            throw error;
+        }
+    },
+
+    /**
      * Upload payment receipt
      * @param {string} orderId - Order UUID
      * @param {File} receiptFile - Receipt file (JPG, PNG, PDF)
      * @returns {Promise} - Receipt upload confirmation
      */
-    uploadReceipt: async (orderId, receiptFile) => {
+    uploadReceipt: async (orderId, receiptFile, guestToken = null) => {
         try {
             const formData = new FormData();
             formData.append('receipt', receiptFile);
 
-            const response = await axiosInstance.post(`/orders/${orderId}/payment-receipt`, formData, {
+            const url = guestToken
+                ? `/orders/${orderId}/payment-receipt?guest_token=${encodeURIComponent(guestToken)}`
+                : `/orders/${orderId}/payment-receipt`;
+
+            const client = guestToken ? publicAxios : axiosInstance;
+            const response = await client.post(url, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }

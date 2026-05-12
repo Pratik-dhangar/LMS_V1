@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import storeService from '../../api/services/ecommerce/storeService';
 import cartService from '../../api/services/ecommerce/cartService';
+import guestCartService from '../../utils/guestCartService';
 import { toast } from 'react-toastify';
 import { getFileUrl } from '../../utils/fileUrlBuilder';
 
 const ProductDetail = () => {
     const { productId } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [product, setProduct] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [loading, setLoading] = useState(true);
@@ -36,7 +39,14 @@ const ProductDetail = () => {
             // Trigger animation
             setIsAnimating(true);
 
-            await cartService.addToCart({ product_id: productId, quantity });
+            if (user) {
+                // Authenticated user - use API
+                await cartService.addToCart({ product_id: productId, quantity });
+            } else {
+                // Guest user - add to localStorage cart with product details
+                await guestCartService.addToCart({ product_id: productId, quantity, product });
+            }
+
             toast.success('Added to cart!');
 
             // Keep animation for a bit then navigate
@@ -47,13 +57,7 @@ const ProductDetail = () => {
         } catch (error) {
             // Remove animation on error
             setIsAnimating(false);
-
-            if (error.response?.status === 401) {
-                toast.info('Please login to add items to cart');
-                navigate('/login');
-            } else {
-                toast.error(error.response?.data?.detail || 'Failed to add to cart');
-            }
+            toast.error(error.response?.data?.detail || 'Failed to add to cart');
         }
     };
 

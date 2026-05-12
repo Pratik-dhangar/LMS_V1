@@ -66,12 +66,21 @@ class CartResponse(BaseModel):
 
 
 # Order Schemas
+class GuestCartItem(BaseModel):
+    """Guest cart item for checkout (from localStorage)"""
+    product_id: str  # UUID as string
+    quantity: int = Field(..., gt=0)
+
+
 class OrderCreate(BaseModel):
     delivery_address: str = Field(..., min_length=10, max_length=1000)
     delivery_city: str = Field(..., min_length=2, max_length=100)
     delivery_pincode: str = Field(..., min_length=6, max_length=10)
     payment_method: str  # UPI_QR or BANK_TRANSFER
     email: Optional[str] = Field(None, description="Customer email for payment instructions (uses account email if not provided)")
+    name: Optional[str] = Field(None, min_length=2, max_length=255, description="Customer name (required for guest checkout)")
+    contact_number: Optional[str] = Field(None, min_length=10, max_length=20, description="Customer contact number (required for guest checkout)")
+    items: Optional[List[GuestCartItem]] = Field(None, description="Cart items for guest users (from localStorage)")
     
     @field_validator('payment_method')
     @classmethod
@@ -98,7 +107,7 @@ class OrderResponse(BaseModel):
     order_id: UUID
     order_number: str
     status: str
-    user_id: int
+    user_id: Optional[int] = None  # Nullable for guest orders
     payment_method: Optional[str] = None
     subtotal: Decimal
     discount_total: Decimal
@@ -116,10 +125,52 @@ class OrderResponse(BaseModel):
         from_attributes = True
 
 
+class AdminOrderItemResponse(BaseModel):
+    """Order item response for admin orders list"""
+    id: UUID
+    product_id: Optional[UUID] = None
+    product_name: str
+    quantity: int
+    unit_price: Decimal
+    discount_percentage: Decimal
+    line_total: Decimal
+
+    class Config:
+        from_attributes = True
+
+
+class AdminOrderResponse(BaseModel):
+    """Admin-specific order response with user and guest details"""
+    order_id: UUID
+    order_number: str
+    status: str
+    user_id: Optional[int] = None  # Nullable for guest orders
+    user_name: str  # "Unknown" for guest orders
+    user_email: Optional[str] = None  # None for guest orders
+    customer_name: Optional[str] = None  # Set for guest orders
+    customer_contact_number: Optional[str] = None  # Set for guest orders
+    guest_token: Optional[str] = None  # Set for guest orders
+    payment_method: Optional[str] = None
+    subtotal: Decimal
+    discount_total: Decimal
+    total_amount: Decimal
+    delivery_address: str
+    delivery_city: Optional[str] = None
+    delivery_pincode: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    items: List[AdminOrderItemResponse]
+    payment_receipt: Optional[dict] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class OrderWithUserResponse(OrderResponse):
     """Extended order response with user details (for admin)"""
     user_name: str
-    user_email: str
+    user_email: Optional[str] = None
 
 
 class OrderCreateResponse(BaseModel):
@@ -132,11 +183,18 @@ class OrderCreateResponse(BaseModel):
     items: List[OrderItemResponse]
     delivery_address: str
     created_at: datetime
+    guest_token: Optional[str] = None
 
 
 class OrderListResponse(BaseModel):
     """Response for listing orders with pagination"""
     orders: List[OrderResponse]
+    pagination: dict
+
+
+class AdminOrderListResponse(BaseModel):
+    """Response for admin orders list with pagination"""
+    orders: List[AdminOrderResponse]
     pagination: dict
 
 

@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import storeService from "../../api/services/ecommerce/storeService";
 import cartService from "../../api/services/ecommerce/cartService";
+import guestCartService from "../../utils/guestCartService";
 import { toast } from "react-toastify";
 import { getFileUrl } from "../../utils/urlHelper";
 
 
 
-
 const StoreCatalog = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [ageGroups, setAgeGroups] = useState([]);
@@ -116,12 +118,20 @@ const StoreCatalog = () => {
     }
   };
 
-  const loadCartCount = async () => {
+  const loadCartCount = () => {
     try {
-      const cartData = await cartService.getCart();
-      setCartCount(cartData.items?.length || 0);
+      if (user) {
+        // Authenticated user - fetch from API
+        cartService.getCart()
+          .then(cartData => setCartCount(cartData.items?.length || 0))
+          .catch(() => setCartCount(0));
+      } else {
+        // Guest user - get from localStorage
+        const guestCart = guestCartService.getCart();
+        setCartCount(guestCart?.items?.length || 0);
+      }
     } catch (error) {
-      // Cart might be empty or user not logged in
+      console.error('Error loading cart count:', error);
       setCartCount(0);
     }
   };
@@ -131,9 +141,16 @@ const StoreCatalog = () => {
       // Trigger animation
       setAnimatingProducts(prev => new Set(prev).add(productId));
 
-      await cartService.addToCart({ product_id: productId, quantity: 1 });
-      loadCartCount();
+      if (user) {
+        // Authenticated user - use API
+        await cartService.addToCart({ product_id: productId, quantity: 1 });
+      } else {
+        // Guest user - fetch product and add to localStorage cart
+        const product = await storeService.getProductDetail(productId);
+        await guestCartService.addToCart({ product_id: productId, quantity: 1, product });
+      }
 
+      loadCartCount();
       toast.success('Item added to cart!');
 
       // Remove animation after it completes
@@ -152,12 +169,7 @@ const StoreCatalog = () => {
         return newSet;
       });
 
-      if (error.response?.status === 401) {
-        toast.info("Please login to add items to cart");
-        navigate("/login");
-      } else {
-        toast.error(error.response?.data?.detail || "Failed to add to cart");
-      }
+      toast.error(error.response?.data?.detail || "Failed to add to cart");
     }
   };
 
