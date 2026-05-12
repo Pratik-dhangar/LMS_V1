@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import cartService from '../../api/services/ecommerce/cartService';
+import guestCartService from '../../utils/guestCartService';
 import { getFileUrl } from '../../utils/fileUrlBuilder';
 import { toast } from 'react-toastify';
 
 const Cart = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [cart, setCart] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -16,24 +19,37 @@ const Cart = () => {
     const loadCart = async () => {
         try {
             setLoading(true);
-            const data = await cartService.getCart();
-            setCart(data);
-        } catch (error) {
-            if (error.response?.status === 401) {
-                toast.info('Please login to view your cart');
-                navigate('/login');
+            if (user) {
+                // Authenticated user - fetch from API
+                const data = await cartService.getCart();
+                setCart(data);
             } else {
-                console.error('Failed to load cart:', error);
-                toast.error('Failed to load cart');
+                // Guest user - load from localStorage
+                const guestCart = guestCartService.getCart();
+                if (guestCart) {
+                    setCart(guestCart);
+                } else {
+                    // No cart data, initialize empty cart
+                    setCart({ items: [], subtotal: 0, discount_total: 0, total: 0 });
+                }
             }
+        } catch (error) {
+            console.error('Failed to load cart:', error);
+            toast.error('Failed to load cart');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleRemoveItem = async (itemId) => {
+    const handleRemoveItem = async (item) => {
         try {
-            await cartService.removeFromCart(itemId);
+            if (user) {
+                // Authenticated user - use API with item.id
+                await cartService.removeFromCart(item.id);
+            } else {
+                // Guest user - use localStorage with product_id
+                await guestCartService.removeFromCart(item.product_id);
+            }
             toast.success('Item removed from cart');
             loadCart();
         } catch (error) {
@@ -41,10 +57,16 @@ const Cart = () => {
         }
     };
 
-    const handleUpdateQuantity = async (itemId, newQuantity) => {
+    const handleUpdateQuantity = async (item, newQuantity) => {
         if (newQuantity < 1) return;
         try {
-            await cartService.updateCartItem(itemId, newQuantity);
+            if (user) {
+                // Authenticated user - use API with item.id
+                await cartService.updateCartItem(item.id, newQuantity);
+            } else {
+                // Guest user - use localStorage with product_id
+                await guestCartService.updateCartItem(item.product_id, newQuantity);
+            }
             loadCart();
         } catch (error) {
             toast.error('Failed to update quantity');
@@ -54,7 +76,13 @@ const Cart = () => {
     const handleClearCart = async () => {
         if (!window.confirm('Are you sure you want to clear your cart?')) return;
         try {
-            await cartService.clearCart();
+            if (user) {
+                // Authenticated user - use API
+                await cartService.clearCart();
+            } else {
+                // Guest user - use localStorage
+                await guestCartService.clearCart();
+            }
             toast.success('Cart cleared');
             loadCart();
         } catch (error) {
@@ -193,7 +221,7 @@ const Cart = () => {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                         <button
-                                                            onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                                                            onClick={() => handleUpdateQuantity(item, item.quantity - 1)}
                                                             style={{
                                                                 background: '#ecf0f1',
                                                                 border: '1px solid #ddd',
@@ -217,7 +245,7 @@ const Cart = () => {
                                                             {item.quantity}
                                                         </div>
                                                         <button
-                                                            onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                                                            onClick={() => handleUpdateQuantity(item, item.quantity + 1)}
                                                             style={{
                                                                 background: '#ecf0f1',
                                                                 border: '1px solid #ddd',
@@ -231,7 +259,7 @@ const Cart = () => {
                                                         </button>
                                                     </div>
                                                     <button
-                                                        onClick={() => handleRemoveItem(item.id)}
+                                                        onClick={() => handleRemoveItem(item)}
                                                         style={{
                                                             color: '#e74c3c',
                                                             cursor: 'pointer',

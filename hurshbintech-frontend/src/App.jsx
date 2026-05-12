@@ -120,6 +120,7 @@ import StoreCatalog from './pages/store/StoreCatalog';
 import ProductDetail from './pages/store/ProductDetail';
 import Cart from './pages/store/Cart';
 import Checkout from './pages/store/Checkout';
+import OrderTracking from './pages/store/OrderTracking';
 
 
 // Communication Pages
@@ -953,15 +954,13 @@ function AppRoutes() {
           <Route path="/learning-materials" element={<StoreCatalog />} />
           <Route path="/store/product/:productId" element={<ProductDetail />} />
           <Route path="/store/cart" element={
-            <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin", "coach"]}>
-              <Cart />
-            </ProtectedRoute>
+            <Cart />
           } />
           <Route path="/store/checkout" element={
-            <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin", "coach"]}>
-              <Checkout />
-            </ProtectedRoute>
+            <Checkout />
           } />
+          {/* Public order tracking route - accessible to all users */}
+          <Route path="/order/track/:trackingId" element={<OrderTracking />} />
 
           {/* Communication Routes */}
           <Route

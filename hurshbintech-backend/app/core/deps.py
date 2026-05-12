@@ -3,6 +3,7 @@ Authentication dependencies for protected routes
 Validates JWT tokens and returns authenticated users
 """
 
+import logging
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer
@@ -25,8 +26,11 @@ from app.models.user_model import (
     UserRole,
 )
 
+logger = logging.getLogger(__name__)
+
 # HTTP Bearer token scheme for JWT authentication
-security = HTTPBearer()
+# auto_error=False lets optional-auth endpoints receive anonymous requests
+security = HTTPBearer(auto_error=False)
 
 
 async def _enforce_active_device_session(db: AsyncSession, user_id: int, access_token: str) -> None:
@@ -542,3 +546,77 @@ async def get_current_coach_optional(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials"
         )
+
+
+async def get_current_user_optional(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    """
+    Get current authenticated user from JWT token
+    Returns None if no authentication token provided (for guest checkout support)
+    """
+    if not credentials:
+        return None
+    
+    try:
+        # Decode JWT token
+        payload = decode_token(credentials.credentials)
+        user_id = payload.get("sub")
+        role = payload.get("role")
+
+        # Convert user_id to int if it's a string
+        if isinstance(user_id, str):
+            user_id = int(user_id)
+
+        await _enforce_active_device_session(db, user_id, credentials.credentials)
+
+        # Normalize role to uppercase for enum comparison
+        role_upper = role.upper() if isinstance(role, str) else role
+
+        # Query based on role - load User with appropriate profile
+        if role_upper == "HEAD":
+            result = await db.execute(
+                select(User)
+                .options(joinedload(User.head_profile).joinedload(HeadProfile.reference_data))
+                .where(User.id == user_id, User.role == UserRole.HEAD)
+            )
+            user = result.unique().scalar_one_or_none()
+        elif role_upper == "TRAINER":
+            result = await db.execute(
+                select(User)
+                .options(joinedload(User.trainer_profile).joinedload(TrainerProfile.reference_data))
+                .where(User.id == user_id, User.role == UserRole.TRAINER)
+            )
+            user = result.unique().scalar_one_or_none()
+        elif role_upper == "COACH":
+            result = await db.execute(
+                select(User)
+                .options(joinedload(User.coach_profile).joinedload(CoachProfile.user))
+                .where(User.id == user_id, User.role == UserRole.COACH)
+            )
+            user = result.unique().scalar_one_or_none()
+        elif role_upper == "LEARNER":
+            result = await db.execute(
+                select(User)
+                .options(joinedload(User.learner_profile).joinedload(LearnerProfile.reference_data))
+                .where(User.id == user_id, User.role == UserRole.LEARNER)
+            )
+            user = result.unique().scalar_one_or_none()
+        else:  # ADMIN
+            result = await db.execute(
+                select(User)
+                .where(User.id == user_id, User.role == UserRole.ADMIN)
+            )
+            user = result.unique().scalar_one_or_none()
+
+        if not user:
+            return None
+
+        return user
+
+    except JWTError:
+        return None
+    except Exception as e:
+        logger.error(f"Error in get_current_user_optional: {str(e)}")
+        return None

@@ -1793,6 +1793,7 @@ class EmailService:
         payment_method: str,
         upi_details: Optional[dict] = None,
         bank_details: Optional[dict] = None,
+        tracking_link: Optional[str] = None,
     ) -> bool:
         """Send order created email with order details and payment instructions"""
         
@@ -1814,6 +1815,20 @@ class EmailService:
                 </tr>
             """
 
+        # Build tracking link HTML
+        tracking_link_html = ""
+        if tracking_link:
+            tracking_link_html = f"""
+                        <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 20px 0; border-radius: 6px; text-align: center;">
+                            <p style="margin: 0 0 10px 0; color: #1565c0; font-weight: 600;">📍 Track Your Order</p>
+                            <a href="{tracking_link}" style="background-color: #2196f3; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+                                Click here to track your order
+                            </a>
+                            <p style="margin: 10px 0 0 0; font-size: 12px; color: #666;">
+                                Or copy this link: <span style="font-family: monospace; color: #1565c0;">{tracking_link}</span>
+                            </p>
+                        </div>
+            """
         html_body = f"""
         <html lang="en">
             <head>
@@ -1928,6 +1943,8 @@ class EmailService:
                         </div>
                         
                         <h3 style="color: #2c3e50; margin-top: 25px;">📍 Delivery Address</h3>
+                        {tracking_link_html}
+                        
                         <p style="background-color: #f9fafb; padding: 15px; border-radius: 6px; border-left: 4px solid #f39c12;">
                             {delivery_address}
                         </p>
