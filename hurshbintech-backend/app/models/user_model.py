@@ -500,7 +500,7 @@ class Appointment(Base):
     
     # Payment and Session Info
     payment_receipt_url = Column(String(500), nullable=True)  # URL to payment screenshot
-    session_type = Column(String(50), nullable=True)  # e.g., initial_consultation, follow_up
+    session_type = Column(String(255), nullable=True)  # e.g., initial_consultation, follow_up
     
     # Rejection Info
     rejection_reason = Column(Text, nullable=True)  # Reason for rejecting the appointment
