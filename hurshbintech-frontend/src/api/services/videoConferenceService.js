@@ -184,39 +184,41 @@ class VideoConferenceService {
                 }
             };
 
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const getStream = async (mediaConstraints) => {
+                const stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
 
-            // console.log(`[VideoConference][${this.role}] Media access granted:`, {
-            //     videoTracks: stream.getVideoTracks().length,
-            //     audioTracks: stream.getAudioTracks().length
-            // });
+                // Trigger callback if set
+                if (this.onLocalStream) {
+                    this.onLocalStream(stream);
+                }
 
-            // Trigger callback if set
-            if (this.onLocalStream) {
-                this.onLocalStream(stream);
-            }
+                return stream;
+            };
 
-            return stream;
-        } catch (error) {
-            console.error(`[VideoConference][${this.role}] Media access failed:`, error);
+            try {
+                return await getStream(constraints);
+            } catch (combinedError) {
+                console.warn(`[VideoConference][${this.role}] Full A/V capture failed, retrying with separate camera and microphone requests:`, combinedError);
 
-            // Try audio-only fallback
-            if (error.name === 'NotFoundError' || error.name === 'OverconstrainedError') {
-                // console.log(`[VideoConference][${this.role}] Attempting audio-only fallback...`);
                 try {
-                    const audioStream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        }
-                    });
-                    // console.log(`[VideoConference][${this.role}] Audio-only mode activated`);
-                    return audioStream;
-                } catch (audioError) {
-                    console.error(`[VideoConference][${this.role}] Audio-only fallback failed:`, audioError);
+                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: constraints.video, audio: false });
+                    const audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: constraints.audio });
+
+                    const mergedStream = new MediaStream();
+                    videoStream.getVideoTracks().forEach(track => mergedStream.addTrack(track));
+                    audioStream.getAudioTracks().forEach(track => mergedStream.addTrack(track));
+
+                    if (this.onLocalStream) {
+                        this.onLocalStream(mergedStream);
+                    }
+
+                    return mergedStream;
+                } catch (separateError) {
+                    throw separateError;
                 }
             }
+        } catch (error) {
+            console.error(`[VideoConference][${this.role}] Media access failed:`, error);
 
             throw new Error(`Media access denied: ${error.message}`);
         }
