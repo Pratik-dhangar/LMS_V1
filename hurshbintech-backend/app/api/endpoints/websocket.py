@@ -213,14 +213,19 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
                 observer_message["observer_data"] = user_data
             await rtc_connections[session_id]["trainer"].websocket.send_json(observer_message)
 
-        # Normal peer connection setup for trainer/learner or coach/client
-        if len(rtc_connections[session_id]) == 2 and role != "observer":
-            initiator_role = "trainer" if "trainer" in rtc_connections[session_id] else "coach"
-            logger.info(f"Both participants connected - signaling {initiator_role} to initiate offer")
-            if initiator_role in rtc_connections[session_id]:
-                await rtc_connections[session_id][initiator_role].websocket.send_json(
-                    {"type": "peer_ready", "role": "both_connected"}
-                )
+        # Trigger offer creation when both peers are present.
+        # Fires for initial join AND when initiator reconnects while other party is already present.
+        session_roles = set(rtc_connections[session_id].keys())
+        if "trainer" in session_roles and "learner" in session_roles and role != "observer":
+            logger.info(f"Trainer + learner both present — signaling trainer to create offer")
+            await rtc_connections[session_id]["trainer"].websocket.send_json(
+                {"type": "peer_ready", "role": "both_connected"}
+            )
+        elif "coach" in session_roles and "client" in session_roles:
+            logger.info(f"Coach + client both present — signaling coach to create offer")
+            await rtc_connections[session_id]["coach"].websocket.send_json(
+                {"type": "peer_ready", "role": "both_connected"}
+            )
 
         try:
             while conn_info.is_alive:
@@ -292,6 +297,24 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
                             logger.info(f"Forwarding {message_type} from learner to trainer")
                             await other_conn.websocket.send_json(message)
                     continue  # Skip the generic broadcast below
+
+                # Coach signaling messages go to client only
+                elif role == "coach" and message_type in ["offer", "answer", "ice-candidate"]:
+                    if "client" in rtc_connections[session_id]:
+                        other_conn = rtc_connections[session_id]["client"]
+                        if other_conn.is_alive:
+                            logger.info(f"Forwarding {message_type} from coach to client")
+                            await other_conn.websocket.send_json(message)
+                    continue
+
+                # Client signaling messages go to coach only
+                elif role == "client" and message_type in ["offer", "answer", "ice-candidate"]:
+                    if "coach" in rtc_connections[session_id]:
+                        other_conn = rtc_connections[session_id]["coach"]
+                        if other_conn.is_alive:
+                            logger.info(f"Forwarding {message_type} from client to coach")
+                            await other_conn.websocket.send_json(message)
+                    continue
                 
                 # For all other messages, use role mapping
                 role_mapping = {
