@@ -269,13 +269,8 @@ async def get_session_by_id(db: AsyncSession, session_id: str) -> Optional[Train
     )
     session = result.unique().scalar_one_or_none()
 
-    if session and session.status == "active" and session.started_at:
-        if session.started_at + timedelta(minutes=session.duration) < datetime.utcnow():
-            session.status = "ended"
-            session.ended_at = datetime.utcnow()
-            await db.commit()
-            await db.refresh(session)
-
+    # NOTE: Removed automatic status transition based on duration.
+    # Sessions will remain in their current state until explicitly ended.
     return session
 
 
@@ -500,8 +495,9 @@ async def cancel_session(db: AsyncSession, session_id: str) -> Optional[Training
 
 async def auto_end_expired_sessions(db: AsyncSession) -> int:
     """
-    Automatically end sessions that have exceeded their duration.
-    This is a safety mechanism to ensure sessions are ended even if frontend doesn't do it.
+    Automatically end legacy sessions that still have a duration configured.
+    This keeps existing duration-based sessions working while date-only sessions
+    remain active until the trainer ends them.
     
     - Finds all active sessions where current_time > started_at + duration
     - Ends those sessions by setting status='ended' and ended_at=now
@@ -513,51 +509,6 @@ async def auto_end_expired_sessions(db: AsyncSession) -> int:
     from datetime import timezone
     
     logger = logging.getLogger(__name__)
-    logger.info("🔄 Starting auto-end expired sessions...")
-    
-    try:
-        # Find all active sessions that have exceeded their duration
-        now = datetime.now(timezone.utc)
-        
-        result = await db.execute(
-            select(TrainingSession).where(
-                and_(
-                    TrainingSession.status == "active",
-                    TrainingSession.started_at.isnot(None),
-                    TrainingSession.duration.isnot(None)
-                )
-            )
-        )
-        active_sessions = result.scalars().all()
-        
-        sessions_ended = 0
-        for session in active_sessions:
-            # Calculate when session should end
-            session_duration_ms = session.duration * 60 * 1000  # Convert minutes to milliseconds
-            session_end_time = session.started_at.timestamp() * 1000 + session_duration_ms
-            current_time_ms = now.timestamp() * 1000
-            
-            # If current time is past session end time, end the session
-            if current_time_ms >= session_end_time:
-                logger.info(f"⏱️  Auto-ending expired session: {session.session_id} (duration: {session.duration}m, started: {session.started_at})")
-                
-                session.status = "ended"
-                session.ended_at = now
-                
-                # Calculate actual duration
-                duration_delta = session.ended_at - session.started_at
-                session.total_duration = int(duration_delta.total_seconds() / 60)
-                
-                sessions_ended += 1
-        
-        if sessions_ended > 0:
-            await db.commit()
-            logger.info(f"✅ Auto-ended {sessions_ended} expired sessions")
-        else:
-            logger.info("ℹ️  No expired sessions to auto-end")
-        
-        return sessions_ended
-        
-    except Exception as e:
-        logger.error(f"❌ Error in auto-end expired sessions: {str(e)}", exc_info=True)
-        return 0
+    # Auto-end behavior disabled: sessions will remain active until explicitly ended
+    logger.info("🔕 auto_end_expired_sessions is disabled — skipping automatic endings.")
+    return 0

@@ -30,6 +30,7 @@ const Checkout = () => {
         email: '',
         contact_number: ''
     });
+    const [fieldErrors, setFieldErrors] = useState({});
 
     useEffect(() => {
         loadCart();
@@ -138,22 +139,40 @@ const Checkout = () => {
     };
 
     const handleCheckout = async () => {
+        const newErrors = {};
+
         // Validate form - common fields
         if (!formData.delivery_address || !formData.delivery_city || !formData.delivery_pincode) {
+            if (!formData.delivery_address) newErrors.delivery_address = 'Delivery address is required';
+            if (!formData.delivery_city) newErrors.delivery_city = 'City is required';
+            if (!formData.delivery_pincode) newErrors.delivery_pincode = 'Postal code is required';
+            setFieldErrors(newErrors);
             toast.error('Please fill in all delivery details');
             return;
         }
+        if (formData.delivery_address.trim().length < 10) {
+            newErrors.delivery_address = 'Please enter your full address properly';
+            setFieldErrors(newErrors);
+            toast.error('Please enter your full address properly');
+            return;
+        }
         if (!formData.email) {
+            newErrors.email = 'Email is required';
+            setFieldErrors(newErrors);
             toast.error('Please provide your email address');
             return;
         }
         if (!formData.contact_number) {
+            newErrors.contact_number = 'Contact number is required';
+            setFieldErrors(newErrors);
             toast.error('Please provide your contact number');
             return;
         }
 
         // Guest users must provide name
         if (isGuestUser && !formData.name) {
+            newErrors.name = 'Name is required';
+            setFieldErrors(newErrors);
             toast.error('Please provide your name');
             return;
         }
@@ -161,6 +180,8 @@ const Checkout = () => {
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
+            newErrors.email = 'Please enter a valid email address';
+            setFieldErrors(newErrors);
             toast.error('Please enter a valid email address');
             return;
         }
@@ -168,6 +189,9 @@ const Checkout = () => {
             toast.error('Please upload payment receipt');
             return;
         }
+
+        // Clear errors if validation passes
+        setFieldErrors({});
 
         try {
             setSubmitting(true);
@@ -358,11 +382,26 @@ const Checkout = () => {
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
-                                                border: '1px solid #ddd',
+                                                border: fieldErrors.delivery_address ? '2px solid #dc2626' : '1px solid #ddd',
                                                 borderRadius: '6px',
-                                                fontSize: '14px'
+                                                fontSize: '14px',
+                                                backgroundColor: fieldErrors.delivery_address ? '#fef2f2' : 'white'
                                             }}
                                         />
+                                        {fieldErrors.delivery_address && (
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                marginTop: '6px',
+                                                fontSize: '13px',
+                                                color: '#dc2626',
+                                                fontWeight: '500'
+                                            }}>
+                                                <AlertCircle size={16} />
+                                                {fieldErrors.delivery_address}
+                                            </div>
+                                        )}
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                         <div>

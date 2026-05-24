@@ -57,6 +57,10 @@ export default function IOSNavBar({
     onRefresh,
     // Optional position override — 'bottom-right' (default) | 'bottom-left' | 'top-right' | 'top-left'
     position = 'bottom-right',
+    // If true, render anchored (absolute) inside parent instead of fixed to viewport
+    anchored = false,
+    // Offset used when anchored (can be negative to overlap). Example: '-20px'
+    anchoredOffset = '-20px',
 }) {
     const [visible, setVisible] = useState(false);
     const [pressed, setPressed] = useState(null); // 'back' | 'refresh' | null
@@ -90,18 +94,18 @@ export default function IOSNavBar({
     // Position styles
     const posMap = {
         'bottom-right': { bottom: 'calc(env(safe-area-inset-bottom, 12px) + 16px)', right: '16px' },
-        'bottom-left':  { bottom: 'calc(env(safe-area-inset-bottom, 12px) + 16px)', left: '16px' },
-        'top-right':    { top:    'calc(env(safe-area-inset-top, 12px) + 16px)',    right: '16px' },
-        'top-left':     { top:    'calc(env(safe-area-inset-top, 12px) + 16px)',    left: '16px' },
+        'bottom-left': { bottom: 'calc(env(safe-area-inset-bottom, 12px) + 16px)', left: '16px' },
+        'top-right': { top: 'calc(env(safe-area-inset-top, 12px) + 16px)', right: '16px' },
+        'top-left': { top: 'calc(env(safe-area-inset-top, 12px) + 16px)', left: '16px' },
     };
 
     const pillStyle = {
-        position: 'fixed',
+        position: anchored ? 'absolute' : 'fixed',
         zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
         gap: '2px',
-        padding: '4px 6px',
+        // padding: '2px',
         background: 'rgba(20, 20, 20, 0.72)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
@@ -109,7 +113,13 @@ export default function IOSNavBar({
         boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
         border: '1px solid rgba(255,255,255,0.12)',
         pointerEvents: 'auto',
-        ...posMap[position] ?? posMap['bottom-right'],
+        // If anchored, use anchoredOffset for bottom/top placement so it sits just below the
+        // parent container when rendered inside AttendeeUpperSection. Otherwise use viewport calc().
+        ...(anchored
+            ? (position.startsWith('bottom')
+                ? { bottom: anchoredOffset, right: position.endsWith('right') ? '16px' : undefined, left: position.endsWith('left') ? '16px' : undefined }
+                : { top: anchoredOffset, right: position.endsWith('right') ? '16px' : undefined, left: position.endsWith('left') ? '16px' : undefined })
+            : (posMap[position] ?? posMap['bottom-right'])),
     };
 
     return (

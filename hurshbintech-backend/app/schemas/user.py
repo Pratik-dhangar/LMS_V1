@@ -329,6 +329,8 @@ class TrainerResponse(BaseModel):
     input_at_hurshbin: Optional[str] = None
     note_box: Optional[str] = None
     message_box: Optional[str] = None
+    can_schedule_ilp: bool = False
+    trainer_ilp_override: Optional[bool] = None
     reference_data: List[ReferenceDataSchema] = []
 
     created_by: Optional[int] = None
@@ -353,6 +355,12 @@ class TrainerResponse(BaseModel):
             "contact_number": user.contact_number,  # Get from User table
             "created_at": user.created_at,
             "created_by": profile.created_by_head_id,
+            "can_schedule_ilp": (
+                profile.can_schedule_ilp
+                if profile.can_schedule_ilp is not None
+                else bool(getattr(getattr(profile, "created_by_head", None), "can_trainers_schedule_ilp", False))
+            ),
+            "trainer_ilp_override": profile.can_schedule_ilp,
             # Profile fields
             **{
                 field: getattr(profile, field)

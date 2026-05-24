@@ -180,6 +180,8 @@ class HeadProfile(Base):
     reference_data = relationship(
         "HeadReferenceData", back_populates="head", cascade="all, delete-orphan"
     )
+    # Permissions / feature flags controlled by Head
+    can_trainers_schedule_ilp = Column(Boolean, default=False, nullable=False, server_default="false")
 
 
 # Trainer user model
@@ -221,6 +223,9 @@ class TrainerProfile(Base):
     created_by_head_id = Column(
         Integer, ForeignKey("head_profiles.id", ondelete='SET NULL')
     )  # Head who created this trainer
+    # Optional per-trainer ILP scheduling override controlled by Head.
+    # None means fallback to head-level permission.
+    can_schedule_ilp = Column(Boolean, nullable=True, default=None)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships

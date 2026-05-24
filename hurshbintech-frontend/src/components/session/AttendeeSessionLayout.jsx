@@ -25,6 +25,8 @@
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import IOSNavBar from '../common/IOSNavBar';
 import PropTypes from 'prop-types';
 import { Clock, Mic, MicOff, Video, VideoOff, PhoneOff, Bold } from 'lucide-react';
 
@@ -160,11 +162,6 @@ export const AttendeeWaitingScreen = ({
                                 <p className="text-sm text-gray-700">
                                     <strong>Session Details:</strong>
                                 </p>
-                                {sessionInfo?.duration && (
-                                    <p className="text-xs text-gray-600 mt-1">
-                                        ⏱️ Duration: {sessionInfo.duration} minutes
-                                    </p>
-                                )}
                             </div>
                         )}
                     </div>
@@ -416,11 +413,6 @@ export const AttendeeSessionHeader = ({
                     <div className="session-header-info">
                         Status: <strong>{connectionStatus}</strong>
                     </div>
-                    {timeLeft && (
-                        <div className="session-header-info">
-                            Time Left: <strong>{timeLeft}</strong>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
@@ -2003,6 +1995,29 @@ export const AttendeeMetricsPanel = ({
 }) => {
     const bulbGlowFromBucket = useBulbGlowAnimation(bucketColor);
     const isBulbGlowing = bulbGlowFromBucket || !!promptAnimating;
+    const promptRef = useRef(null);
+    const [navOffset, setNavOffset] = useState('48px');
+
+    useEffect(() => {
+        const measure = () => {
+            try {
+                if (promptRef.current) {
+                    const el = promptRef.current;
+                    const offset = el.offsetTop + el.offsetHeight + 8; // 8px gap
+                    setNavOffset(`${offset}px`);
+                } else {
+                    // Default offset when there's no prompt visible
+                    setNavOffset('48px');
+                }
+            } catch (e) {
+                setNavOffset('48px');
+            }
+        };
+
+        measure();
+        window.addEventListener('resize', measure);
+        return () => window.removeEventListener('resize', measure);
+    }, [isPromptOpen, promptText]);
 
     return (
         <div className="attendee-metrics-panel" style={{
@@ -2088,7 +2103,7 @@ export const AttendeeMetricsPanel = ({
 
                 {/* Prompt Box — in-flow below Row 1, stays inside panel */}
                 {isPromptOpen && (
-                    <div style={{
+                    <div ref={promptRef} style={{
                         width: '100%',
                         backgroundColor: '#ffffff',
                         borderRadius: '0.375rem',
@@ -2126,6 +2141,7 @@ export const AttendeeMetricsPanel = ({
                         </p>
                     </div>
                 )}
+
             </div>
 
             {/* Row 3: Video control icons - Small and compact */}
@@ -2191,6 +2207,21 @@ export const AttendeeMetricsPanel = ({
                     </span>
                 </div>
             )}
+            {/* Anchored nav placed below the "R:" row inside the metrics panel */}
+            <IOSNavBar
+                anchored={true}
+                anchoredOffset={navOffset}
+                position="top-left"
+                onBack={() => {
+                    try {
+                        // navigate could be provided from parent; default fallback
+                        window.history.back();
+                    } catch (e) {
+                        window.history.back();
+                    }
+                }}
+                onRefresh={() => window.location.reload()}
+            />
         </div>
     );
 };
@@ -2242,6 +2273,8 @@ export const AttendeePromptPanel = ({
     // Local fallback for exercise answer when parent doesn't provide onExerciseUpdate
     const [localExerciseAnswer, setLocalExerciseAnswer] = React.useState(exerciseData?.answer || '');
 
+    const navigate = useNavigate();
+
     React.useEffect(() => {
         setLocalExerciseAnswer(exerciseData?.answer || '');
     }, [exerciseData && exerciseData.answer]);
@@ -2271,6 +2304,7 @@ export const AttendeePromptPanel = ({
     return (
         <div ref={panelRef} tabIndex={-1} className="attendee-prompt-panel" style={{
             width: '100%',
+            position: 'relative',
             display: 'flex',
             flexDirection: 'column',
             gap: 'clamp(0.5rem, 1.5vh, 0.875rem)',
@@ -2420,6 +2454,8 @@ export const AttendeePromptPanel = ({
                     </div>
                 </div>
             )}
+
+            {/* IOSNavBar for attendees is anchored in the left metrics panel below the R: element */}
         </div>
     );
 };
@@ -2712,6 +2748,7 @@ export const AttendeeUpperSection = ({
     // General
     sessionType = 'guest'
 }) => {
+    const navigate = useNavigate();
     const [isMobile, setIsMobile] = React.useState(false);
     const [isTablet, setIsTablet] = React.useState(false);
     // New: control whether the Prompt Line (middle panel) is visible (closed by default)
@@ -2882,6 +2919,7 @@ export const AttendeeUpperSection = ({
             <div className="attendee-upper-section" style={{
                 width: '100%',
                 height: 'clamp(10rem, 22vh, 16rem)',
+                position: 'relative',
                 display: 'flex',
                 flexDirection: 'row',
                 alignItems: 'stretch',
@@ -2945,6 +2983,7 @@ export const AttendeeUpperSection = ({
                     remoteStream={remoteStream}
                     label={videoLabel}
                 />
+                {/* Nav is rendered inside the prompt panel to anchor below voice input */}
             </div>
         </>
     );

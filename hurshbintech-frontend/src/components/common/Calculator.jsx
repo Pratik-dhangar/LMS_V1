@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import './Calculator.css';
 
 /**
@@ -17,12 +17,84 @@ const Calculator = ({
     remoteDisplay = null,
     remoteHistory = []
 }) => {
+    const containerRef = useRef(null);
+    const dragStateRef = useRef({ active: false, offsetX: 0, offsetY: 0 });
+    const hasPositionedRef = useRef(false);
     const [display, setDisplay] = useState('0');
     const [previousValue, setPreviousValue] = useState(null);
     const [operation, setOperation] = useState(null);
     const [waitingForNewValue, setWaitingForNewValue] = useState(false);
     const [history, setHistory] = useState([]);
     const [error, setError] = useState(null);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+
+    const clampToBounds = (nextX, nextY, bounds, elementBounds) => {
+        const maxX = Math.max(0, bounds.width - elementBounds.width - 6);
+        const maxY = Math.max(0, bounds.height - elementBounds.height - 6);
+
+        return {
+            x: Math.min(Math.max(6, nextX), maxX),
+            y: Math.min(Math.max(6, nextY), maxY)
+        };
+    };
+
+    const positionPanel = () => {
+        const element = containerRef.current;
+        const parent = element?.parentElement;
+
+        if (!element || !parent) return;
+
+        const parentBounds = parent.getBoundingClientRect();
+        const elementBounds = element.getBoundingClientRect();
+
+        if (parentBounds.width === 0 || parentBounds.height === 0 || elementBounds.width === 0 || elementBounds.height === 0) {
+            return;
+        }
+
+        const nextPosition = clampToBounds(
+            parentBounds.width - elementBounds.width - 6,
+            parentBounds.height - elementBounds.height - 6,
+            parentBounds,
+            elementBounds
+        );
+
+        setPosition(nextPosition);
+        hasPositionedRef.current = true;
+    };
+
+    const clampCurrentPosition = () => {
+        const element = containerRef.current;
+        const parent = element?.parentElement;
+
+        if (!element || !parent) return;
+
+        const parentBounds = parent.getBoundingClientRect();
+        const elementBounds = element.getBoundingClientRect();
+        setPosition((current) => {
+            const nextPosition = clampToBounds(current.x, current.y, parentBounds, elementBounds);
+            if (current.x === nextPosition.x && current.y === nextPosition.y) {
+                return current;
+            }
+            return nextPosition;
+        });
+    };
+
+    useLayoutEffect(() => {
+        if (!hasPositionedRef.current) {
+            positionPanel();
+        } else {
+            clampCurrentPosition();
+        }
+    });
+
+    useEffect(() => {
+        const handleResize = () => {
+            clampCurrentPosition();
+        };
+
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // For instructor: show remote attendee's calculator state
     const displayValue = isInstructor && remoteDisplay !== null ? remoteDisplay : display;
@@ -189,22 +261,74 @@ const Calculator = ({
         }
     }, [remoteDisplay, isInstructor]);
 
+    useEffect(() => {
+        const stopDrag = () => {
+            dragStateRef.current.active = false;
+        };
+
+        const moveDrag = (event) => {
+            if (!dragStateRef.current.active) return;
+
+            const element = containerRef.current;
+            const parent = element?.parentElement;
+            if (!element || !parent) return;
+
+            const parentBounds = parent.getBoundingClientRect();
+            const elementBounds = element.getBoundingClientRect();
+            const nextPosition = clampToBounds(
+                event.clientX - parentBounds.left - dragStateRef.current.offsetX,
+                event.clientY - parentBounds.top - dragStateRef.current.offsetY,
+                parentBounds,
+                elementBounds
+            );
+
+            setPosition(nextPosition);
+        };
+
+        window.addEventListener('pointermove', moveDrag);
+        window.addEventListener('pointerup', stopDrag);
+        window.addEventListener('pointercancel', stopDrag);
+
+        return () => {
+            window.removeEventListener('pointermove', moveDrag);
+            window.removeEventListener('pointerup', stopDrag);
+            window.removeEventListener('pointercancel', stopDrag);
+        };
+    }, []);
+
+    const handleDragStart = (event) => {
+        const element = containerRef.current;
+        const parent = element?.parentElement;
+
+        if (!element || !parent) return;
+
+        const parentBounds = parent.getBoundingClientRect();
+        dragStateRef.current = {
+            active: true,
+            offsetX: event.clientX - parentBounds.left - position.x,
+            offsetY: event.clientY - parentBounds.top - position.y
+        };
+
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
     const buttonClass = (isInstructor && !hasPermission) ? 'calculator-button disabled' : 'calculator-button';
     const operationButtonClass = (isInstructor && !hasPermission) ? 'calculator-button operation disabled' : 'calculator-button operation';
 
     return (
-        <div className="calculator-container">
-            <div className="calculator-header">
+        <div
+            ref={containerRef}
+            className="calculator-container"
+            style={{ left: `${position.x}px`, top: `${position.y}px` }}
+        >
+            <div className="calculator-header calculator-drag-handle" onPointerDown={handleDragStart}>
                 <h3>Calculator</h3>
                 {!isInstructor && !hasPermission && (
                     <div className="permission-badge">🔒 Waiting for permission</div>
                 )}
-                {!isInstructor && hasPermission && (
-                    <div className="permission-badge active">✓ Enabled</div>
-                )}
-                {isInstructor && (
-                    <div className="permission-badge instructor">👨‍🏫 Monitoring</div>
-                )}
+
+
             </div>
 
             <div className="calculator-display">

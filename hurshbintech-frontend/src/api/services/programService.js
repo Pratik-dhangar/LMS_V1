@@ -41,6 +41,29 @@ const programService = {
     }
   },
 
+  trainer: {
+    getPrograms: async (learnerId = null) => {
+      try {
+        const params = learnerId ? { learner_id: learnerId } : {};
+        const response = await api.get('/trainer/programs/', { params });
+        return response.data;
+      } catch (error) {
+        console.error('[programService] Error fetching trainer programs:', error);
+        throw error;
+      }
+    },
+
+    getProgramById: async (programId) => {
+      try {
+        const response = await api.get(`/trainer/programs/${programId}`);
+        return response.data;
+      } catch (error) {
+        console.error('[programService] Error fetching trainer program:', error);
+        throw error;
+      }
+    },
+  },
+
   /**
    * Get full details of a single program by ID.
    *

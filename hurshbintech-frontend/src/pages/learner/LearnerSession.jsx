@@ -21,7 +21,6 @@ import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
 import { denormalizeItem } from '../../utils/drawingSync';
 import { setupAttendeeWhiteboardCallbacks } from '../../components/session/InstructorSessionLayout';
-import IOSNavBar from '../../components/common/IOSNavBar';
 import '../../styles/components/common/sessionHeader.css';
 
 import {
@@ -649,59 +648,12 @@ const LearnerSession = () => {
     return cleanup;
   }, [whiteboardService, sessionInfo, floatingAnimations, buckets]);
 
-  // Countdown timer with auto-end
+  // Sessions no longer auto-end on a local timer.
   useEffect(() => {
-    if (!sessionInfo?.started_at) return;
+    if (!sessionInfo) return;
+    setTimeLeft('No limit');
+  }, [sessionInfo, setTimeLeft]);
 
-    const startTimeStr = sessionInfo.started_at.includes('Z')
-      ? sessionInfo.started_at
-      : sessionInfo.started_at + 'Z';
-    const endTime = new Date(startTimeStr).getTime() + sessionInfo.duration * 60 * 1000;
-
-    const interval = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = endTime - now;
-
-      if (distance < 0) {
-        clearInterval(interval);
-        setTimeLeft('00:00');
-        toast.info('Session time has ended.');
-
-        // Auto-end session and redirect
-        try {
-          if (webRTC?.localStream) {
-            webRTC.localStream.getTracks().forEach(track => track.stop());
-          }
-          webRTC?.close();
-          whiteboardService?.close();
-          clearSessionActivity(sessionId, 'learner');
-        } catch (error) {
-          console.error('[LearnerSession] Error during cleanup:', error);
-        }
-
-        // Redirect to dashboard after cleanup
-        setTimeout(() => {
-          navigate('/learner/dashboard');
-        }, 500);
-        return;
-      }
-
-      const totalSeconds = Math.floor(distance / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      if (hours > 0) {
-        setTimeLeft(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      } else {
-        setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionInfo, navigate, webRTC, whiteboardService, sessionId]);
-
-  // Auto check for session end
   useEffect(() => {
     if (!sessionInfo || sessionInfo.status !== 'active') return;
 
@@ -1403,10 +1355,7 @@ const LearnerSession = () => {
               Waiting for Trainer
             </h2>
             <p className="text-gray-600 mb-4">
-              Your session is scheduled and you're ready to join!
-            </p>
-            <p className="text-gray-600 mb-6">
-              Please wait while <strong>{sessionInfo?.trainer_name ?? 'your trainer'}</strong> joins the session.
+              The session will start when the trainer joins.
             </p>
             <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
               <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
@@ -1421,21 +1370,10 @@ const LearnerSession = () => {
                   <>📅 {new Date(sessionInfo.scheduled_date).toLocaleString()}</>
                 )}
               </p>
-              {sessionInfo?.duration && (
-                <p className="text-xs text-gray-600 mt-1">
-                  ⏱️ Duration: {sessionInfo.duration} minutes
-                </p>
-              )}
             </div>
           </div>
         </div>
 
-        {/* iOS / PWA floating nav (back + refresh) */}
-        <IOSNavBar
-          onBack={() => navigate('/learner/dashboard')}
-          onRefresh={() => window.location.reload()}
-          position="bottom-right"
-        />
       </div>
     );
   }
@@ -1896,6 +1834,9 @@ const LearnerSession = () => {
           sessionType="learner"
         />
 
+        {/* iOS / PWA floating nav (back + refresh) - placed below voice input (attendee upper section) */}
+        {/* IOSNavBar is now anchored inside AttendeeUpperSection */}
+
         {/* Whiteboard - Fills remaining space */}
         <AttendeeWhiteboardSection>
           <LearnerWhiteboardWithVideo
@@ -1933,7 +1874,7 @@ const LearnerSession = () => {
           />
 
           {calculatorPermission && (
-            <div style={{ position: 'absolute', right: '12px', bottom: '12px', zIndex: 80, width: 'min(340px, 92vw)' }}>
+            <div style={{ position: 'absolute', inset: 0, zIndex: 80, pointerEvents: 'none' }}>
               <Calculator
                 hasPermission={calculatorPermission}
                 onCalculatorChange={(payload) => {
@@ -2009,12 +1950,6 @@ const LearnerSession = () => {
         {/* Background Music Audio Element */}
         <audio ref={audioRef} crossOrigin="anonymous" />
 
-        {/* iOS / PWA floating nav (back + refresh) */}
-        <IOSNavBar
-          onBack={() => navigate('/learner/dashboard')}
-          onRefresh={() => window.location.reload()}
-          position="bottom-right"
-        />
       </div>
       {showFeedbackModal && (
         <SessionFeedbackModal

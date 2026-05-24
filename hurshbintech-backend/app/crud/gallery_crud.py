@@ -13,6 +13,9 @@ class GalleryCRUD:
             photo_url=gallery.photo_url,
             photo_size=gallery.photo_size,
             thumbnail_url=gallery.thumbnail_url,
+            video_url=gallery.video_url,
+            video_size=gallery.video_size,
+            video_thumbnail_url=gallery.video_thumbnail_url,
             status=gallery.status or "draft",
         )
         db.add(db_gallery)
@@ -73,6 +76,20 @@ class GalleryCRUD:
         if db_gallery.thumbnail_url:
             # Remove leading slash and normalize path separators
             clean_path = db_gallery.thumbnail_url.lstrip("/").replace("\\", "/")
+            thumbnail_path = base_dir / clean_path
+            if thumbnail_path.exists():
+                thumbnail_path.unlink()
+
+        if db_gallery.video_url:
+            # Remove leading slash and normalize path separators
+            clean_path = db_gallery.video_url.lstrip("/").replace("\\", "/")
+            file_path = base_dir / clean_path
+            if file_path.exists():
+                file_path.unlink()
+
+        if db_gallery.video_thumbnail_url:
+            # Remove leading slash and normalize path separators
+            clean_path = db_gallery.video_thumbnail_url.lstrip("/").replace("\\", "/")
             thumbnail_path = base_dir / clean_path
             if thumbnail_path.exists():
                 thumbnail_path.unlink()

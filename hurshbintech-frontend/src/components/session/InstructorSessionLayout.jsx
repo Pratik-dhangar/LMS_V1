@@ -44,6 +44,7 @@ import { normalizeItem } from '../../utils/drawingSync';
 import Exercise from './Exercise';
 import YouTubePopup from '../common/YouTubePopup';
 import LearningContentSidebar from '../../pages/trainer/LearningContentSidebar';
+import learningContentService from '../../api/services/learningContentService';
 import StopwatchDisplay from '../common/StopwatchDisplay';
 import { playFeedbackSound, playFeedbackSoundLoop, stopFeedbackSound, playFloatingAnimationSound } from '../../utils/feedbackSounds';
 
@@ -90,11 +91,6 @@ export const InstructorSessionHeader = ({
                     <div className="session-header-info">
                         Status: <strong>{connectionStatus}</strong>
                     </div>
-                    {timeLeft && (
-                        <div className="session-header-info">
-                            Time Left: <strong>{timeLeft}</strong>
-                        </div>
-                    )}
                     {showEndButton && (
                         <button className="btn-session btn-session-end" onClick={onEndSession}>
                             🏁 End Session
@@ -2942,13 +2938,23 @@ export const createContentDragPayload = (content) => {
         youtubeVideoId = extractYoutubeVideoId(content.youtube_url);
     }
 
+    // Normalize file URL to a usable browser URL and set accurate mimeType
+    const resolvedUrl = content.file_url ? learningContentService.getFileUrl(content.file_url) : null;
+    let mime = content.mime_type || null;
+    if (!mime) {
+        if (content.content_type === 'image') mime = 'image/jpeg';
+        else if (content.content_type === 'pdf') mime = 'application/pdf';
+        else if (content.content_type === 'video') mime = 'video/mp4';
+        else mime = 'application/octet-stream';
+    }
+
     return {
         id: content.id,
         title: content.title,
         type: content.is_youtube ? 'youtube' : content.content_type,
-        url: content.file_url || null,
+        url: resolvedUrl,
         thumbnail: content.thumbnail_url || null,
-        mimeType: content.content_type === 'image' ? 'image/jpeg' : 'application/octet-stream',
+        mimeType: mime,
         originalFilename: content.title,
         is_youtube: content.is_youtube || false,
         youtube_url: content.youtube_url || null,
@@ -3178,9 +3184,6 @@ export const InstructorSessionPage = ({
                     <div className="session-header-controls">
                         <div className="session-header-info">
                             Status: <strong>{connectionStatus}</strong>
-                        </div>
-                        <div className="session-header-info">
-                            Time Left: <strong>{timeLeft ?? '--:--'}</strong>
                         </div>
                         <button
                             className="btn-secondary"
@@ -4020,14 +4023,10 @@ export const WhiteboardTools = ({
                 <div
                     id="calculator-panel"
                     style={{
-                        position: 'fixed',
-                        right: '12px',
-                        bottom: '12px',
+                        position: 'absolute',
+                        inset: 0,
                         zIndex: 120,
-                        width: 'min(360px, 92vw)',
-                        maxHeight: '75vh',
-                        overflowY: 'auto',
-                        padding: 'clamp(0.5rem, 1.5vw, 1rem)'
+                        pointerEvents: 'none'
                     }}
                 >
                     <Calculator

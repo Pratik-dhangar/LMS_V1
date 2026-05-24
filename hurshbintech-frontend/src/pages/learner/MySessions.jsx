@@ -82,6 +82,27 @@ const MySessions = () => {
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const isSameLocalDay = (dateA, dateB) => {
+    if (!dateA || !dateB) return false;
+    return (
+      dateA.getFullYear() === dateB.getFullYear() &&
+      dateA.getMonth() === dateB.getMonth() &&
+      dateA.getDate() === dateB.getDate()
+    );
+  };
+
+  const canJoinSession = (session) => {
+    if (!session?.scheduled_date) return false;
+
+    const status = session.status;
+    if (status === 'cancelled' || status === 'ended') {
+      return false;
+    }
+
+    const scheduled = new Date(session.scheduled_date);
+    return isSameLocalDay(scheduled, new Date());
+  };
+
   return (
     <div className="page-container">
       <style>{`
@@ -330,12 +351,14 @@ const MySessions = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {sessions
                   .sort((a, b) => {
-                    // Only ongoing (active) sessions come to the top; rest keep original order (newest date first)
-                    const isActive = (sess) => sess.status === 'active';
-                    if (isActive(a) && !isActive(b)) return -1;
-                    if (!isActive(a) && isActive(b)) return 1;
-                    // Within same group, sort by date (newest first)
-                    return new Date(b.scheduled_date || 0) - new Date(a.scheduled_date || 0);
+                    const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : Number.POSITIVE_INFINITY;
+                    const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : Number.POSITIVE_INFINITY;
+
+                    if (dateA !== dateB) {
+                      return dateA - dateB;
+                    }
+
+                    return (a.session_id || a.id || 0) - (b.session_id || b.id || 0);
                   })
                   .slice(0, itemsPerPage)
                   .map((session) => {
@@ -390,6 +413,8 @@ const MySessions = () => {
                         isExpired ? { bg: '#e5e7eb', color: '#374151' } :
                           isCancelled ? { bg: '#fee2e2', color: '#dc2626' } :
                             { bg: '#f3f4f6', color: '#1f2937' };
+                    const joinableToday = canJoinSession(session);
+                    const joinButtonLabel = joinedSessions.has(session.session_id) ? 'Rejoin Session' : 'Join Session';
 
                     return (
                       <div
@@ -427,11 +452,7 @@ const MySessions = () => {
                           </div>
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.75rem', color: '#4b5563' }}>
                             <span>📅 {formatShortDate(session.scheduled_date ?? session.started_at)}</span>
-                            {session.scheduled_date && (
-                              <span>🕐 {new Date(session.scheduled_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            )}
                             <span>👨‍🏫 {session.trainer?.name || session.trainer_name || '—'}</span>
-                            {session.duration && <span>⏱️ {session.duration} min</span>}
                           </div>
                           {session.program?.name && (
                             <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>Program: {session.program.name}</p>
@@ -455,23 +476,31 @@ const MySessions = () => {
                             {(isActive || isScheduled) && !isExpired && !isCancelled && (
                               <button
                                 onClick={() => handleJoinSession(session.session_id)}
+                                disabled={!joinableToday}
                                 style={{
-                                  background: 'linear-gradient(to right, #f59e0b, #d97706)',
+                                  background: joinableToday ? 'linear-gradient(to right, #f59e0b, #d97706)' : '#d1d5db',
                                   color: '#ffffff',
                                   padding: '0.5rem 1rem',
                                   borderRadius: '0.375rem',
                                   fontSize: '0.875rem',
                                   fontWeight: '600',
                                   border: 'none',
-                                  cursor: 'pointer',
+                                  cursor: joinableToday ? 'pointer' : 'not-allowed',
                                   transition: 'all 0.2s',
                                   whiteSpace: 'nowrap',
                                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
                                 }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #d97706, #ea580c)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'linear-gradient(to right, #f59e0b, #d97706)'}
+                                onMouseEnter={(e) => {
+                                  if (joinableToday) {
+                                    e.currentTarget.style.background = 'linear-gradient(to right, #d97706, #ea580c)';
+                                  }
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = joinableToday ? 'linear-gradient(to right, #f59e0b, #d97706)' : '#d1d5db';
+                                }}
+                                title={joinableToday ? 'Join session today' : 'Join Session is available only on the session day'}
                               >
-                                {joinedSessions.has(session.session_id) ? 'Rejoin Session' : 'Join Session'}
+                                {joinButtonLabel}
                               </button>
                             )}
                             {isEnded && (
@@ -624,25 +653,10 @@ const MySessions = () => {
                       : "—"}
                   </p>
                 </div>
-                <div className="app-modal-form-field">
-                  <label className="app-modal-form-label">Time</label>
-                  <p className="app-modal-text">
-                    {selectedSession.scheduled_date
-                      ? new Date(selectedSession.scheduled_date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })
-                      : "—"}
-                  </p>
-                </div>
               </div>
 
-              {/* Duration & Program */}
+              {/* Program */}
               <div className="app-modal-form-grid app-modal-form-grid--2">
-                <div className="app-modal-form-field">
-                  <label className="app-modal-form-label">Duration</label>
-                  <p className="app-modal-text">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
-                </div>
                 <div className="app-modal-form-field">
                   <label className="app-modal-form-label">Program / ILP</label>
                   <p className="app-modal-text">
