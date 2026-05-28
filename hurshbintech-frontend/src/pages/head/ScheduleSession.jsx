@@ -14,6 +14,7 @@ import { useAuth } from "../../context/AuthContext";
 import { downloadLearningProgramPDF } from "../../utils/pdfGenerator";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/Table.css";
+import "../../styles/Subscription.css";
 import "../../styles/head/ScheduleSession.css";
 
 const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
@@ -39,6 +40,8 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
   const contentSentinelRef = useRef(null);
   const CONTENT_PAGE_SIZE = 12;
   const [contentVisibleCount, setContentVisibleCount] = useState(CONTENT_PAGE_SIZE);
+  const GOALS_PAGE_SIZE = 5;
+  const [goalCurrentPage, setGoalCurrentPage] = useState(1);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -515,6 +518,22 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
     ]
     : filteredGoals;
 
+  const goalTotalPages = Math.max(1, Math.ceil(sortedFilteredGoals.length / GOALS_PAGE_SIZE));
+  const paginatedGoals = sortedFilteredGoals.slice(
+    (goalCurrentPage - 1) * GOALS_PAGE_SIZE,
+    goalCurrentPage * GOALS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setGoalCurrentPage(1);
+  }, [searchTerm.goal, selectedProgramId]);
+
+  useEffect(() => {
+    if (goalCurrentPage > goalTotalPages) {
+      setGoalCurrentPage(goalTotalPages);
+    }
+  }, [goalCurrentPage, goalTotalPages]);
+
   const sortedFilteredContents = selectedProgramId
     ? [
       ...filteredContents.filter((c) => formData.content_ids.includes(c.id)),
@@ -965,16 +984,11 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
                                   const unselGoals = sortedFilteredGoals.filter((g) => !formData.goal_ids.includes(g.id));
                                   const showDivider = selectedProgramId && selGoals.length > 0 && unselGoals.length > 0;
                                   const firstUnselId = unselGoals[0]?.id;
+                                  const startItem = (goalCurrentPage - 1) * GOALS_PAGE_SIZE + 1;
+                                  const endItem = Math.min(goalCurrentPage * GOALS_PAGE_SIZE, sortedFilteredGoals.length);
                                   return (
                                     <>
-                                      {showDivider && selGoals.length > 0 && (
-                                        <tr>
-                                          <td colSpan="3" style={{ padding: '0.4rem 0.75rem', background: '#ecfdf5', fontSize: '0.75rem', color: '#065f46', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                            ✅ From Selected Program
-                                          </td>
-                                        </tr>
-                                      )}
-                                      {sortedFilteredGoals.map((goal) => {
+                                      {paginatedGoals.map((goal) => {
                                         const isSelected = formData.goal_ids.includes(goal.id);
                                         const isDividerRow = showDivider && goal.id === firstUnselId;
                                         return (
@@ -1008,6 +1022,50 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
                                           </React.Fragment>
                                         );
                                       })}
+                                      {goalTotalPages > 1 && (
+                                        <tr>
+                                          <td colSpan="3" style={{ padding: '0.85rem 0.75rem' }}>
+                                            <div className="table-pagination-section" style={{ padding: 0, margin: 0, gap: '0.75rem' }}>
+                                              <div className="table-pagination" style={{ justifyContent: 'space-between' }}>
+                                                <div className="pagination-info">
+                                                  Showing {startItem}-{endItem} of {sortedFilteredGoals.length}
+                                                </div>
+                                                <div className="table-pagination-pages">
+                                                  <button
+                                                    type="button"
+                                                    className="table-pagination-btn"
+                                                    onClick={() => setGoalCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                                    disabled={goalCurrentPage === 1}
+                                                  >
+                                                    Previous
+                                                  </button>
+                                                  {[...Array(goalTotalPages)].map((_, index) => {
+                                                    const pageNum = index + 1;
+                                                    return (
+                                                      <button
+                                                        key={pageNum}
+                                                        type="button"
+                                                        className={`table-pagination-page ${goalCurrentPage === pageNum ? 'active' : ''}`}
+                                                        onClick={() => setGoalCurrentPage(pageNum)}
+                                                      >
+                                                        {pageNum}
+                                                      </button>
+                                                    );
+                                                  })}
+                                                  <button
+                                                    type="button"
+                                                    className="table-pagination-btn"
+                                                    onClick={() => setGoalCurrentPage((prev) => Math.min(prev + 1, goalTotalPages))}
+                                                    disabled={goalCurrentPage === goalTotalPages}
+                                                  >
+                                                    Next
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      )}
                                     </>
                                   );
                                 })()

@@ -6,8 +6,11 @@ import learningSkillsService from "../../api/services/learningSkillsService";
 import SearchBar from "../../components/common/SearchBar";
 import "../../styles/components/common/Modal.css";
 import "../../styles/Table.css";
+import "../../styles/Subscription.css";
 import "../../styles/admin/AdminManageLearningGoals.css";
 import "../../styles/ManageUsersLayout.css";
+
+const PAGE_SIZE_OPTIONS = [5, 10, 15, 25];
 
 const ManageLearningGoals = () => {
   const navigate = useNavigate();
@@ -23,6 +26,8 @@ const ManageLearningGoals = () => {
   const [selectedSkill, setSelectedSkill] = useState(null);
   const [learningSkillName, setLearningSkillName] = useState("");
   const [editLearningSkillName, setEditLearningSkillName] = useState("");
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState({
     goal: "",
     goal_description: "",
@@ -32,6 +37,10 @@ const ManageLearningGoals = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeView, activeSearchQuery, itemsPerPage]);
 
   const fetchData = async () => {
     try {
@@ -195,6 +204,110 @@ const ManageLearningGoals = () => {
     skill.skill_name?.toLowerCase().includes(activeSearchQuery.toLowerCase())
   );
 
+  const activeRecords = activeView === "goals" ? filteredGoals : filteredSkills;
+  const totalPages = Math.max(1, Math.ceil(activeRecords.length / itemsPerPage));
+  const paginatedRecords = activeRecords.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const renderPagination = () => {
+    if (activeRecords.length === 0) {
+      return null;
+    }
+
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, activeRecords.length);
+
+    return (
+      <div className="table-pagination-section">
+        <div className="table-pagination-size-row">
+          <label htmlFor="learning-goals-page-size" className="table-pagination-size-label">
+            Rows per page:
+          </label>
+          <select
+            id="learning-goals-page-size"
+            className="table-pagination-size-select"
+            value={itemsPerPage}
+            onChange={(e) => setItemsPerPage(Number(e.target.value))}
+          >
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="table-pagination">
+          <div className="pagination-info">
+            Showing {startItem}-{endItem} of {activeRecords.length}
+          </div>
+          {totalPages > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="table-pagination-btn"
+              >
+                Previous
+              </button>
+
+              <div className="table-pagination-pages">
+                {[...Array(totalPages)].map((_, index) => {
+                  const pageNum = index + 1;
+
+                  if (
+                    pageNum === 1 ||
+                    pageNum === totalPages ||
+                    (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        type="button"
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`table-pagination-page ${currentPage === pageNum ? "active" : ""}`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  }
+
+                  if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                    return (
+                      <span key={pageNum} className="table-pagination-ellipsis">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  return null;
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="table-pagination-btn"
+              >
+                Next
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="page-container">
       <div className="page-main">
@@ -350,10 +463,10 @@ const ManageLearningGoals = () => {
                   </thead>
                   <tbody className="table-primary-body">
                     {activeView === "goals"
-                      ? filteredGoals.map((goal, index) => (
+                      ? paginatedRecords.map((goal, index) => (
                         <tr key={goal.id} className="table-primary-row">
                           <td className="table-primary-td table-primary-td-center">
-                            {index + 1}
+                            {(currentPage - 1) * itemsPerPage + index + 1}
                           </td>
                           <td className="table-primary-td">
                             <div className="table-primary-cell-name">
@@ -419,10 +532,10 @@ const ManageLearningGoals = () => {
                           </td>
                         </tr>
                       ))
-                      : filteredSkills.map((skill, index) => (
+                      : paginatedRecords.map((skill, index) => (
                         <tr key={skill.id} className="table-primary-row">
                           <td className="table-primary-td table-primary-td-center">
-                            {index + 1}
+                            {(currentPage - 1) * itemsPerPage + index + 1}
                           </td>
                           <td className="table-primary-td">
                             <div className="table-primary-cell-name-text">
@@ -481,6 +594,7 @@ const ManageLearningGoals = () => {
                   </tbody>
                 </table>
               </div>
+              {renderPagination()}
             </div>
           )}
         </div>

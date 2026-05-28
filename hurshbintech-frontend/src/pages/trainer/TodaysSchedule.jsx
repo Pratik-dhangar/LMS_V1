@@ -135,24 +135,28 @@ const TodaysSchedule = ({ embedded = false }) => {
     if (session.status === 'cancelled') {
       return 'cancelled';
     }
-    if (session.status === 'active') {
-      return 'active';
-    }
-    if (session.status === 'ended') {
+    if (session.status === 'ended' || session.ended_at) {
       return 'ended';
     }
+    if (session.status === 'active' || session.started_at) {
+      return 'active';
+    }
 
-    // Check if session is expired — trainer/coach keep access until midnight of session day
-    if (session.scheduled_date) {
+    // Only mark a session expired if it was never started and the scheduled window has passed.
+    if (session.status === 'scheduled' && session.scheduled_date) {
       try {
         const now = new Date();
         const scheduled = new Date(session.scheduled_date);
 
-        // Expire at end of session day (midnight) so trainer can resume any time during the day
-        const midnight = new Date(scheduled);
-        midnight.setHours(23, 59, 59, 999);
+        const expiresAt = session.duration
+          ? new Date(scheduled.getTime() + Number(session.duration) * 60 * 1000)
+          : (() => {
+            const midnight = new Date(scheduled);
+            midnight.setHours(23, 59, 59, 999);
+            return midnight;
+          })();
 
-        if (now > midnight) {
+        if (now > expiresAt) {
           return 'expired';
         }
       } catch (e) {
@@ -165,7 +169,7 @@ const TodaysSchedule = ({ embedded = false }) => {
   // Check if trainer can start session based on scheduled time
   const canStartSession = (session) => {
     // Can only start if status is scheduled (not ended, cancelled, or already active)
-    if (session.status !== 'scheduled') {
+    if (session.status !== 'scheduled' || session.started_at || session.ended_at) {
       return false;
     }
 
@@ -221,13 +225,25 @@ const TodaysSchedule = ({ embedded = false }) => {
     });
   }, []);
 
+  const getSessionSortPriority = (status) => {
+    if (status === "active") return 0;
+    if (status === "scheduled") return 1;
+    if (status === "expired" || status === "ended" || status === "cancelled") return 2;
+    return 3;
+  };
+
   const sortedSessions = useMemo(() => {
     return [...sessions].sort((a, b) => {
-      const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : Number.POSITIVE_INFINITY;
-      const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : Number.POSITIVE_INFINITY;
-      if (dateA !== dateB) return dateA - dateB;
+      const priorityA = getSessionSortPriority(getSessionStatus(a));
+      const priorityB = getSessionSortPriority(getSessionStatus(b));
 
-      return (a.id || 0) - (b.id || 0);
+      if (priorityA !== priorityB) return priorityA - priorityB;
+
+      const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : Number.NEGATIVE_INFINITY;
+      const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : Number.NEGATIVE_INFINITY;
+      if (dateA !== dateB) return dateB - dateA;
+
+      return (b.id || b.session_id || 0) - (a.id || a.session_id || 0);
     });
   }, [sessions]);
 

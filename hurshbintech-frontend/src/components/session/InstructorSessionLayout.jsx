@@ -664,7 +664,16 @@ export const instructorSessionStyles = `
     margin: 0;
     padding: 0;
     overflow: hidden;
+        overscroll-behavior-y: none;
+        overscroll-behavior: none;
+        touch-action: pan-x pan-y;
   }
+
+    html, body {
+        overscroll-behavior-y: none;
+        overscroll-behavior: none;
+        overflow-y: hidden;
+    }
 
   .instructor-main-content {
     display: flex;

@@ -553,6 +553,8 @@ export const attendeeSessionStyles = `
     box-sizing: border-box !important;
     position: relative !important;
     overflow: hidden !important;
+        overscroll-behavior-y: none !important;
+        overscroll-behavior: none !important;
   }
 
   html, body {
@@ -561,6 +563,8 @@ export const attendeeSessionStyles = `
     height: 100% !important;
     width: 100% !important;
     overflow-x: hidden !important;
+        overscroll-behavior-y: none !important;
+        overscroll-behavior: none !important;
   }
 
   .session-header {

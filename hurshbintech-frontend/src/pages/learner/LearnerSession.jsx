@@ -1444,6 +1444,8 @@ const LearnerSession = () => {
           padding: 0 !important;
           box-sizing: border-box !important;
           position: relative !important;
+          overscroll-behavior-y: none !important;
+          overscroll-behavior: none !important;
           /* overflow controlled by media queries */
         }
 
@@ -1453,6 +1455,8 @@ const LearnerSession = () => {
           height: 100% !important;
           width: 100% !important;
           overflow-x: hidden !important;
+          overscroll-behavior-y: none !important;
+          overscroll-behavior: none !important;
         }
 
         /* Session Header - Fixed at top */
@@ -1664,6 +1668,8 @@ const LearnerSession = () => {
             /* Allow scrolling on mobile to hide browser chrome */
             overflow-y: auto !important;
             overflow-x: hidden !important;
+            overscroll-behavior-y: none !important;
+            overscroll-behavior: none !important;
             /* Enable momentum scrolling on iOS */
             -webkit-overflow-scrolling: touch !important;
             /* Handle safe areas (notches, rounded corners) */
@@ -1680,6 +1686,8 @@ const LearnerSession = () => {
             overflow-x: hidden !important;
             /* Allow vertical scrolling to hide browser chrome */
             overflow-y: auto !important;
+            overscroll-behavior-y: none !important;
+            overscroll-behavior: none !important;
           }
           
           body {
@@ -1690,6 +1698,8 @@ const LearnerSession = () => {
             min-height: -webkit-fill-available !important;
             overflow-x: hidden !important;
             overflow-y: auto !important;
+            overscroll-behavior-y: none !important;
+            overscroll-behavior: none !important;
             /* Remove default margins that can cause layout issues */
             margin: 0 !important;
             padding: 0 !important;

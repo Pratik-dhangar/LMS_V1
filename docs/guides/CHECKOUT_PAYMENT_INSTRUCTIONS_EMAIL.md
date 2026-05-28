@@ -138,7 +138,7 @@ Content:
 │ Bank Account Details:                        │
 │ ┌─────────────────────────────────────────┐ │
 │ │ Bank Name: HDFC Bank                   │ │
-│ │ Account Holder: HurshBintech Pvt Ltd   │ │
+│ │ Account Holder: HurshBin Pvt Ltd   │ │
 │ │ Account Number: XXXX XXXX 1234         │ │
 │ │ IFSC Code: HDFC0001234                 │ │
 │ │ Amount to Pay: ₹5,000.00               │ │

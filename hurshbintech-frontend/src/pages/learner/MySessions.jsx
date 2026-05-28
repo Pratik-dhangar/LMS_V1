@@ -103,6 +103,13 @@ const MySessions = () => {
     return isSameLocalDay(scheduled, new Date());
   };
 
+  const getSessionSortPriority = (status) => {
+    if (status === 'active') return 0;
+    if (status === 'scheduled') return 1;
+    if (status === 'expired' || status === 'ended' || status === 'cancelled') return 2;
+    return 3;
+  };
+
   return (
     <div className="page-container">
       <style>{`
@@ -349,16 +356,23 @@ const MySessions = () => {
               <div style={{ textAlign: 'center', padding: '1.5rem', color: '#6b7280' }}>No sessions scheduled.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {sessions
+                {[...sessions]
                   .sort((a, b) => {
-                    const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : Number.POSITIVE_INFINITY;
-                    const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : Number.POSITIVE_INFINITY;
+                    const priorityA = getSessionSortPriority(a.status);
+                    const priorityB = getSessionSortPriority(b.status);
 
-                    if (dateA !== dateB) {
-                      return dateA - dateB;
+                    if (priorityA !== priorityB) {
+                      return priorityA - priorityB;
                     }
 
-                    return (a.session_id || a.id || 0) - (b.session_id || b.id || 0);
+                    const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : Number.NEGATIVE_INFINITY;
+                    const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : Number.NEGATIVE_INFINITY;
+
+                    if (dateA !== dateB) {
+                      return dateB - dateA;
+                    }
+
+                    return (b.session_id || b.id || 0) - (a.session_id || a.id || 0);
                   })
                   .slice(0, itemsPerPage)
                   .map((session) => {
@@ -368,25 +382,29 @@ const MySessions = () => {
                       if (sess.status === 'cancelled') {
                         return 'cancelled';
                       }
-                      if (sess.status === 'active') {
-                        return 'active';
-                      }
-                      if (sess.status === 'ended') {
+                      if (sess.status === 'ended' || sess.ended_at) {
                         return 'ended';
                       }
+                      if (sess.status === 'active' || sess.started_at) {
+                        return 'active';
+                      }
 
-                      // Check if scheduled session is expired (scheduled time + duration has passed and session not started)
+                      // Check if scheduled session is expired only when it never started.
                       if (sess.status === 'scheduled' && sess.scheduled_date) {
                         try {
                           const now = new Date();
                           const scheduled = new Date(sess.scheduled_date);
 
-                          // Calculate session end time: scheduled_date + duration (in minutes)
-                          const durationMs = (sess.duration || 0) * 60 * 1000; // Convert minutes to milliseconds
-                          const sessionEndTime = new Date(scheduled.getTime() + durationMs);
+                          const expiresAt = sess.duration
+                            ? new Date(scheduled.getTime() + Number(sess.duration) * 60 * 1000)
+                            : (() => {
+                              const midnight = new Date(scheduled);
+                              midnight.setHours(23, 59, 59, 999);
+                              return midnight;
+                            })();
 
-                          // If current time is after (session end time), it's expired
-                          if (now >= sessionEndTime) {
+                          // If current time is after the scheduled window and the session never started, it's expired.
+                          if (now >= expiresAt) {
                             return 'expired';
                           }
                         } catch (e) {
