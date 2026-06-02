@@ -9,7 +9,7 @@ import time
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.user_model import (
     Admin,
@@ -396,7 +396,11 @@ async def get_trainer_by_id(db: AsyncSession, trainer_id: int):
     """Get trainer profile with user data and reference files by profile ID"""
     result = await db.execute(
         select(TrainerProfile)
-        .options(joinedload(TrainerProfile.user), joinedload(TrainerProfile.reference_data))
+        .options(
+            selectinload(TrainerProfile.user), 
+            selectinload(TrainerProfile.reference_data),
+            selectinload(TrainerProfile.created_by_head).selectinload(HeadProfile.user)
+        )
         .where(TrainerProfile.id == trainer_id)
     )
     return result.unique().scalar_one_or_none()
@@ -417,8 +421,9 @@ async def get_trainers_by_head(db: AsyncSession, head_id: int):
     result = await db.execute(
         select(TrainerProfile)
         .options(
-            joinedload(TrainerProfile.user),
-            joinedload(TrainerProfile.reference_data)
+            selectinload(TrainerProfile.user),
+            selectinload(TrainerProfile.reference_data),
+            selectinload(TrainerProfile.created_by_head).selectinload(HeadProfile.user)
         )
         .where(TrainerProfile.created_by_head_id == head_id)
     )
@@ -718,7 +723,11 @@ async def get_learner_by_id(db: AsyncSession, learner_id: int):
     """Get learner profile with user data and reference files by profile ID"""
     result = await db.execute(
         select(LearnerProfile)
-        .options(joinedload(LearnerProfile.user), joinedload(LearnerProfile.reference_data))
+        .options(
+            selectinload(LearnerProfile.user), 
+            selectinload(LearnerProfile.reference_data),
+            selectinload(LearnerProfile.created_by_head).selectinload(HeadProfile.user)
+        )
         .where(LearnerProfile.id == learner_id)
     )
     learner = result.unique().scalar_one_or_none()
@@ -758,8 +767,9 @@ async def get_learners_by_head(db: AsyncSession, head_id: int):
     result = await db.execute(
         select(LearnerProfile)
         .options(
-            joinedload(LearnerProfile.user),
-            joinedload(LearnerProfile.reference_data)
+            selectinload(LearnerProfile.user),
+            selectinload(LearnerProfile.reference_data),
+            selectinload(LearnerProfile.created_by_head).selectinload(HeadProfile.user)
         )
         .where(LearnerProfile.created_by_head_id == head_id)
     )
@@ -1020,9 +1030,9 @@ async def get_all_trainers_system_wide(db: AsyncSession):
     result = await db.execute(
         select(TrainerProfile)
         .options(
-            joinedload(TrainerProfile.user),
-            joinedload(TrainerProfile.reference_data),
-            joinedload(TrainerProfile.created_by_head).joinedload(HeadProfile.user)
+            selectinload(TrainerProfile.user),
+            selectinload(TrainerProfile.reference_data),
+            selectinload(TrainerProfile.created_by_head).selectinload(HeadProfile.user)
         )
         .order_by(TrainerProfile.id)
     )
@@ -1037,8 +1047,8 @@ async def get_all_coaches_system_wide(db: AsyncSession):
     result = await db.execute(
         select(CoachProfile)
         .options(
-            joinedload(CoachProfile.user),
-            joinedload(CoachProfile.reference_data)
+            selectinload(CoachProfile.user),
+            selectinload(CoachProfile.reference_data)
         )
         .order_by(CoachProfile.id)
     )
@@ -1053,9 +1063,9 @@ async def get_all_learners_system_wide(db: AsyncSession):
     result = await db.execute(
         select(LearnerProfile)
         .options(
-            joinedload(LearnerProfile.user),
-            joinedload(LearnerProfile.reference_data),
-            joinedload(LearnerProfile.created_by_head).joinedload(HeadProfile.user)
+            selectinload(LearnerProfile.user),
+            selectinload(LearnerProfile.reference_data),
+            selectinload(LearnerProfile.created_by_head).selectinload(HeadProfile.user)
         )
         .order_by(LearnerProfile.id)
     )
