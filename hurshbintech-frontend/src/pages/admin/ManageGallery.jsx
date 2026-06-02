@@ -17,6 +17,7 @@ const ManageGallery = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedGallery, setSelectedGallery] = useState(null);
+    const [selectedMedia, setSelectedMedia] = useState(null);
 
 
     const fetchGalleries = async () => {
@@ -51,12 +52,92 @@ const ManageGallery = () => {
         } catch (err) {
             console.error("Delete error:", err);
             console.error("Error details:", err.response?.data || err.message);
-            setError("Failed to delete gallery photo. Please try again later.");
+            setError("Failed to delete gallery item. Please try again later.");
             setShowDeleteModal(false);
         }
     };
 
     const filteredGalleries = galleries;
+
+    const inferMediaType = (gallery) => {
+        const mediaUrl = gallery.video_url || gallery.photo_url || '';
+        const lowerUrl = mediaUrl.toLowerCase();
+        const isVideo = Boolean(
+            gallery.video_url ||
+            lowerUrl.endsWith('.mp4') ||
+            lowerUrl.endsWith('.webm') ||
+            lowerUrl.endsWith('.ogg') ||
+            lowerUrl.endsWith('.mov') ||
+            lowerUrl.endsWith('.quicktime')
+        );
+
+        return {
+            type: isVideo ? 'video' : 'image',
+            url: getFileUrl(gallery.video_url || gallery.photo_url),
+            poster: getFileUrl(gallery.video_thumbnail_url || gallery.thumbnail_url),
+        };
+    };
+
+    const handleView = (gallery) => {
+        setSelectedMedia(inferMediaType(gallery));
+    };
+
+    const renderGalleryPreview = (gallery) => {
+        const mediaType = inferMediaType(gallery).type;
+
+        if (mediaType === "video") {
+            const posterUrl = gallery.video_thumbnail_url || gallery.thumbnail_url;
+
+            return (
+                <div className="admin-gallery-media admin-gallery-media--video">
+                    {posterUrl ? (
+                        <img
+                            src={getFileUrl(posterUrl)}
+                            alt={`Video thumbnail ${gallery.id}`}
+                            className="admin-gallery-media__image"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.style.display = "none";
+                                e.target.nextElementSibling?.classList.remove("hidden");
+                            }}
+                        />
+                    ) : (
+                        <video
+                            src={getFileUrl(gallery.video_url)}
+                            className="admin-gallery-media__video"
+                            muted
+                            loop
+                            playsInline
+                            preload="metadata"
+                        />
+                    )}
+
+                    <div className="admin-gallery-media__badge">
+                        <span className="admin-gallery-media__badge-icon">▶</span>
+                    </div>
+                    
+                </div>
+            );
+        }
+
+        return (
+            <div className="admin-gallery-media admin-gallery-media--image">
+                {gallery.thumbnail_url || gallery.photo_url ? (
+                    <img
+                        src={getFileUrl(gallery.thumbnail_url || gallery.photo_url)}
+                        alt={`Gallery image ${gallery.id}`}
+                        className="admin-gallery-media__image"
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = "none";
+                            e.target.nextElementSibling?.classList.remove("hidden");
+                        }}
+                    />
+                ) : null}
+                
+            </div>
+        );
+    };
 
     const formatFileSize = (size) => {
         if (!size) return "N/A";
@@ -108,20 +189,20 @@ const ManageGallery = () => {
                             onClick={() => setShowCreateModal(true)}
                             className="app-modal-btn app-modal-btn--success"
                         >
-                            + Add New Photo
+                            + Add Photo or Video
                         </button>
                     </div>
                     {/* Gallery Grid */}
                     {galleries.length === 0 ? (
                         <div className="empty-state">
                             <p className="empty-state-description">
-                                No gallery photos available. Create your first photo to get started!
+                                No gallery items available. Create your first photo or video to get started!
                             </p>
                         </div>
                     ) : filteredGalleries.length === 0 ? (
                         <div className="empty-state">
                             <p className="empty-state-description">
-                                No gallery photos available.
+                                No gallery items available.
                             </p>
                         </div>
                     ) : (
@@ -131,11 +212,15 @@ const ManageGallery = () => {
                                     {/* Card Header */}
                                     <div className="admin-content-card-header">
                                         <div className="admin-content-card-header-left">
-                                            <span className="admin-content-icon">🖼️</span>
+                                            <span className="admin-content-icon">
+                                                {inferMediaType(gallery).type === "video" ? "🎬" : "🖼️"}
+                                            </span>
                                             <div>
-                                                <p className="admin-content-type-text">Image</p>
+                                                <p className="admin-content-type-text">
+                                                    {inferMediaType(gallery).type === "video" ? "Video" : "Image"}
+                                                </p>
                                                 <p className="admin-content-size-text">
-                                                    {formatFileSize(gallery.photo_size)}
+                                                    {formatFileSize(inferMediaType(gallery).type === "video" ? (gallery.video_size || gallery.photo_size) : gallery.photo_size)}
                                                 </p>
                                             </div>
                                         </div>
@@ -146,28 +231,7 @@ const ManageGallery = () => {
 
                                     {/* Preview Section */}
                                     <div className="admin-content-preview">
-                                        {gallery.photo_url || gallery.thumbnail_url ? (
-                                            <img
-                                                src={getFileUrl(gallery.thumbnail_url || gallery.photo_url)}
-                                                alt={`Gallery image ${gallery.id}`}
-                                                style={{
-                                                    width: "100%",
-                                                    height: "100%",
-                                                    objectFit: "cover",
-                                                }}
-                                                onError={(e) => {
-                                                    e.target.onerror = null;
-                                                    e.target.style.display = "none";
-                                                    e.target.nextElementSibling?.classList.remove("hidden");
-                                                }}
-                                            />
-                                        ) : null}
-                                        <div
-                                            className={`hidden ${gallery.photo_url ? "" : "block"}`}
-                                            style={{ fontSize: "2rem", color: "rgba(0, 0, 0, 0.2)" }}
-                                        >
-                                            🖼️
-                                        </div>
+                                        {renderGalleryPreview(gallery)}
                                     </div>
 
                                     {/* Card Content */}
@@ -180,8 +244,6 @@ const ManageGallery = () => {
                                         >
                                             {gallery.status === "published" ? "✓ Published" : "📝 Draft"}
                                         </span>
-
-                                        {/* Title and description removed per new requirements */}
 
                                         {/* Metadata */}
                                         <div className="admin-content-meta">
@@ -199,14 +261,13 @@ const ManageGallery = () => {
 
                                         {/* Action Buttons */}
                                         <div className="admin-content-actions">
-                                            <a
-                                                href={getFileUrl(gallery.photo_url)}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <button
+                                                type="button"
+                                                onClick={() => handleView(gallery)}
                                                 className="app-modal-btn app-modal-btn--secondary btn-sm"
                                             >
                                                 View
-                                            </a>
+                                            </button>
                                             <button
                                                 onClick={() => handleEdit(gallery)}
                                                 className="app-modal-btn app-modal-btn--primary btn-sm"
@@ -246,8 +307,8 @@ const ManageGallery = () => {
             {showDeleteModal && selectedGallery && (
                 <ConfirmModal
                     show={showDeleteModal}
-                    title="Delete Gallery Photo"
-                    message={`Are you sure you want to delete this photo (#${selectedGallery.id})? This action cannot be undone.`}
+                    title="Delete Gallery Item"
+                    message={`Are you sure you want to delete this ${selectedGallery.video_url ? "video" : "photo"} (#${selectedGallery.id})? This action cannot be undone.`}
                     onConfirm={handleDelete}
                     onClose={() => {
                         setShowDeleteModal(false);
@@ -256,6 +317,47 @@ const ManageGallery = () => {
                     confirmText="Delete"
                     confirmColor="danger"
                 />
+            )}
+
+            {selectedMedia && (
+                <div className="app-modal-overlay" onClick={() => setSelectedMedia(null)}>
+                    <div
+                        className="app-modal-container app-modal-container--md"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ maxWidth: '900px' }}
+                    >
+                        <div className="app-modal-header app-modal-header--primary">
+                            <h2 className="app-modal-title">Media Preview</h2>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedMedia(null)}
+                                className="app-modal-close"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="app-modal-content" style={{ paddingTop: '1rem' }}>
+                            {selectedMedia.type === 'video' ? (
+                                <video
+                                    src={selectedMedia.url}
+                                    poster={selectedMedia.poster || undefined}
+                                    controls
+                                    autoPlay
+                                    playsInline
+                                    preload="metadata"
+                                    style={{ width: '100%', maxHeight: '70vh', borderRadius: '12px', background: '#000' }}
+                                />
+                            ) : (
+                                <img
+                                    src={selectedMedia.url}
+                                    alt="Gallery preview"
+                                    style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '12px' }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
         </>
     );

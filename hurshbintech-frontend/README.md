@@ -1,5 +1,8 @@
  d:\Projects\hurshbintech-pwa\hurshbintech\hurshbintech-backend\.venv\Scripts\Activate.ps1
 
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+
 **Edit a file, create a new file, and clone from Bitbucket in under 2 minutes**
 
 

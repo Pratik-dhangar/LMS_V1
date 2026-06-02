@@ -163,8 +163,7 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
         created_by_name=session.created_by.name if session.created_by else "Unknown",
         created_at=session.created_at,
         updated_at=session.updated_at,
-        # Fallback to 60 if duration is None in DB (for old sessions) — otherwise use stored value
-        duration=session.duration if session.duration is not None else 60,
+        duration=session.duration,
         total_duration=session.total_duration,
         session_start_time=session.session_start_time,
         subscription_id=session.subscription_id,
@@ -194,11 +193,13 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
                 "id": goal.id,
                 "goal": goal.goal,
                 "goal_description": goal.goal_description,
+                "delivery_instruction": goal.delivery_instruction,
                 "prompt_meter": report_map.get(goal.id, {}).get("prompt_meter"),
                 "reinforcement_meter": report_map.get(goal.id, {}).get("reinforcement_meter")
             }
             for goal in (session.learning_goals or [])
         ],
+        mode_of_expression=session.mode_of_expression,
     )
 
 
@@ -214,33 +215,55 @@ async def create_training_session(
     """Head creates a new training session"""
     logger.info(f"User {current_user.id} ({current_user.role}) attempting to create session")
 
-    # Only Head can create sessions
-    # Handle both enum and string comparison
-    from app.models.user_model import UserRole
+    # Allow Head to create sessions as before. Allow Trainers to create sessions
+    # only when their Head has enabled the permission flag.
+    from app.models.user_model import UserRole, TrainerProfile, HeadProfile
 
-    is_head = (
-        (current_user.role == UserRole.HEAD)
-        or (str(current_user.role).upper() == "HEAD")
-        or (current_user.role == "head")
-    )
-    logger.info(
-        f"Is head check: {is_head}, role value: {current_user.role}, role type: {type(current_user.role)}"
-    )
+    role_val = str(current_user.role).upper() if current_user.role else ''
+    is_head = (role_val == "HEAD" or current_user.role == UserRole.HEAD)
+    is_trainer = (role_val == "TRAINER" or current_user.role == UserRole.TRAINER)
 
-    if not is_head:
-        logger.warning(
-            f"User {current_user.id} with role {current_user.role} attempted to create session"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only Head users can create sessions"
-        )
+    logger.info(f"Create session request by user {current_user.id} role={current_user.role}")
 
-    # Head must specify trainer_id
-    if not session_data.trainer_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Head must specify trainer_id when creating session",
+    if is_head:
+        # Head must specify trainer_id
+        if not session_data.trainer_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Head must specify trainer_id when creating session",
+            )
+    elif is_trainer:
+        # Trainers can only create sessions for themselves and only when head permission enabled
+        # Resolve trainer profile and head
+        trainer_result = await db.execute(select(TrainerProfile).where(TrainerProfile.user_id == current_user.id))
+        trainer_profile = trainer_result.scalar_one_or_none()
+        if not trainer_profile:
+            raise HTTPException(status_code=404, detail="Trainer profile not found")
+
+        head_id = getattr(trainer_profile, 'created_by_head_id', None)
+        if not head_id:
+            raise HTTPException(status_code=403, detail="Trainer is not associated with a Head")
+
+        head_result = await db.execute(select(HeadProfile).where(HeadProfile.id == head_id))
+        head_profile = head_result.scalar_one_or_none()
+        effective_permission = (
+            trainer_profile.can_schedule_ilp
+            if getattr(trainer_profile, 'can_schedule_ilp', None) is not None
+            else bool(getattr(head_profile, 'can_trainers_schedule_ilp', False))
         )
+        if not head_profile or not effective_permission:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Scheduling ILP is disabled by your Head")
+
+        # Ensure trainer_id matches current trainer
+        # Mutate session_data to set trainer_id to current user
+        try:
+            session_data = session_data.model_copy(update={"trainer_id": current_user.id})
+        except Exception:
+            # Fallback for older pydantic
+            setattr(session_data, 'trainer_id', current_user.id)
+    else:
+        logger.warning(f"User {current_user.id} with role {current_user.role} attempted to create session")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only Head or Trainer users can create sessions")
 
     logger.info(
         f"Head {current_user.id} creating session for trainer {session_data.trainer_id} and learner {session_data.learner_id}"
@@ -426,13 +449,8 @@ async def end_training_session(
     except Exception as e:
         logger.error(f"Error cleaning up whiteboard state for session {session_id}: {str(e)}")
 
-    # 🔥 IMMEDIATELY process subscription session counting (don't wait for scheduler)
-    try:
-        from app.crud import subscription_crud
-        sessions_processed = await subscription_crud.process_ended_sessions_and_update_subscriptions(db)
-        logger.info(f"✅ Immediately processed {sessions_processed} ended sessions after session {session_id} ended")
-    except Exception as e:
-        logger.error(f"Error immediately processing sessions: {str(e)}")
+    # 🔥 Auto-processing of session counts has been disabled per request.
+    # Trainers must now manually mark sessions as done.
 
     # Broadcast session end to all participants via WebSocket
     if session_id in active_connections:
@@ -452,6 +470,39 @@ async def end_training_session(
                 logger.error(f"Failed to send session end message: {e}")
 
     return {"message": "Session ended successfully"}
+
+
+@router.post("/{session_id}/mark-done")
+async def mark_session_done(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_trainer: TrainerProfile = Depends(get_current_trainer),
+):
+    """Manually mark a session as done to decrement session count"""
+    logger.info(f"Trainer {current_trainer.user_id} manually marking session {session_id} as done")
+
+    session = await session_crud.get_session_by_id(db, session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.trainer_id != current_trainer.user_id:
+        # Note: If Heads are also allowed to mark as done, we need to check their role too.
+        # Assuming only trainers do it based on "Trainer have to click on button".
+        raise HTTPException(status_code=403, detail="Not authorized to mark this session as done")
+
+    if session.session_counted:
+        raise HTTPException(status_code=400, detail="Session is already counted")
+        
+    from app.crud import subscription_crud
+    
+    success = await subscription_crud.process_single_ended_session(db, session_id)
+    
+    if success:
+        return {"message": "Session counted successfully", "success": True}
+    else:
+        raise HTTPException(status_code=400, detail="Failed to process session count (may have no active subscription or already counted)")
+
 
 
 @router.get("/{session_id}/feedback", response_model=list[SessionFeedbackResponse])

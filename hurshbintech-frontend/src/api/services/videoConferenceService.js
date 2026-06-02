@@ -12,28 +12,23 @@
  */
 
 const ICE_SERVERS = [
-    // Google STUN servers for NAT traversal
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-
-    // ✅ Self-hosted TURN server on EC2 (Primary - Most Reliable)
     {
-        urls: 'turn:43.204.218.16:3478',
+        urls: 'turn:103.192.199.59:3478',
         username: 'hurshbin',
         credential: 'SecureTurnPass2024!',
     },
     {
-        urls: 'turn:43.204.218.16:3478?transport=tcp',
+        urls: 'turn:103.192.199.59:3478?transport=tcp',
         username: 'hurshbin',
         credential: 'SecureTurnPass2024!',
     },
-
-    // Backup: Free TURN servers (Fallback only)
     {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject',
-    }
+        urls: 'turns:103.192.199.59:443?transport=tcp',
+        username: 'hurshbin',
+        credential: 'SecureTurnPass2024!',
+    },
 ];
 
 const RTC_CONFIG = {
@@ -41,6 +36,7 @@ const RTC_CONFIG = {
     iceCandidatePoolSize: 10,
     bundlePolicy: 'max-bundle',
     rtcpMuxPolicy: 'require',
+    iceTransportPolicy: 'all',
 };
 
 const normalizeWsBaseUrl = (rawUrl) => {
@@ -153,6 +149,7 @@ class VideoConferenceService {
             if (this.onError) {
                 this.onError(error);
             }
+            this.diagnoseTurnConnectivity();
             throw error;
         }
     }
@@ -184,39 +181,41 @@ class VideoConferenceService {
                 }
             };
 
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const getStream = async (mediaConstraints) => {
+                const stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
 
-            // console.log(`[VideoConference][${this.role}] Media access granted:`, {
-            //     videoTracks: stream.getVideoTracks().length,
-            //     audioTracks: stream.getAudioTracks().length
-            // });
+                // Trigger callback if set
+                if (this.onLocalStream) {
+                    this.onLocalStream(stream);
+                }
 
-            // Trigger callback if set
-            if (this.onLocalStream) {
-                this.onLocalStream(stream);
-            }
+                return stream;
+            };
 
-            return stream;
-        } catch (error) {
-            console.error(`[VideoConference][${this.role}] Media access failed:`, error);
+            try {
+                return await getStream(constraints);
+            } catch (combinedError) {
+                console.warn(`[VideoConference][${this.role}] Full A/V capture failed, retrying with separate camera and microphone requests:`, combinedError);
 
-            // Try audio-only fallback
-            if (error.name === 'NotFoundError' || error.name === 'OverconstrainedError') {
-                // console.log(`[VideoConference][${this.role}] Attempting audio-only fallback...`);
                 try {
-                    const audioStream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        }
-                    });
-                    // console.log(`[VideoConference][${this.role}] Audio-only mode activated`);
-                    return audioStream;
-                } catch (audioError) {
-                    console.error(`[VideoConference][${this.role}] Audio-only fallback failed:`, audioError);
+                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: constraints.video, audio: false });
+                    const audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: constraints.audio });
+
+                    const mergedStream = new MediaStream();
+                    videoStream.getVideoTracks().forEach(track => mergedStream.addTrack(track));
+                    audioStream.getAudioTracks().forEach(track => mergedStream.addTrack(track));
+
+                    if (this.onLocalStream) {
+                        this.onLocalStream(mergedStream);
+                    }
+
+                    return mergedStream;
+                } catch (separateError) {
+                    throw separateError;
                 }
             }
+        } catch (error) {
+            console.error(`[VideoConference][${this.role}] Media access failed:`, error);
 
             throw new Error(`Media access denied: ${error.message}`);
         }
@@ -410,16 +409,16 @@ class VideoConferenceService {
         // Handle ICE candidates
         this.peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                // console.log(`[VideoConference][${this.role}] New ICE candidate:`, {
-                //     type: event.candidate.type,
-                //     protocol: event.candidate.protocol
-                // });
                 this.sendSignal({
                     type: 'ice-candidate',
                     candidate: event.candidate
                 });
             } else {
-                // console.log(`[VideoConference][${this.role}] ICE gathering complete`);
+                // End-of-candidates marker — remote peer must know gathering is done
+                this.sendSignal({
+                    type: 'ice-candidate',
+                    candidate: null
+                });
             }
         };
 
@@ -871,8 +870,7 @@ class VideoConferenceService {
      */
     async handleIceCandidate(candidate) {
         if (!candidate) {
-            console.warn(`[VideoConference][${this.role}] Received null ICE candidate`);
-            return;
+            return; // End-of-candidates marker, safe to ignore
         }
 
         if (!this.peerConnection.remoteDescription) {
@@ -915,6 +913,11 @@ class VideoConferenceService {
      */
     async restartIce() {
         if (!this.peerConnection || !this.sessionActive) return;
+
+        if (!this.peerConnection.remoteDescription) {
+            console.warn(`[VideoConference][${this.role}] Skipping ICE restart: no remote description yet`);
+            return;
+        }
 
         // Check attempt limit
         if (this.iceRestartAttempts >= this.maxIceRestartAttempts) {
@@ -1274,6 +1277,33 @@ class VideoConferenceService {
             //     `Sent=${(qualityData.details.bytesSent / 1024).toFixed(0)}KB`
             // );
         }
+    }
+
+    async diagnoseTurnConnectivity() {
+        console.log('[VideoConference] Diagnosing TURN connectivity for 103.192.199.59...');
+        const testPc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const candidates = [];
+
+        testPc.onicecandidate = (e) => {
+            if (e.candidate) {
+                candidates.push(e.candidate.type);
+                console.log(`[TURN Diag] Candidate: type=${e.candidate.type} proto=${e.candidate.protocol}`);
+            } else {
+                const hasRelay = candidates.includes('relay');
+                console.log(`[TURN Diag] Done. Has relay: ${hasRelay}. Types: ${[...new Set(candidates)].join(', ')}`);
+                if (!hasRelay) {
+                    console.error('[TURN Diag] ❌ TURN UNREACHABLE on 103.192.199.59. Check: 1) EC2 security group UDP/TCP 3478 open, 2) coturn running, 3) credentials correct, 4) UDP relay ports 49152-65535 open');
+                } else {
+                    console.log('[TURN Diag] ✅ TURN server reachable and working');
+                }
+                testPc.close();
+            }
+        };
+
+        testPc.createDataChannel('diag');
+        const offer = await testPc.createOffer();
+        await testPc.setLocalDescription(offer);
+        setTimeout(() => { try { testPc.close(); } catch (e) { } }, 10000);
     }
 
     /**

@@ -1,9 +1,9 @@
-# PWA Implementation Guide - HurshBintech Learning Platform
+# PWA Implementation Guide - HurshBin Learning Platform
 
 ## Date: December 2, 2025
 
 ## Overview
-Complete guide to implementing Progressive Web App (PWA) features in the HurshBintech Learning Platform frontend. This enables offline functionality, installability, and native app-like experience.
+Complete guide to implementing Progressive Web App (PWA) features in the HurshBin Learning Platform frontend. This enables offline functionality, installability, and native app-like experience.
 
 ---
 
@@ -79,8 +79,8 @@ export default defineConfig(({ mode }) => {
         
         // Web App Manifest
         manifest: {
-          name: 'HurshBintech Learning Platform',
-          short_name: 'HurshBintech',
+          name: 'HurshBin Learning Platform',
+          short_name: 'HurshBin',
           description: 'Professional learning management platform for trainers and trainees',
           theme_color: '#1e40af',
           background_color: '#ffffff',
@@ -261,8 +261,8 @@ convert logo.png -resize 512x512 public/icons/logo_512x512.png
 
 ```json
 {
-  "name": "HurshBintech Learning Platform",
-  "short_name": "HurshBintech",
+  "name": "HurshBin Learning Platform",
+  "short_name": "HurshBin",
   "description": "Professional learning management platform for trainers and trainees",
   "theme_color": "#1e40af",
   "background_color": "#ffffff",
@@ -334,7 +334,7 @@ convert logo.png -resize 512x512 public/icons/logo_512x512.png
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Offline - HurshBintech</title>
+  <title>Offline - HurshBin</title>
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 
@@ -412,7 +412,7 @@ Add PWA meta tags in `<head>`:
   <meta name="description" content="Professional learning management platform for trainers and trainees" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="HurshBintech" />
+  <meta name="apple-mobile-web-app-title" content="HurshBin" />
 
   <!-- Favicon -->
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -431,7 +431,7 @@ Add PWA meta tags in `<head>`:
   <!-- Manifest -->
   <link rel="manifest" href="/manifest.json" />
 
-  <title>HurshBintech Learning Platform</title>
+  <title>HurshBin Learning Platform</title>
 </head>
 <body>
   <div id="root"></div>
@@ -565,8 +565,8 @@ npm run dev
 **Check:** DevTools > Application > Manifest
 
 **Verify:**
-- [ ] Name: "HurshBintech Learning Platform"
-- [ ] Short name: "HurshBintech"
+- [ ] Name: "HurshBin Learning Platform"
+- [ ] Short name: "HurshBin"
 - [ ] Theme color: `#1e40af`
 - [ ] Display: `standalone`
 - [ ] All 8 icons present

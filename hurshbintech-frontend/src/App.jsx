@@ -592,7 +592,7 @@ function AppRoutes() {
             path="/head/schedule-session"
             element={
               <ProtectedRoute allowedRoles={['head']}>
-                <ScheduleSession />
+                <ScheduleSession mode="head" />
               </ProtectedRoute>
             }
           />
@@ -714,10 +714,18 @@ function AppRoutes() {
             }
           />
           <Route
-            path="/trainer/schedule"
+            path="/trainer/sessions"
             element={
               <ProtectedRoute allowedRoles={['trainer']}>
                 <TodaysSchedule />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trainer/schedule"
+            element={
+              <ProtectedRoute allowedRoles={['trainer']}>
+                <ScheduleSession mode="trainer" />
               </ProtectedRoute>
             }
           />

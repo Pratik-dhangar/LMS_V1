@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_serializer
 
+from app.models.session_model import ModeOfExpression
 from app.schemas.program_schema import ProgramInSession
 
 
@@ -17,11 +18,11 @@ class SessionCreate(BaseModel):
     trainer_id: int
     learner_id: int
     scheduled_date: datetime
-    # Duration is required and must be between 15 and 240 minutes
-    duration: int = Field(..., ge=15, le=240)
+    duration: Optional[int] = Field(None, ge=15, le=240)
     content_ids: List[int] = Field(default_factory=list)  # IDs of learning content to attach
     goal_ids: List[int] = Field(default_factory=list)  # IDs of learning goals to attach
     program_id: Optional[int] = None  # Optional program to link (goals/content auto-derived if provided)
+    mode_of_expression: Optional[List[ModeOfExpression]] = None  # Multiple mode-of-expression selections
 
 
 class SessionUpdate(BaseModel):
@@ -33,6 +34,7 @@ class SessionUpdate(BaseModel):
     content_ids: Optional[List[int]] = None  # IDs of learning content to attach
     goal_ids: Optional[List[int]] = None  # IDs of learning goals to attach
     program_id: Optional[int] = None  # Optional program to link or update
+    mode_of_expression: Optional[List[ModeOfExpression]] = None  # Multiple mode-of-expression selections
 
 
 class SessionEnd(BaseModel):
@@ -64,6 +66,7 @@ class LearningGoalInSession(BaseModel):
     id: int
     goal: str
     goal_description: Optional[str]
+    delivery_instruction: Optional[str] = None
     # Include prompt and reinforcement values from session reports
     prompt_meter: Optional[str] = None
     reinforcement_meter: Optional[str] = None
@@ -88,14 +91,15 @@ class SessionResponse(BaseModel):
     trainer_name: str
     learner_name: str
     created_by_name: str
-    # Duration (minutes) — required in response; do not silently default to 60
-    duration: int
+    # Duration is optional for date-only sessions
+    duration: Optional[int] = None
     # New tracking fields
     total_duration: Optional[int] = None  # Actual session duration in minutes
     session_start_time: Optional[datetime] = None  # When trainer started the session
     # Subscription tracking
     subscription_id: Optional[int] = None  # Linked learner subscription for session count tracking
     session_counted: bool = False  # Has this ended session been counted towards subscription usage?
+    mode_of_expression: Optional[List[ModeOfExpression]] = None  # Mode of expression for the session (optional list of enums)
     # Session notes from session_reports table
     session_notes: Optional[str] = None  # Notes stored in session_reports table
     # Recording fields

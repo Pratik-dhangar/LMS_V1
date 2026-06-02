@@ -31,6 +31,16 @@ const GuestBookingStep2 = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [coachAvailability, setCoachAvailability] = useState({}); // Track availability by coach ID
 
+  const getSessionDurationLabel = (sessionType) => {
+    const normalizedSessionType = (sessionType || '').toLowerCase();
+
+    if (normalizedSessionType.includes('functional assessment') || normalizedSessionType.includes('assessment') || normalizedSessionType.includes('90')) {
+      return '90 min';
+    }
+
+    return '60 min';
+  };
+
   const [formData, setFormData] = useState({
     guest_name: '',
     guest_phone: '',
@@ -41,7 +51,7 @@ const GuestBookingStep2 = () => {
     notes: '',
   });
 
- const sessionTypes = [
+  const sessionTypes = [
     { value: 'Online consultation', label: 'Online consultation', duration: '60 min', fee: 1800 },
     { value: 'Online/Offline consultation/functional assessment', label: 'Online/Offline consultation/functional assessment', duration: '90 min', fee: 2700 },
   ];
@@ -596,7 +606,7 @@ const GuestBookingStep2 = () => {
                         <input
                           type="text"
                           id="session_type"
-                          value={`${selectedCoach.dedicated_package.package_name} - 1 Hour (60 min)`}
+                          value={`${selectedCoach.dedicated_package.package_name} - 1 Hour (${getSessionDurationLabel(selectedCoach.dedicated_package.package_name)})`}
                           disabled
                           style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
                         />

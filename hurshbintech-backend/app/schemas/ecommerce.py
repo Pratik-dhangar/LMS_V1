@@ -82,6 +82,13 @@ class OrderCreate(BaseModel):
     contact_number: Optional[str] = Field(None, min_length=10, max_length=20, description="Customer contact number (required for guest checkout)")
     items: Optional[List[GuestCartItem]] = Field(None, description="Cart items for guest users (from localStorage)")
     
+    @field_validator('delivery_address')
+    @classmethod
+    def validate_delivery_address(cls, v):
+        if len(v.strip()) < 10:
+            raise ValueError("Please enter your full address properly")
+        return v
+    
     @field_validator('payment_method')
     @classmethod
     def validate_payment_method(cls, v):

@@ -1963,7 +1963,7 @@ class EmailService:
                         </div>
                     </div>
                     <div class="footer">
-                        <p>© 2026 HurshBintech. All rights reserved.</p>
+                        <p>© 2026 HurshBin. All rights reserved.</p>
                         <p>This email contains your order details and payment instructions. Please keep it for your records.</p>
                     </div>
                 </div>
@@ -2158,11 +2158,11 @@ class EmailService:
                         
                         <div style="text-align: center; margin-top: 30px;">
                             <p style="font-weight: 600; color: #2c3e50;">Thank you for shopping with us!</p>
-                            <p style="color: #10b981; font-size: 18px;">❤️ HurshBintech Team</p>
+                            <p style="color: #10b981; font-size: 18px;">❤️ HurshBin Team</p>
                         </div>
                     </div>
                     <div class="footer">
-                        <p>© 2026 HurshBintech. All rights reserved.</p>
+                        <p>© 2026 HurshBin. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -2496,7 +2496,7 @@ class EmailService:
                         </p>
                     </div>
                     <div class="footer">
-                        <p>© 2026 HurshBintech. All rights reserved.</p>
+                        <p>© 2026 HurshBin. All rights reserved.</p>
                         <p>This is an automated notification. Please do not reply to this email.</p>
                     </div>
                 </div>
@@ -2633,11 +2633,11 @@ class EmailService:
                         </p>
                         
                         <p style="color: #999; font-size: 13px; margin-top: 25px;">
-                            Thank you for choosing HurshBintech!
+                            Thank you for choosing HurshBin!
                         </p>
                     </div>
                     <div class="footer">
-                        <p>© 2026 HurshBintech. All rights reserved.</p>
+                        <p>© 2026 HurshBin. All rights reserved.</p>
                     </div>
                 </div>
             </body>
@@ -3025,8 +3025,8 @@ class EmailService:
                         </p>
                     </div>
                     <div class="footer">
-                        <p>© 2026 HurshBintech. All rights reserved.</p>
-                        <p>This is an automated invitation from HurshBintech Communication System.</p>
+                        <p>© 2026 HurshBin. All rights reserved.</p>
+                        <p>This is an automated invitation from HurshBin Communication System.</p>
                     </div>
                 </div>
             </body>
@@ -3060,7 +3060,7 @@ class EmailService:
             logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
             return False
         
-        subject = "Subscription Inquiry Confirmation - HurshBintech"
+        subject = "Subscription Inquiry Confirmation - HurshBin"
         
         # Format dates
         dob_display = inquiry_data.get('date_of_birth', '')
@@ -3209,7 +3209,7 @@ class EmailService:
                 <div class="container">
                     <div class="header">
                         <h1>Subscription Inquiry Received</h1>
-                        <p>Thank you for your interest in HurshBintech programs</p>
+                        <p>Thank you for your interest in HurshBin programs</p>
                     </div>
                     
                     <div class="content">
@@ -3289,8 +3289,8 @@ class EmailService:
                         </div>
                         
                         <div class="footer">
-                            <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
-                            <p>This is an automated confirmation email from HurshBintech.</p>
+                            <p>© 2026 HurshBin Child Development. All rights reserved.</p>
+                            <p>This is an automated confirmation email from HurshBin.</p>
                             <p><a href="https://hurshbin.com/" class="link">Visit our website</a></p>
                         </div>
                     </div>
@@ -3323,7 +3323,7 @@ class EmailService:
             return False
 
         role_display = role.capitalize()
-        subject = f"Welcome to HurshBintech – Your {role_display} Account is Ready"
+        subject = f"Welcome to HurshBin – Your {role_display} Account is Ready"
 
         html_body = f"""
         <html lang="en">
@@ -3432,14 +3432,14 @@ class EmailService:
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1>Welcome to HurshBintech!</h1>
+                        <h1>Welcome to HurshBin!</h1>
                         <p>Your {role_display} account has been created</p>
                     </div>
                     <div class="content">
                         <p class="greeting">Dear <strong>{recipient_name}</strong>,</p>
                         <p>
                             We are pleased to inform you that your <strong>{role_display}</strong> account on
-                            <strong>HurshBintech Child Development Platform</strong> has been successfully created
+                            <strong>HurshBin Child Development Platform</strong> has been successfully created
                             by your Head.
                         </p>
                         <p>Below are your login credentials. Please keep them safe and do not share them with anyone.</p>
@@ -3475,8 +3475,8 @@ class EmailService:
                         </p>
 
                         <div class="footer">
-                            <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
-                            <p>This is an automated credentials email from HurshBintech. Please do not reply.</p>
+                            <p>© 2026 HurshBin Child Development. All rights reserved.</p>
+                            <p>This is an automated credentials email from HurshBin. Please do not reply.</p>
                             <p><a href="https://hurshbin.com/" class="link">Visit our website</a></p>
                         </div>
                     </div>
@@ -3593,7 +3593,7 @@ class EmailService:
                         </p>
 
                         <div class="footer">
-                            <p>© 2026 HurshBintech Child Development. All rights reserved.</p>
+                            <p>© 2026 HurshBin Child Development. All rights reserved.</p>
                             <p>This is an automated vendor notification. Please do not reply directly to this email.</p>
                         </div>
                     </div>
@@ -3941,7 +3941,7 @@ class EmailService:
             logger.warning(f"Email sending disabled or no recipient email for {recipient_name}")
             return False
 
-        subject = "Welcome to HurshBintech! - Assessment Received"
+        subject = "Welcome to HurshBin! - Assessment Received"
         
         html_body = f"""
         <html lang="en">
@@ -4012,7 +4012,7 @@ class EmailService:
             <body>
                 <div class="container">
                     <div class="header">
-                        <h1 style="margin: 0; font-size: 28px;">Welcome to HurshBintech! 👋</h1>
+                        <h1 style="margin: 0; font-size: 28px;">Welcome to HurshBin! 👋</h1>
                         <p style="margin: 10px 0 0 0; opacity: 0.9;">Your assessment has been received</p>
                     </div>
                     <div class="content">
@@ -4043,12 +4043,12 @@ class EmailService:
                         </div>
                         
                         <p style="color: #666; font-size: 14px; margin-top: 20px;">
-                            We appreciate you choosing HurshBintech for your child's developmental assessment. 
+                            We appreciate you choosing HurshBin for your child's developmental assessment. 
                             We're committed to providing the best support and guidance.
                         </p>
                         
                         <p style="color: #666; font-size: 14px; margin-top: 15px;">
-                            <strong>Welcome to the HurshBintech family!</strong>
+                            <strong>Welcome to the HurshBin family!</strong>
                         </p>
                         
                         <div class="footer">
@@ -4068,3 +4068,149 @@ class EmailService:
             html_body=html_body,
             email_type="free_assessment_confirmation",
         )
+
+    # ========== FREE APPOINTMENT EMAILS ==========
+
+    @staticmethod
+    async def send_free_appointment_notification(
+        recipient_email: str,
+        recipient_name: str,
+        child_name: str,
+        age: int,
+        concerns: Optional[str] = None,
+        diagnosis: Optional[str] = None,
+        address: Optional[str] = None,
+        contact_number: str = "",
+        reference_by: Optional[str] = None,
+        appointment_id: int = None,
+    ) -> bool:
+        """Send notification email when a new free appointment form is submitted"""
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email")
+            return False
+
+        subject = f"New Free Appointment Request - {child_name}"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #e8f5e9;
+                    }}
+                    .header {{
+                        background-color: #2e7d32;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .info-box {{
+                        background-color: #f5f5f5;
+                        padding: 15px;
+                        border-left: 4px solid #2e7d32;
+                        margin: 15px 0;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">📅 New Free Appointment Request</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">A new appointment request has been submitted</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{recipient_name}</strong>,</p>
+                        <p>A new free appointment request has been submitted. Please review the details below:</p>
+                        
+                        <div class="info-box">
+                            <h3 style="margin-top: 0; color: #2e7d32;">Appointment Details</h3>
+                            <table style="width: 100%; border-collapse: collapse; margin: 0; border: 1px solid #ddd;">
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Child Name:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{child_name}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Age:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{age} years</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Concerns:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{concerns or 'Not provided'}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Diagnosis:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{diagnosis or 'Not provided'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Address:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{address or 'Not provided'}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Contact Number:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{contact_number}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Reference By:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{reference_by or 'Not provided'}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Appointment ID:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;"><span style="font-family: monospace; background: #efefef; padding: 2px 6px; border-radius: 3px;">#{appointment_id}</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <p><strong>Next Steps:</strong></p>
+                        <ol>
+                            <li>Review the appointment details</li>
+                            <li>Contact the parent/guardian at <strong>{contact_number}</strong></li>
+                            <li>Schedule and confirm the appointment</li>
+                        </ol>
+                        
+                        <p style="color: #666; font-size: 14px;">Please respond to this appointment request at your earliest convenience.</p>
+                        
+                        <div class="footer">
+                            <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="free_appointment_notification",
+        )
+
