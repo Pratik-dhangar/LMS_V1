@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_serializer
 
+from app.models.session_model import ModeOfExpression
 from app.schemas.program_schema import ProgramInSession
 
 
@@ -21,6 +22,7 @@ class SessionCreate(BaseModel):
     content_ids: List[int] = Field(default_factory=list)  # IDs of learning content to attach
     goal_ids: List[int] = Field(default_factory=list)  # IDs of learning goals to attach
     program_id: Optional[int] = None  # Optional program to link (goals/content auto-derived if provided)
+    mode_of_expression: Optional[List[ModeOfExpression]] = None  # Multiple mode-of-expression selections
 
 
 class SessionUpdate(BaseModel):
@@ -32,6 +34,7 @@ class SessionUpdate(BaseModel):
     content_ids: Optional[List[int]] = None  # IDs of learning content to attach
     goal_ids: Optional[List[int]] = None  # IDs of learning goals to attach
     program_id: Optional[int] = None  # Optional program to link or update
+    mode_of_expression: Optional[List[ModeOfExpression]] = None  # Multiple mode-of-expression selections
 
 
 class SessionEnd(BaseModel):
@@ -96,6 +99,7 @@ class SessionResponse(BaseModel):
     # Subscription tracking
     subscription_id: Optional[int] = None  # Linked learner subscription for session count tracking
     session_counted: bool = False  # Has this ended session been counted towards subscription usage?
+    mode_of_expression: Optional[List[ModeOfExpression]] = None  # Mode of expression for the session (optional list of enums)
     # Session notes from session_reports table
     session_notes: Optional[str] = None  # Notes stored in session_reports table
     # Recording fields

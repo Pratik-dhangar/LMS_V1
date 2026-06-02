@@ -199,6 +199,7 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
             }
             for goal in (session.learning_goals or [])
         ],
+        mode_of_expression=session.mode_of_expression,
     )
 
 
