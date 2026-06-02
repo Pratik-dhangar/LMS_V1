@@ -92,6 +92,7 @@ const ViewSessionModal = ({ session, onClose }) => {
 
     // Learning Content is all session-selected learning content.
     const selectedLearningContents = learningContents;
+    const modeOfExpression = Array.isArray(session.mode_of_expression) ? session.mode_of_expression : [];
 
     const renderProgramStructure = () => {
         const hasAnySubProgram = groupedProgramStructure.some(
@@ -208,6 +209,27 @@ const ViewSessionModal = ({ session, onClose }) => {
                                 </div>
                             </div>
                         )}
+
+                        {/* Mode of Expression */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Mode of Expression</label>
+                            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                {modeOfExpression.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {modeOfExpression.map((mode) => (
+                                            <span
+                                                key={mode}
+                                                className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-[#fef3e2] text-[#9C4D0B] border border-[#DB9D32]"
+                                            >
+                                                {mode}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500">No mode of expression selected</p>
+                                )}
+                            </div>
+                        </div>
 
                         {/* Session Details */}
                         <div className="grid grid-cols-3 gap-4 mb-6">

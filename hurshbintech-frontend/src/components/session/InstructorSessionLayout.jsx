@@ -3150,6 +3150,11 @@ export const InstructorSessionPage = ({
 }) => {
     // Components are imported at the top of the file
     const roleTitle = role === 'trainer' ? 'HurshBin Trainer' : 'HurshBin Coach';
+    const modeOfExpressionValues = Array.isArray(sessionInfo?.mode_of_expression)
+        ? sessionInfo.mode_of_expression
+        : sessionInfo?.mode_of_expression
+            ? [sessionInfo.mode_of_expression]
+            : [];
     const dashboardPath = `/${role}/dashboard`;
 
     return (
@@ -3184,9 +3189,41 @@ export const InstructorSessionPage = ({
             <div className={`session-header ${!showHeader ? 'hidden' : ''} ${navbarClassName}`} onClick={handleHeaderClick}>
                 <div className="session-header-main">
                     <div>
-                        <div className="session-header-title">{roleTitle}</div>
+                        <div className="session-header-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <span>{roleTitle}</span>
+                           
+                        </div>
                         <div className="session-header-subtitle">
                             {sessionInfo?.title ?? `${role === 'trainer' ? 'Training' : 'Coach'} Session`} — {participantName}: {(sessionInfo?.learner_name || sessionInfo?.client_name) ?? participantName}
+                            
+                            {modeOfExpressionValues.length > 0 && (
+                                <span style={{ 
+                                    display: 'inline-flex', 
+                                    alignItems: 'center', 
+                                    gap: '6px', 
+                                    marginLeft: '16px' /* Adds space after the participant name */
+                                }}>
+                                    <span style={{ opacity: 0.9 }}>Mode of expression:</span>
+                                    <span
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '0.35rem',
+                                            padding: '0.25rem 0.55rem',
+                                            borderRadius: '9999px',
+                                            backgroundColor: '#fef3e2',
+                                            color: '#9C4D0B',
+                                            border: '1px solid #DB9D32',
+                                            fontSize: '0.78rem',
+                                            fontWeight: 700,
+                                            lineHeight: 1,
+                                        }}
+                                        title="Mode of Expression"
+                                    >
+                                        {modeOfExpressionValues.join(', ')}
+                                    </span>
+                                </span>
+                            )}
                         </div>
                     </div>
 

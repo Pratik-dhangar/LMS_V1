@@ -43,6 +43,16 @@ const sessionService = {
     }
   },
 
+  markSessionDone: async (sessionId) => {
+    try {
+      const response = await api.post(`/sessions/${sessionId}/mark-done`);
+      return response.data;
+    } catch (error) {
+      console.error('[sessionService] Error marking session as done:', error);
+      throw error;
+    }
+  },
+
   // Learner APIs
   getLearnerSessions: async () => {
     try {

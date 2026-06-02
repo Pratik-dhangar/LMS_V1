@@ -15,6 +15,7 @@ async def create_learning_goal(
     new_goal = LearningGoals(
         goal=goal_data.goal,
         goal_description=goal_data.goal_description,
+        delivery_instruction=goal_data.delivery_instruction,
         created_by_admin_id=admin_id,
     )
 
@@ -64,6 +65,8 @@ async def update_learning_goal(
         goal.goal = goal_data.goal
     if goal_data.goal_description is not None:
         goal.goal_description = goal_data.goal_description
+    if goal_data.delivery_instruction is not None:
+        goal.delivery_instruction = goal_data.delivery_instruction
 
     goal.updated_by_id = user_id
 

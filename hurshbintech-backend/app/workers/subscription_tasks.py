@@ -253,20 +253,10 @@ async def cleanup_old_receipts():
 async def process_ended_sessions_task():
     """
     Process all ended sessions and update subscription session counts.
-    - Decrement sessions_remaining when session ends
-    - Mark learner as inactive when sessions_remaining reaches 0
-    Should run frequently (e.g., every 5-10 minutes) to ensure timely processing
+    Disabled because session tracking is now manually triggered by trainers.
     """
-    logger.info("Starting session tracking task...")
-    
-    try:
-        async with AsyncSessionLocal() as db:
-            sessions_processed = await subscription_crud.process_ended_sessions_and_update_subscriptions(db)
-            logger.info(f"Session tracking task completed: {sessions_processed} sessions processed")
-            return sessions_processed
-    except Exception as e:
-        logger.error(f"Error in session tracking task: {str(e)}")
-        raise
+    logger.info("Session tracking task is disabled (now manual via Trainer UI).")
+    return 0
 
 
 # ============ MASTER TASK SCHEDULER ============

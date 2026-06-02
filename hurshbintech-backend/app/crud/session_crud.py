@@ -85,6 +85,7 @@ async def create_session(
         scheduled_date=scheduled_date,
         duration=session_data.duration,
         status="scheduled",
+        mode_of_expression=list(session_data.mode_of_expression) if session_data.mode_of_expression else None,
     )
 
     db.add(new_session)
@@ -377,6 +378,10 @@ async def update_session(
             if key == "scheduled_date" and value.tzinfo is not None:
                 value = value.replace(tzinfo=None)
             setattr(session, key, value)
+
+    if "mode_of_expression" in update_data:
+        mode_values = update_data.get("mode_of_expression")
+        session.mode_of_expression = list(mode_values) if mode_values else None
 
     # ── Program link (edit path) ───────────────────────────────────────────────
     program_id = update_data.pop("program_id", None)

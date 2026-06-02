@@ -334,6 +334,7 @@ class TrainerResponse(BaseModel):
     reference_data: List[ReferenceDataSchema] = []
 
     created_by: Optional[int] = None
+    created_by_head_name: Optional[str] = None
     created_at: datetime  # From User
 
     @classmethod
@@ -361,6 +362,7 @@ class TrainerResponse(BaseModel):
                 else bool(getattr(getattr(profile, "created_by_head", None), "can_trainers_schedule_ilp", False))
             ),
             "trainer_ilp_override": profile.can_schedule_ilp,
+            "created_by_head_name": getattr(getattr(getattr(profile, "created_by_head", None), "user", None), "name", None),
             # Profile fields
             **{
                 field: getattr(profile, field)
@@ -805,6 +807,7 @@ class LearnerResponse(BaseModel):
 
     # --- Timestamps & FKs ---
     created_by: Optional[int] = None
+    created_by_head_name: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     reference_data: List[ReferenceDataSchema] = []
@@ -829,6 +832,7 @@ class LearnerResponse(BaseModel):
             "created_at": user.created_at,
             "updated_at": profile.updated_at,
             "created_by": profile.created_by_head_id,
+            "created_by_head_name": getattr(getattr(getattr(profile, "created_by_head", None), "user", None), "name", None),
         }
 
         # Add all other profile fields

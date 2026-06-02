@@ -19,6 +19,7 @@ const AdminManageLearners = () => {
     const [filteredLearners, setFilteredLearners] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeSearchQuery, setActiveSearchQuery] = useState('');
+    const [selectedHeadFilter, setSelectedHeadFilter] = useState('');
     const [error, setError] = useState('');
     const [visiblePasscodes, setVisiblePasscodes] = useState({});
     const [revealedPasscodes, setRevealedPasscodes] = useState({});
@@ -124,19 +125,42 @@ const AdminManageLearners = () => {
         }
     };
 
-    const handleSearch = (query) => {
+    const handleSearch = (query, headFilter = selectedHeadFilter) => {
         setActiveSearchQuery(query);
-        if (query.trim() === '') {
-            setFilteredLearners(learners);
-        } else {
+        
+        let filtered = learners;
+        
+        // Apply search query filter
+        if (query.trim() !== '') {
             const lowerQuery = query.toLowerCase();
-            const filtered = learners.filter(learner =>
+            filtered = filtered.filter(learner =>
                 learner.name?.toLowerCase().includes(lowerQuery) ||
-                learner.passcode?.toLowerCase().includes(lowerQuery)
+                learner.passcode?.toLowerCase().includes(lowerQuery) ||
+                (learner.created_by_head_name && learner.created_by_head_name.toLowerCase().includes(lowerQuery))
             );
-            setFilteredLearners(filtered);
         }
+        
+        // Apply head filter
+        if (headFilter !== '') {
+            filtered = filtered.filter(learner => 
+                learner.created_by_head_name === headFilter
+            );
+        }
+        
+        setFilteredLearners(filtered);
     };
+
+    const handleHeadFilterChange = (e) => {
+        const value = e.target.value;
+        setSelectedHeadFilter(value);
+        handleSearch(activeSearchQuery, value);
+    };
+
+    // Get unique head names for the filter dropdown
+    const uniqueHeads = [...new Set(learners
+        .map(l => l.created_by_head_name)
+        .filter(name => name)
+    )].sort();
 
     const openLearnerRecordingModal = async (learner) => {
         try {
@@ -323,12 +347,41 @@ const AdminManageLearners = () => {
                         </div>
                     </div>
 
-                    {/* Search Bar */}
-                    <div className="search-section">
-                        <SearchBar
-                            onSearch={handleSearch}
-                            placeholder="Search by name, passcode..."
-                        />
+                    {/* Search Bar & Filters */}
+                    <div className="search-section" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div style={{ flex: 1, minWidth: '300px' }}>
+                            <SearchBar
+                                onSearch={(query) => handleSearch(query, selectedHeadFilter)}
+                                placeholder="Search by name, passcode..."
+                            />
+                        </div>
+                        
+                        {uniqueHeads.length > 0 && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 500 }}>Filter by Head:</span>
+                                <select
+                                    value={selectedHeadFilter}
+                                    onChange={handleHeadFilterChange}
+                                    style={{
+                                        padding: '0.5rem 0.75rem',
+                                        borderRadius: '0.375rem',
+                                        border: '1px solid #d1d5db',
+                                        fontSize: '0.875rem',
+                                        backgroundColor: 'white',
+                                        color: '#374151',
+                                        cursor: 'pointer',
+                                        fontWeight: 500
+                                    }}
+                                >
+                                    <option value="">All Heads</option>
+                                    {uniqueHeads.map(head => (
+                                        <option key={head} value={head}>
+                                            {head}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     {/* Report Creator Filter */}
@@ -435,6 +488,7 @@ const AdminManageLearners = () => {
                                             <tr>
                                                 <th className="table-primary-th">Sr. No.</th>
                                                 <th className="table-primary-th">Name</th>
+                                                <th className="table-primary-th">Created By Head</th>
                                                 <th className="table-primary-th">Passcode</th>
                                                 <th className="table-primary-th">Start Date</th>
                                                 <th className="table-primary-th">Skill Development Graph </th>
@@ -453,6 +507,7 @@ const AdminManageLearners = () => {
                                                         <div className="table-primary-cell-name-text">{row.name}</div>
                                                         <div className="table-primary-cell-subtitle" style={{ color: '#f59e0b', fontSize: '0.75rem' }}>Not registered</div>
                                                     </td>
+                                                    <td className="table-primary-td" style={{ color: '#9ca3af' }}>—</td>
                                                     <td className="table-primary-td" style={{ color: '#9ca3af' }}>—</td>
                                                     <td className="table-primary-td" style={{ color: '#9ca3af' }}>—</td>
                                                     <td className="table-primary-td table-primary-td-center">
@@ -493,6 +548,9 @@ const AdminManageLearners = () => {
                                                     <td className="table-primary-td">
                                                         <div className="table-primary-cell-name-text">{learner.name}</div>
                                                         <div className="table-primary-cell-subtitle">{learner.role}</div>
+                                                    </td>
+                                                    <td className="table-primary-td">
+                                                        {learner.created_by_head_name || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/A</span>}
                                                     </td>
                                                     <td className="table-primary-td">
                                                         <div className="manage-users-passcode-display">
