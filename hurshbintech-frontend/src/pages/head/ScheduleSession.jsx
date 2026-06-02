@@ -12,6 +12,7 @@ import programService from "../../api/services/programService";
 import trainerService from "../../api/services/trainerService";
 import { useAuth } from "../../context/AuthContext";
 import { downloadLearningProgramPDF } from "../../utils/pdfGenerator";
+import ModeOfExpressionSelector from "../../components/common/ModeOfExpressionSelector";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/Table.css";
 import "../../styles/Subscription.css";
@@ -50,6 +51,7 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
     scheduled_dates: [],
     content_ids: [],
     goal_ids: [],
+    mode_of_expression: [],
   });
 
   const [searchTerm, setSearchTerm] = useState({
@@ -193,6 +195,13 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
     });
   };
 
+  const handleModeOfExpressionChange = (nextValues) => {
+    setFormData((prev) => ({
+      ...prev,
+      mode_of_expression: nextValues,
+    }));
+  };
+
   const formatDateKey = (dateObj) => {
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -255,6 +264,7 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
       learner_id: parseInt(formData.learner_id),
       content_ids: formData.content_ids.map(Number),
       goal_ids: formData.goal_ids.map(Number),
+      mode_of_expression: formData.mode_of_expression,
       ...(selectedProgramId ? { program_id: selectedProgramId } : {}),
     };
 
@@ -1005,7 +1015,7 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
                                               className={`table-primary-row ${isSelected ? 'row-selected' : ''}`}
                                             >
                                               <td className="table-primary-td table-primary-td-center">
-                                                <input
+                                                        <input
                                                   type="checkbox"
                                                   checked={isSelected}
                                                   onChange={() => { }}
@@ -1088,8 +1098,13 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
                 </>
               </div>
 
+              <ModeOfExpressionSelector
+                value={formData.mode_of_expression}
+                onChange={handleModeOfExpressionChange}
+              />
+
               {/* ── SELECT LEARNING CONTENT (child) ───────────────────────────── */}
-              <div className="modern-form-section" style={{ marginTop: '1.5rem' }}>
+              <div className="modern-form-section" >
                 <h2 className="modern-form-section-title">Select Learning Content</h2>
                 <p className="modern-form-section-description">
                   {selectedProgramId
