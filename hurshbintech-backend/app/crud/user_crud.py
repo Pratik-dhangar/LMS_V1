@@ -1021,7 +1021,8 @@ async def get_all_trainers_system_wide(db: AsyncSession):
         select(TrainerProfile)
         .options(
             joinedload(TrainerProfile.user),
-            joinedload(TrainerProfile.reference_data)
+            joinedload(TrainerProfile.reference_data),
+            joinedload(TrainerProfile.created_by_head).joinedload(HeadProfile.user)
         )
         .order_by(TrainerProfile.id)
     )
@@ -1053,7 +1054,8 @@ async def get_all_learners_system_wide(db: AsyncSession):
         select(LearnerProfile)
         .options(
             joinedload(LearnerProfile.user),
-            joinedload(LearnerProfile.reference_data)
+            joinedload(LearnerProfile.reference_data),
+            joinedload(LearnerProfile.created_by_head).joinedload(HeadProfile.user)
         )
         .order_by(LearnerProfile.id)
     )

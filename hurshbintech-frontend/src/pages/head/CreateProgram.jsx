@@ -11,6 +11,8 @@ import "../../styles/ManageUsersLayout.css";
 import "../../styles/Table.css";
 import "../../styles/head/ScheduleSession.css";
 
+const SUB_PROGRAMS_PER_PAGE = 5;
+
 const CreateProgram = () => {
     const navigate = useNavigate();
     const learnerDropdownRef = useRef(null);
@@ -25,9 +27,10 @@ const CreateProgram = () => {
 
     const [searchTerm, setSearchTerm] = useState({
         learner: "",
-        goal: "",
         content: "",
     });
+    const [subProgramSearchTerms, setSubProgramSearchTerms] = useState({});
+    const [subProgramPages, setSubProgramPages] = useState({});
     const [showLearnerDropdown, setShowLearnerDropdown] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -81,14 +84,6 @@ const CreateProgram = () => {
         (learner) =>
             learner.name?.toLowerCase().includes(searchTerm.learner.toLowerCase()) ||
             learner.id?.toString().includes(searchTerm.learner)
-    );
-
-    const filteredGoals = learningGoals.filter(
-        (goal) =>
-            goal.goal?.toLowerCase().includes(searchTerm.goal.toLowerCase()) ||
-            goal.goal_description
-                ?.toLowerCase()
-                .includes(searchTerm.goal.toLowerCase())
     );
 
     const filteredContents = contents.filter(
@@ -152,6 +147,24 @@ const CreateProgram = () => {
                 };
             }
         });
+
+        setSubProgramSearchTerms((prev) => {
+            if (formData.skills.some((skill) => skill.skill_id === skillId)) {
+                const next = { ...prev };
+                delete next[skillId];
+                return next;
+            }
+            return prev;
+        });
+
+        setSubProgramPages((prev) => {
+            if (formData.skills.some((skill) => skill.skill_id === skillId)) {
+                const next = { ...prev };
+                delete next[skillId];
+                return next;
+            }
+            return prev;
+        });
     };
 
     const handleSkillSubProgramToggle = (skillId, goalId) => {
@@ -172,6 +185,25 @@ const CreateProgram = () => {
                 skills: updatedSkills,
             };
         });
+    };
+
+    const getSubProgramPage = (skillId) => subProgramPages[skillId] || 1;
+
+    const getSubProgramSearchTerm = (skillId) => subProgramSearchTerms[skillId] || "";
+
+    const setSubProgramPage = (skillId, page) => {
+        setSubProgramPages((prev) => ({
+            ...prev,
+            [skillId]: page,
+        }));
+    };
+
+    const setSubProgramSearchTerm = (skillId, query) => {
+        setSubProgramSearchTerms((prev) => ({
+            ...prev,
+            [skillId]: query,
+        }));
+        setSubProgramPage(skillId, 1);
     };
 
     const getContentTitle = (content) => {
@@ -395,121 +427,146 @@ const CreateProgram = () => {
                             {learningSkills.length === 0 ? (
                                 <p className="empty-state">No learning skills available</p>
                             ) : (
-                                <div className="table-primary-container">
+                                <div className="skills-accordion-list">
                                     {learningSkills.map((skill) => {
                                         const skillSelected = formData.skills.find(s => s.skill_id === skill.id);
+                                        const searchQuery = getSubProgramSearchTerm(skill.id);
+                                        const filteredSubPrograms = learningGoals.filter(
+                                            (goal) =>
+                                                goal.goal?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                                goal.goal_description?.toLowerCase().includes(searchQuery.toLowerCase())
+                                        );
+                                        const currentPage = getSubProgramPage(skill.id);
+                                        const totalPages = Math.max(1, Math.ceil(filteredSubPrograms.length / SUB_PROGRAMS_PER_PAGE));
+                                        const paginatedSubPrograms = filteredSubPrograms.slice(
+                                            (currentPage - 1) * SUB_PROGRAMS_PER_PAGE,
+                                            currentPage * SUB_PROGRAMS_PER_PAGE
+                                        );
+                                        const startItem = filteredSubPrograms.length === 0 ? 0 : (currentPage - 1) * SUB_PROGRAMS_PER_PAGE + 1;
+                                        const endItem = Math.min(currentPage * SUB_PROGRAMS_PER_PAGE, filteredSubPrograms.length);
+
                                         return (
                                             <div
                                                 key={skill.id}
-                                                className="modern-form-section"
-                                                style={{
-                                                    border: "1px solid #e0e0e0",
-                                                    borderRadius: "8px",
-                                                    padding: "1rem",
-                                                    marginBottom: "1rem",
-                                                    backgroundColor: skillSelected ? "#f9f5f0" : "#fff",
-                                                }}
+                                                className={`skill-card ${skillSelected ? "skill-card--selected" : ""}`}
                                             >
                                                 <div
-                                                    style={{
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        cursor: "pointer",
-                                                        marginBottom: skillSelected ? "1rem" : "0",
-                                                    }}
+                                                    className="skill-card-header"
                                                     onClick={() => handleSkillToggle(skill.id, skill.skill_name)}
                                                 >
                                                     <input
                                                         type="checkbox"
                                                         checked={!!skillSelected}
                                                         onChange={() => handleSkillToggle(skill.id, skill.skill_name)}
-                                                        style={{ marginRight: "0.75rem", cursor: "pointer" }}
+                                                        className="skill-card-checkbox"
                                                     />
-                                                    <label
-                                                        style={{
-                                                            fontWeight: "600",
-                                                            color: "#333",
-                                                            cursor: "pointer",
-                                                            flex: 1,
-                                                            margin: 0,
-                                                        }}
-                                                    >
-                                                        {skill.skill_name}
-                                                    </label>
+                                                    <div className="skill-card-title-group">
+                                                        <label className="skill-card-title">{skill.skill_name}</label>
+                                                        <span className="skill-card-subtitle">
+                                                            {skillSelected ? `${skillSelected.goal_ids.length} sub-program${skillSelected.goal_ids.length === 1 ? "" : "s"} selected` : "Select this skill to expand"}
+                                                        </span>
+                                                    </div>
+                                                    <span className={`skill-card-chevron ${skillSelected ? "skill-card-chevron--open" : ""}`}>
+                                                        ▾
+                                                    </span>
                                                 </div>
 
                                                 {skillSelected && (
-                                                    <div
-                                                        style={{
-                                                            marginLeft: "1.5rem",
-                                                            paddingTop: "0.5rem",
-                                                            borderTop: "1px solid #ddd",
-                                                        }}
-                                                    >
-                                                        <p
-                                                            className="modern-form-section-description"
-                                                            style={{ marginBottom: "0.75rem" }}
-                                                        >
-                                                            Select sub-programs for <strong>{skill.skill_name}</strong>:
-                                                        </p>
-                                                        {learningGoals.length === 0 ? (
-                                                            <p className="empty-state" style={{ marginLeft: 0 }}>
-                                                                No learning goals available
+                                                    <div className="skill-card-body">
+                                                        <div className="search-container skill-search-container">
+                                                            <Search className="search-icon" />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Search sub-programs by name or description..."
+                                                                value={searchQuery}
+                                                                onChange={(e) => setSubProgramSearchTerm(skill.id, e.target.value)}
+                                                                className="search-input skill-search-input"
+                                                            />
+                                                        </div>
+                                                        <div className="skill-card-meta">
+                                                            <span>
+                                                                Showing {filteredSubPrograms.length} of {learningGoals.length} sub-programs
+                                                            </span>
+                                                            <span>
+                                                                Select sub-programs for <strong>{skill.skill_name}</strong>
+                                                            </span>
+                                                        </div>
+                                                        {filteredSubPrograms.length === 0 ? (
+                                                            <p className="empty-state skill-empty-state">
+                                                                No sub-programs found for your search
                                                             </p>
                                                         ) : (
-                                                            <div
-                                                                style={{
-                                                                    display: "grid",
-                                                                    gridTemplateColumns: "1fr 1fr",
-                                                                    gap: "0.75rem",
-                                                                }}
-                                                            >
-                                                                {learningGoals.map((goal) => {
-                                                                    const isChecked = skillSelected?.goal_ids?.includes(goal.id) || false;
-                                                                    return (
-                                                                        <div
-                                                                            key={goal.id}
-                                                                            style={{
-                                                                                display: "flex",
-                                                                                alignItems: "flex-start",
-                                                                                padding: "0.75rem",
-                                                                                borderRadius: "6px",
-                                                                                backgroundColor: isChecked ? "#fff9f0" : "#fafafa",
-                                                                                border: isChecked ? "1px solid #d9a87e" : "1px solid #e0e0e0",
-                                                                                cursor: "pointer",
-                                                                            }}
-                                                                            onClick={() => handleSkillSubProgramToggle(skill.id, goal.id)}
-                                                                        >
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={isChecked}
-                                                                                onChange={() => handleSkillSubProgramToggle(skill.id, goal.id)}
-                                                                                style={{ marginRight: "0.5rem", marginTop: "0.25rem", cursor: "pointer" }}
-                                                                            />
-                                                                            <div style={{ flex: 1 }}>
-                                                                                <div
-                                                                                    style={{
-                                                                                        fontWeight: "500",
-                                                                                        color: "#333",
-                                                                                        marginBottom: "0.25rem",
-                                                                                    }}
-                                                                                >
-                                                                                    {goal.goal}
-                                                                                </div>
-                                                                                {goal.goal_description && (
-                                                                                    <div
-                                                                                        style={{
-                                                                                            fontSize: "0.85rem",
-                                                                                            color: "#666",
-                                                                                        }}
-                                                                                    >
-                                                                                        {goal.goal_description}
+                                                            <div>
+                                                                <div className="skill-subprogram-grid">
+                                                                    {paginatedSubPrograms.map((goal) => {
+                                                                        const isChecked = skillSelected?.goal_ids?.includes(goal.id) || false;
+                                                                        return (
+                                                                            <div
+                                                                                key={goal.id}
+                                                                                className={`skill-subprogram-card ${isChecked ? "skill-subprogram-card--selected" : ""}`}
+                                                                                onClick={() => handleSkillSubProgramToggle(skill.id, goal.id)}
+                                                                            >
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={isChecked}
+                                                                                    onChange={() => handleSkillSubProgramToggle(skill.id, goal.id)}
+                                                                                    className="skill-subprogram-checkbox"
+                                                                                />
+                                                                                <div className="skill-subprogram-copy">
+                                                                                    <div className="skill-subprogram-title">
+                                                                                        {goal.goal}
                                                                                     </div>
-                                                                                )}
+                                                                                    {goal.goal_description && (
+                                                                                        <div className="skill-subprogram-description">
+                                                                                            {goal.goal_description}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+
+                                                                {totalPages > 1 && (
+                                                                    <div className="skill-pagination-row">
+                                                                        <div className="pagination-info skill-pagination-info">
+                                                                            Showing {startItem}-{endItem} of {filteredSubPrograms.length}
                                                                         </div>
-                                                                    );
-                                                                })}
+                                                                        <div className="skill-pagination-controls">
+                                                                            <button
+                                                                                type="button"
+                                                                                className="table-pagination-btn"
+                                                                                onClick={() => setSubProgramPage(skill.id, Math.max(currentPage - 1, 1))}
+                                                                                disabled={currentPage === 1}
+                                                                            >
+                                                                                Previous
+                                                                            </button>
+                                                                            <div className="table-pagination-pages">
+                                                                                {[...Array(totalPages)].map((_, index) => {
+                                                                                    const pageNum = index + 1;
+                                                                                    return (
+                                                                                        <button
+                                                                                            key={pageNum}
+                                                                                            type="button"
+                                                                                            className={`table-pagination-page ${currentPage === pageNum ? "active" : ""}`}
+                                                                                            onClick={() => setSubProgramPage(skill.id, pageNum)}
+                                                                                        >
+                                                                                            {pageNum}
+                                                                                        </button>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                            <button
+                                                                                type="button"
+                                                                                className="table-pagination-btn"
+                                                                                onClick={() => setSubProgramPage(skill.id, Math.min(currentPage + 1, totalPages))}
+                                                                                disabled={currentPage === totalPages}
+                                                                            >
+                                                                                Next
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>
@@ -679,7 +736,7 @@ const CreateProgram = () => {
                                     {creatingProgram ? "Creating..." : "Create Program"}
                                 </button>
                             </div>
-                            </div>
+                        </div>
                     </form>
                 </div>
             </div>

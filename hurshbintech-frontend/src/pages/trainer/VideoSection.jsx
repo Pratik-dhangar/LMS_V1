@@ -39,7 +39,7 @@ const VideoSection = ({
         </div>
       </div>
       <div className="video-session-info">
-        Connected with: {sessionInfo?.learner_name ?? '—'} | Session Time: {sessionInfo?.started_at ? new Date(sessionInfo.started_at).toLocaleTimeString() : '--:--'}
+        Connected with: {sessionInfo?.learner_name ?? '—'}
       </div>
       <div className="video-container">
         {/* Remote video - learner's */}

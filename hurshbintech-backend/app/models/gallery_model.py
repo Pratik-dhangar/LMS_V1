@@ -14,10 +14,13 @@ class Gallery(Base):
     __tablename__ = "gallery"
 
     id = Column(Integer, primary_key=True, index=True)
-    # Title and description removed per new requirements (only image stored)
-    photo_url = Column(String(255), nullable=False)
-    photo_size = Column(Float, nullable=False)  # Size in MB
+    # Title and description removed per new requirements (only image/video stored)
+    photo_url = Column(String(255), nullable=True)
+    photo_size = Column(Float, nullable=True)  # Size in MB
     thumbnail_url = Column(String(255), nullable=True)
+    video_url = Column(String(255), nullable=True)
+    video_size = Column(Float, nullable=True)  # Size in MB
+    video_thumbnail_url = Column(String(255), nullable=True)
     status = Column(
         SAEnum(
             GalleryPhotoStatus,

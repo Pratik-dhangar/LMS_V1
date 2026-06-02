@@ -25,6 +25,7 @@ const ManageTrainers = () => {
   const [visiblePasscodes, setVisiblePasscodes] = useState({});
   const [revealedPasscodes, setRevealedPasscodes] = useState({}); // Store decrypted passcodes
   const [downloadingTrainer, setDownloadingTrainer] = useState(null);
+  const [updatingIlpPermission, setUpdatingIlpPermission] = useState({});
 
   // Fetch trainers data when component mounts
   useEffect(() => {
@@ -110,6 +111,44 @@ const ManageTrainers = () => {
    */
   const handleEditTrainer = (trainerId) => {
     navigate(`/head/edit-trainer/${trainerId}`);
+  };
+
+  const handleToggleIlpPermission = async (trainer) => {
+    const trainerId = trainer.id;
+    const shouldAllow = !trainer.can_schedule_ilp;
+
+    try {
+      setUpdatingIlpPermission((prev) => ({ ...prev, [trainerId]: true }));
+      await headService.setTrainerIlpPermission(trainerId, shouldAllow);
+
+      const updatePermission = (list) =>
+        list.map((item) =>
+          item.id === trainerId
+            ? { ...item, can_schedule_ilp: shouldAllow, trainer_ilp_override: shouldAllow }
+            : item
+        );
+
+      setTrainers((prev) => updatePermission(prev));
+      setFilteredTrainers((prev) => updatePermission(prev));
+
+      toast.success(
+        shouldAllow
+          ? `ILP access granted for ${trainer.name}`
+          : `ILP access revoked for ${trainer.name}`,
+        {
+          position: "top-center",
+          autoClose: 2000,
+        }
+      );
+    } catch (err) {
+      console.error("Error updating trainer ILP permission:", err);
+      toast.error("Failed to update ILP access. Please try again.", {
+        position: "top-center",
+        autoClose: 3000,
+      });
+    } finally {
+      setUpdatingIlpPermission((prev) => ({ ...prev, [trainerId]: false }));
+    }
   };
 
   /**
@@ -307,6 +346,22 @@ const ManageTrainers = () => {
                           </td>
                           <td className="table-primary-td table-primary-td-center">
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                              <button
+                                onClick={() => handleToggleIlpPermission(trainer)}
+                                disabled={!!updatingIlpPermission[trainer.id]}
+                                className={`app-modal-btn ${trainer.can_schedule_ilp ? 'app-modal-btn--danger' : 'app-modal-btn--success'}`}
+                                title={trainer.can_schedule_ilp ? 'Revoke Schedule ILP access' : 'Give Schedule ILP access'}
+                                style={{
+                                  opacity: updatingIlpPermission[trainer.id] ? 0.6 : 1,
+                                  cursor: updatingIlpPermission[trainer.id] ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                {updatingIlpPermission[trainer.id]
+                                  ? 'Updating...'
+                                  : trainer.can_schedule_ilp
+                                    ? 'Revoke ILP'
+                                    : 'Give ILP'}
+                              </button>
                               <button
                                 onClick={() => handleEditTrainer(trainer.id)}
                                 className="app-modal-btn app-modal-btn--primary"

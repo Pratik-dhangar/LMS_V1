@@ -5,6 +5,7 @@ import Footer from './Footer';
 import MessagingWidget from '../chat/MessagingWidget';
 import BuySubscriptionModal from '../common/BuySubscriptionModal';
 import FreeAssessmentModal from '../common/FreeAssessmentModal';
+import FreeAppointmentModal from '../common/FreeAppointmentModal';
 import { useAuth } from '../../context/AuthContext';
 
 /**
@@ -21,6 +22,7 @@ const MainLayout = () => {
   const location = useLocation();
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showAssessmentModal, setShowAssessmentModal] = useState(false);
+  const [showFreeAppointmentModal, setShowFreeAppointmentModal] = useState(false);
 
   // Hide messaging widget on session pages
   const isSessionPage = location.pathname.includes('/session/') ||
@@ -32,6 +34,7 @@ const MainLayout = () => {
       <Navbar
         setShowSubscriptionModal={setShowSubscriptionModal}
         setShowAssessmentModal={setShowAssessmentModal}
+        setShowFreeAppointmentModal={setShowFreeAppointmentModal}
       />
       <Outlet />
       <Footer />
@@ -50,8 +53,17 @@ const MainLayout = () => {
           onClose={() => setShowAssessmentModal(false)}
         />
       )}
+
+      {/* Free Appointment Modal */}
+      {showFreeAppointmentModal && (
+        <FreeAppointmentModal
+          isOpen={showFreeAppointmentModal}
+          onClose={() => setShowFreeAppointmentModal(false)}
+        />
+      )}
     </>
   );
 };
 
 export default MainLayout;
+

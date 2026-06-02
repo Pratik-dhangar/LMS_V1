@@ -1,5 +1,5 @@
 """
-Logging Configuration for HurshbinTech Backend
+Logging Configuration for Hurshbin Backend
 Provides structured logging with different handlers for development and production
 """
 

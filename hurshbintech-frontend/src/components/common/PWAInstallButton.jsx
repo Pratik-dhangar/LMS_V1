@@ -35,7 +35,7 @@ const PWAInstallButton = () => {
                 onClick={handleInstall}
                 disabled={isInstalling}
                 className="pwa-install-button"
-                title="Install HurshBintech App"
+                title="Install HurshBin App"
             >
                 {isInstalling ? (
                     <>

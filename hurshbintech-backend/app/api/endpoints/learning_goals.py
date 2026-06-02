@@ -4,10 +4,10 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_admin, get_current_head, get_current_coach
+from app.core.deps import get_current_admin, get_current_head, get_current_coach, get_current_trainer
 from app.crud import learning_goals_crud
 from app.db.session import get_db
-from app.models.user_model import HeadProfile, CoachProfile, User
+from app.models.user_model import HeadProfile, CoachProfile, TrainerProfile, User
 from app.schemas.learning_goals import (
     LearningGoalsCreate,
     LearningGoalsResponse,
@@ -180,6 +180,37 @@ async def get_goal_by_id_head(
     return LearningGoalsResponse.from_orm_with_users(goal)
 
 # ============ COACH ENDPOINTS ============#
+
+
+@router.get("/trainer", response_model=List[LearningGoalsResponse])
+async def get_all_goals_trainer(
+    db: AsyncSession = Depends(get_db),
+    current_trainer: TrainerProfile = Depends(get_current_trainer),
+):
+    """Trainer gets all learning goals for their Head."""
+    cache_key = cache_service.key_learning_goals_list(f"trainer:{current_trainer.created_by_head_id}")
+
+    cached_data = await cache_service.get(cache_key)
+    if cached_data:
+        return [LearningGoalsResponse(**item) for item in cached_data]
+
+    goals = await learning_goals_crud.get_all_learning_goals(db)
+    result = [LearningGoalsResponse.from_orm_with_users(g) for g in goals]
+    await cache_service.set(cache_key, [r.model_dump() for r in result], ttl=cache_service.TTL_LEARNING_GOALS)
+    return result
+
+
+@router.get("/trainer/{goal_id}", response_model=LearningGoalsResponse)
+async def get_goal_by_id_trainer(
+    goal_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_trainer: TrainerProfile = Depends(get_current_trainer),
+):
+    """Trainer gets a specific learning goal."""
+    goal = await learning_goals_crud.get_learning_goal_by_id(db, goal_id)
+    if not goal:
+        raise HTTPException(status_code=404, detail="Goal not found")
+    return LearningGoalsResponse.from_orm_with_users(goal)
 
 
 @router.get("/coach", response_model=List[LearningGoalsResponse])

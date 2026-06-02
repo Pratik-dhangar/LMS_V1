@@ -1,5 +1,5 @@
 # =============================================================================
-# Bitbucket Pipelines - HurshBintech PWA
+# Bitbucket Pipelines - HurshBin PWA
 # Triggers ONLY on pushes to "uat-pwa" branch
 # =============================================================================
 image: atlassian/default-image:3

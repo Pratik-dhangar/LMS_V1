@@ -46,6 +46,17 @@ const headService = {
   },
 
   /**
+   * Grant/Revoke ILP scheduling access for a specific trainer
+   * @param {number} trainerId
+   * @param {boolean} allowed
+   * @returns {Promise}
+   */
+  setTrainerIlpPermission: async (trainerId, allowed) => {
+    const response = await axiosInstance.put(`/head/trainers/${trainerId}/ilp_permission`, allowed);
+    return response.data;
+  },
+
+  /**
    * Update Trainer
    * @param {number} trainerId
    * @param {FormData} updateData

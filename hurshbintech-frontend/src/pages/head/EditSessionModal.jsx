@@ -5,6 +5,7 @@ import learningGoalsService from '../../api/services/learningGoalsService';
 import sessionService from '../../api/services/sessionService';
 import learningContentService from '../../api/services/learningContentService';
 import programService from '../../api/services/programService';
+import ModeOfExpressionSelector from '../../components/common/ModeOfExpressionSelector';
 import '../../styles/components/common/Modal.css';
 
 
@@ -32,7 +33,8 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
         scheduled_date: session.scheduled_date ? session.scheduled_date.slice(0, 16) : '',
         duration: session.duration || '',
         content_ids: session.learning_contents?.map(c => c.id) || [],
-        goal_ids: session.learning_goals?.map(g => g.id) || []
+        goal_ids: session.learning_goals?.map(g => g.id) || [],
+        mode_of_expression: session.mode_of_expression || []
     });
 
     const [searchTerm, setSearchTerm] = useState({
@@ -200,6 +202,7 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
             duration: parseInt(formData.duration),
             content_ids: formData.content_ids.map(Number),
             goal_ids: formData.goal_ids.map(Number),
+            mode_of_expression: formData.mode_of_expression,
             ...(selectedProgramId ? { program_id: selectedProgramId } : {}),
         };
 
@@ -387,6 +390,11 @@ const EditSessionModal = ({ session, onClose, onSuccess }) => {
                                 placeholder="Session description (optional)"
                             />
                         </div>
+
+                        <ModeOfExpressionSelector
+                            value={formData.mode_of_expression}
+                            onChange={(nextValues) => setFormData({ ...formData, mode_of_expression: nextValues })}
+                        />
 
                         <div className="app-modal-form-grid app-modal-form-grid app-modal-form-grid--2">
                             {/* Scheduled Date/Time */}

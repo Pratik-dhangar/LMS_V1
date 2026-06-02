@@ -8,6 +8,7 @@ const CreateGalleryModal = ({ onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
         status: 'draft',
         photo: null,
+        video: null,
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -24,7 +25,10 @@ const CreateGalleryModal = ({ onClose, onSuccess }) => {
         const { name, files } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: files[0]
+            [name]: files[0],
+            // Clear the other file type when a new one is selected
+            ...(name === 'photo' && { video: null }),
+            ...(name === 'video' && { photo: null }),
         }));
     };
 
@@ -34,18 +38,27 @@ const CreateGalleryModal = ({ onClose, onSuccess }) => {
         setError(null);
 
         try {
+            // Validate that at least one file is provided
+            if (!formData.photo && !formData.video) {
+                setError('Please upload either a photo or a video.');
+                setLoading(false);
+                return;
+            }
+
             const formDataToSend = new FormData();
-            // only send image + status
             formDataToSend.append('status', formData.status);
-            // backend expects field name 'photo_file'
+
             if (formData.photo) {
                 formDataToSend.append('photo_file', formData.photo);
+            }
+            if (formData.video) {
+                formDataToSend.append('video_file', formData.video);
             }
 
             await galleryService.createGallery(formDataToSend);
             onSuccess();
-        } catch {
-            setError('Failed to create gallery photo. Please try again.');
+        } catch (err) {
+            setError('Failed to create gallery item. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -55,7 +68,7 @@ const CreateGalleryModal = ({ onClose, onSuccess }) => {
         <div className="app-modal-overlay">
             <div className="app-modal-container app-modal-container--md">
                 <div className="app-modal-header app-modal-header--primary">
-                    <h2 className="app-modal-title">Add Photo to Gallery</h2>
+                    <h2 className="app-modal-title">Add Photo or Video to Gallery</h2>
                     <button
                         type="button"
                         onClick={onClose}
@@ -73,7 +86,6 @@ const CreateGalleryModal = ({ onClose, onSuccess }) => {
                                 {error}
                             </div>
                         )}
-                        {/* Title and Description removed — only image is required */}
 
                         <div className="app-modal-form-field">
                             <label className="app-modal-form-label">
@@ -93,20 +105,49 @@ const CreateGalleryModal = ({ onClose, onSuccess }) => {
 
                         <div className="app-modal-form-field">
                             <label className="app-modal-form-label">
-                                Photo Image <span className="form-required">*</span>
+                                Photo Image {!formData.video && <span className="form-required">*</span>}
                             </label>
                             <input
                                 type="file"
                                 name="photo"
                                 accept="image/*"
                                 onChange={handleFileChange}
-                                required
+                                disabled={!!formData.video}
                                 className="app-modal-form-input"
                             />
                             <small className="form-helper-text">
                                 Accepted formats: JPEG, PNG, WebP, GIF. Max size: 50MB. Thumbnail will be auto-generated.
                             </small>
                         </div>
+
+                        <div style={{ textAlign: 'center', margin: '10px 0', color: '#999' }}>
+                            — OR —
+                        </div>
+
+                        <div className="app-modal-form-field">
+                            <label className="app-modal-form-label">
+                                Video File {!formData.photo && <span className="form-required">*</span>}
+                            </label>
+                            <input
+                                type="file"
+                                name="video"
+                                accept="video/*"
+                                onChange={handleFileChange}
+                                disabled={!!formData.photo}
+                                className="app-modal-form-input"
+                            />
+                            <small className="form-helper-text">
+                                Accepted formats: MP4, WebM, OGG, QuickTime. Max size: 500MB. Thumbnail will be auto-generated.
+                            </small>
+                        </div>
+
+                        {(formData.photo || formData.video) && (
+                            <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+                                <small>
+                                    <strong>Selected:</strong> {formData.photo ? formData.photo.name : formData.video.name}
+                                </small>
+                            </div>
+                        )}
                     </div>
 
                     <div className="app-modal-footer">
@@ -121,9 +162,9 @@ const CreateGalleryModal = ({ onClose, onSuccess }) => {
                         <button
                             type="submit"
                             className="app-modal-btn app-modal-btn--primary"
-                            disabled={loading}
+                            disabled={loading || (!formData.photo && !formData.video)}
                         >
-                            {loading ? 'Adding...' : 'Add Photo'}
+                            {loading ? 'Adding...' : 'Add to Gallery'}
                         </button>
                     </div>
                 </form>

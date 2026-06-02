@@ -833,10 +833,10 @@ const UnifiedChatPage = ({ isModal = false }) => {
                   <path fill="currentColor" d="M151.5 0C67.9 0 0 67.9 0 151.5S67.9 303 151.5 303 303 235.1 303 151.5 235.1 0 151.5 0zm0 282C79 282 21 224 21 151.5S79 21 151.5 21 282 79 282 151.5 224 282 151.5 282z" />
                 </svg>
               </div>
-              <h2 className="chat-welcome-title">HurshbinTech Chat</h2>
+              <h2 className="chat-welcome-title">Hurshbin Chat</h2>
               <p className="chat-welcome-description">
                 Send and receive messages without keeping your phone online.
-                Use HurshbinTech Chat on up to 4 linked devices and 1 mobile phone.
+                Use Hurshbin Chat on up to 4 linked devices and 1 mobile phone.
               </p>
               <div className="chat-welcome-divider" />
               <p className="chat-welcome-encrypted">

@@ -81,6 +81,66 @@
     display: block;
 }
 
+.gallery-card-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    background: #000;
+}
+
+.gallery-video-preview {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.gallery-video-controls {
+    position: absolute;
+    left: 0.5rem;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.6rem;
+    backdrop-filter: blur(4px);
+}
+
+.gv-btn {
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    padding: 0.28rem 0.45rem;
+    border-radius: 0.45rem;
+    font-weight: 700;
+    cursor: pointer;
+    min-width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gv-progress {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    flex: 1 1 auto;
+}
+
+.gv-progress::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
 .gallery-card-overlay {
     position: absolute;
     inset: 0;

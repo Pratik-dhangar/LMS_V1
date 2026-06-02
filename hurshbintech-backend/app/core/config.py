@@ -106,6 +106,9 @@ class Settings(BaseSettings):
     MAX_ADJUSTMENTS_PER_SUBSCRIPTION_HEAD: int = 3
     RENEWAL_REMINDER_DAYS: List[int] = [14, 7, 3]
 
+    # Free Appointment Notification
+    FREE_APPOINTMENT_NOTIFICATION_EMAIL: Optional[str] = None
+
     # Redis Cache Configuration
     REDIS_ENABLED: bool = False  # Enable/disable Redis caching
     REDIS_HOST: str = "localhost"

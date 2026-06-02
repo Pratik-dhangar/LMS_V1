@@ -2,9 +2,12 @@
 Training Session Model - For video conferencing sessions
 """
 
+import enum
 from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Table, Text
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import relationship, backref
 
 from app.db.session import Base
@@ -40,6 +43,18 @@ session_goal_association = Table(
         "goal_id", Integer, ForeignKey("learning_goals.id", ondelete="CASCADE"), primary_key=True
     ),
 )
+
+
+class ModeOfExpression(enum.Enum):
+    Identify = "Identify"
+    Point = "Point"
+    Show = "Show"
+    Vocalize = "Vocalize"
+    Name = "Name"
+    Sign = "Sign"
+    Communicate = "Communicate"
+    Write = "Write"
+    Type = "Type"
 
 
 class TrainingSession(Base):
@@ -80,6 +95,20 @@ class TrainingSession(Base):
         ForeignKey("programs.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
+    )
+
+    # Mode of expression (array of enum values: Identify, Point, Show, Vocalize, Name, Sign, Communicate, Write, Type)
+    mode_of_expression = Column(
+        postgresql.ARRAY(
+            SAEnum(
+                ModeOfExpression,
+                name="mode_of_expression_enum",
+                values_callable=lambda obj: [e.value for e in obj],
+                create_type=False,
+            )
+        ),
+        nullable=True,
+        comment="Mode of expression enum array",
     )
 
     # Session data

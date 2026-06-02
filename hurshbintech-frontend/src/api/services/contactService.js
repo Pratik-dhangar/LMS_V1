@@ -21,6 +21,20 @@ const contactService = {
         return response.data;
     },
 
+    // Public endpoint - Submit free appointment form
+    submitFreeAppointment: async (appointmentData) => {
+        const response = await api.post('/free-appointments-form', {
+            child_name: appointmentData.child_name,
+            age: parseInt(appointmentData.age, 10),
+            concerns: appointmentData.concerns?.trim() || null,
+            diagnosis: appointmentData.diagnosis?.trim() || null,
+            address: appointmentData.address?.trim() || null,
+            contact_number: appointmentData.contact_number,
+            reference_by: appointmentData.reference_by?.trim() || null,
+        });
+        return response.data;
+    },
+
     // Admin endpoints - Get all contacts with filters
     getAdminContacts: async (skip = 0, limit = 10, filters = {}) => {
         const params = new URLSearchParams({

@@ -5,9 +5,12 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class GalleryBase(BaseModel):
-    photo_url: str
-    photo_size: float
+    photo_url: Optional[str] = None
+    photo_size: Optional[float] = None
     thumbnail_url: Optional[str] = None
+    video_url: Optional[str] = None
+    video_size: Optional[float] = None
+    video_thumbnail_url: Optional[str] = None
     status: Optional[str] = Field(default="draft")  # "draft" or "published"
 
 
@@ -19,6 +22,9 @@ class GalleryUpdate(BaseModel):
     photo_url: Optional[str] = None
     photo_size: Optional[float] = None
     thumbnail_url: Optional[str] = None
+    video_url: Optional[str] = None
+    video_size: Optional[float] = None
+    video_thumbnail_url: Optional[str] = None
     status: Optional[str] = None
 
 

@@ -27,6 +27,7 @@ const ViewTrainers = () => {
   const [filteredTrainers, setFilteredTrainers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeSearchQuery, setActiveSearchQuery] = useState('');
+  const [selectedHeadFilter, setSelectedHeadFilter] = useState('');
   const [error, setError] = useState('');
   const [visiblePasscodes, setVisiblePasscodes] = useState({});
 
@@ -58,20 +59,43 @@ const ViewTrainers = () => {
    * 
    * @param {string} query - The search query from SearchBar component
    */
-  const handleSearch = (query) => {
+  const handleSearch = (query, headFilter = selectedHeadFilter) => {
     setActiveSearchQuery(query);
-    if (query.trim() === '') {
-      setFilteredTrainers(trainers);
-    } else {
+    
+    let filtered = trainers;
+    
+    // Apply search query filter
+    if (query.trim() !== '') {
       const lowerQuery = query.toLowerCase();
-      const filtered = trainers.filter(trainer =>
+      filtered = filtered.filter(trainer =>
         trainer.name.toLowerCase().includes(lowerQuery) ||
         trainer.passcode.toLowerCase().includes(lowerQuery) ||
-        (trainer.contact_number && trainer.contact_number.toLowerCase().includes(lowerQuery))
+        (trainer.contact_number && trainer.contact_number.toLowerCase().includes(lowerQuery)) ||
+        (trainer.created_by_head_name && trainer.created_by_head_name.toLowerCase().includes(lowerQuery))
       );
-      setFilteredTrainers(filtered);
     }
+    
+    // Apply head filter
+    if (headFilter !== '') {
+      filtered = filtered.filter(trainer => 
+        trainer.created_by_head_name === headFilter
+      );
+    }
+    
+    setFilteredTrainers(filtered);
   };
+
+  const handleHeadFilterChange = (e) => {
+    const value = e.target.value;
+    setSelectedHeadFilter(value);
+    handleSearch(activeSearchQuery, value);
+  };
+
+  // Get unique head names for the filter dropdown
+  const uniqueHeads = [...new Set(trainers
+    .map(t => t.created_by_head_name)
+    .filter(name => name)
+  )].sort();
 
   /**
    * Toggle passcode visibility for a specific trainer
@@ -122,12 +146,41 @@ const ViewTrainers = () => {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="search-section">
-            <SearchBar
-              onSearch={handleSearch}
-              placeholder="Search by name, passcode, contact number..."
-            />
+          {/* Search Bar & Filters */}
+          <div className="search-section" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ flex: 1, minWidth: '300px' }}>
+              <SearchBar
+                onSearch={(query) => handleSearch(query, selectedHeadFilter)}
+                placeholder="Search by name, passcode, contact number..."
+              />
+            </div>
+            
+            {uniqueHeads.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 500 }}>Filter by Head:</span>
+                <select
+                  value={selectedHeadFilter}
+                  onChange={handleHeadFilterChange}
+                  style={{
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '0.375rem',
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.875rem',
+                    backgroundColor: 'white',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    fontWeight: 500
+                  }}
+                >
+                  <option value="">All Heads</option>
+                  {uniqueHeads.map(head => (
+                    <option key={head} value={head}>
+                      {head}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           {activeSearchQuery && (
             <div className="search-results-info">
@@ -181,6 +234,9 @@ const ViewTrainers = () => {
                           Name
                         </th>
                         <th className="table-primary-th">
+                          Created By Head
+                        </th>
+                        <th className="table-primary-th">
                           Passcode
                         </th>
                         <th className="table-primary-th">
@@ -202,6 +258,9 @@ const ViewTrainers = () => {
                               <div className="table-primary-cell-name-text">{trainer.name}</div>
                               <div className="table-primary-cell-subtitle">{trainer.role}</div>
                             </div>
+                          </td>
+                          <td className="table-primary-td">
+                            {trainer.created_by_head_name || <span style={{ color: '#9ca3af', fontStyle: 'italic' }}>N/A</span>}
                           </td>
                           <td className="table-primary-td">
                             <div className="passcode-display-inline">

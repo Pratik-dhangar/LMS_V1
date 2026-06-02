@@ -2922,6 +2922,51 @@ const Whiteboard = ({
 
         if (!isTrainer) return;
 
+        // Handle files dragged directly from filesystem (e.g., PDF from desktop)
+        const files = e.dataTransfer && e.dataTransfer.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            try {
+                if (file.type === 'application/pdf') {
+                    const blobUrl = URL.createObjectURL(file);
+                    const pdfData = {
+                        id: Date.now(),
+                        src: blobUrl,
+                        title: file.name
+                    };
+                    setInlineVideo(null);
+                    setIsInlineVideoMinimized(false);
+                    setInlinePdf(pdfData);
+                    setIsInlinePdfMinimized(false);
+
+                    // Do not broadcast local blob URLs to learners (requires upload)
+                    return;
+                }
+
+                // If image, add as canvas item (local preview)
+                if (file.type.startsWith('image/')) {
+                    const blobUrl = URL.createObjectURL(file);
+                    const newItem = {
+                        id: Date.now(),
+                        src: blobUrl,
+                        x: x - 50,
+                        y: y - 50,
+                        width: 100,
+                        height: 100,
+                        originalWidth: 100,
+                        originalHeight: 100,
+                        title: file.name,
+                        type: 'image',
+                        mimeType: file.type
+                    };
+                    setCanvasItems(prev => [...prev, newItem]);
+                    return;
+                }
+            } catch (err) {
+                console.error('[Whiteboard] Error handling dropped file:', err);
+            }
+        }
+
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -3659,6 +3704,15 @@ const Whiteboard = ({
         ? `https://www.youtube-nocookie.com/embed/${activeYoutubeMedia.videoId}?enablejsapi=1&fs=0&modestbranding=1&rel=0&playsinline=1&autoplay=0&controls=0&disablekb=1&iv_load_policy=3`
         : '';
 
+    const pdfViewerSrc = useCallback((src) => {
+        if (!src || isTrainer) {
+            return src;
+        }
+
+        const viewerOptions = 'toolbar=0&navpanes=0&scrollbar=0&view=FitH';
+        return src.includes('#') ? `${src}&${viewerOptions}` : `${src}#${viewerOptions}`;
+    }, [isTrainer]);
+
     return (
         <div className={`whiteboard-container ${isTrainer ? 'trainer-mode' : 'learner-mode'}`}>
             {/* Gesture Hints Tutorial - First Time Users */}
@@ -4042,7 +4096,7 @@ const Whiteboard = ({
                 {inlinePdf && (
                     <div className={`whiteboard-split-video pdf-split-view ${isInlinePdfMinimized ? 'split-media-minimized-hidden' : ''}`}>
                         <iframe
-                            src={inlinePdf.src}
+                            src={pdfViewerSrc(inlinePdf.src)}
                             title={inlinePdf.title || 'PDF Document'}
                             className="pdf-split-iframe"
                         />

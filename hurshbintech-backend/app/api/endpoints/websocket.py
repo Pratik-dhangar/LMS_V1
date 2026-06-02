@@ -213,14 +213,20 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
                 observer_message["observer_data"] = user_data
             await rtc_connections[session_id]["trainer"].websocket.send_json(observer_message)
 
-        # Normal peer connection setup for trainer/learner or coach/client
-        if len(rtc_connections[session_id]) == 2 and role != "observer":
-            initiator_role = "trainer" if "trainer" in rtc_connections[session_id] else "coach"
-            logger.info(f"Both participants connected - signaling {initiator_role} to initiate offer")
-            if initiator_role in rtc_connections[session_id]:
-                await rtc_connections[session_id][initiator_role].websocket.send_json(
-                    {"type": "peer_ready", "role": "both_connected"}
-                )
+        # Trigger offer creation when both peers are present.
+        # Fires for initial join AND when initiator reconnects while other party is already present.
+        session_roles = set(rtc_connections[session_id].keys())
+        if "trainer" in session_roles and "learner" in session_roles and role != "observer":
+            logger.info(f"Trainer + learner both present — signaling trainer to create offer")
+            await rtc_connections[session_id]["trainer"].websocket.send_json(
+                {"type": "peer_ready", "role": "both_connected"}
+            )
+        elif "coach" in session_roles and ("client" in session_roles or "guest" in session_roles):
+            peer_role = "client" if "client" in session_roles else "guest"
+            logger.info(f"Coach + {peer_role} both present — signaling coach to create offer")
+            await rtc_connections[session_id]["coach"].websocket.send_json(
+                {"type": "peer_ready", "role": "both_connected"}
+            )
 
         try:
             while conn_info.is_alive:
@@ -292,6 +298,25 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
                             logger.info(f"Forwarding {message_type} from learner to trainer")
                             await other_conn.websocket.send_json(message)
                     continue  # Skip the generic broadcast below
+
+                # Coach signaling messages go to the connected attendee (client or guest)
+                elif role == "coach" and message_type in ["offer", "answer", "ice-candidate"]:
+                    target_role = "client" if "client" in rtc_connections[session_id] else "guest"
+                    if target_role in rtc_connections[session_id]:
+                        other_conn = rtc_connections[session_id][target_role]
+                        if other_conn.is_alive:
+                            logger.info(f"Forwarding {message_type} from coach to {target_role}")
+                            await other_conn.websocket.send_json(message)
+                    continue
+
+                # Client/guest signaling messages go to coach only
+                elif role in ["client", "guest"] and message_type in ["offer", "answer", "ice-candidate"]:
+                    if "coach" in rtc_connections[session_id]:
+                        other_conn = rtc_connections[session_id]["coach"]
+                        if other_conn.is_alive:
+                            logger.info(f"Forwarding {message_type} from {role} to coach")
+                            await other_conn.websocket.send_json(message)
+                    continue
                 
                 # For all other messages, use role mapping
                 role_mapping = {
@@ -557,6 +582,36 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
                 "heartbeat_interval": HEARTBEAT_INTERVAL,
             }
         )
+
+        # Notify the controller when a participant joins the whiteboard channel.
+        # This is the earliest reliable join signal for coach/trainer UIs while the
+        # attendee is still waiting for admission.
+        participant_roles = ["learner", "client", "guest"]
+        controller_roles_by_participant = {
+            "learner": ["trainer"],
+            "client": ["coach"],
+            "guest": ["coach"],
+        }
+        if role in participant_roles and session_id in whiteboard_connections:
+            join_notice = {
+                "type": "participant_joined",
+                "data": {
+                    "role": role,
+                    "session_id": session_id,
+                },
+            }
+            for controller_role in controller_roles_by_participant.get(role, []):
+                controller_conn = whiteboard_connections[session_id].get(controller_role)
+                if controller_conn and controller_conn.is_alive:
+                    try:
+                        await controller_conn.websocket.send_json(join_notice)
+                        logger.info(
+                            f"[WHITEBOARD] Notified {controller_role} that {role} joined session {session_id}"
+                        )
+                    except Exception as e:
+                        logger.error(
+                            f"[WHITEBOARD] Error notifying {controller_role} about {role} join: {e}"
+                        )
 
         # Restore whiteboard state for reconnecting users
         try:

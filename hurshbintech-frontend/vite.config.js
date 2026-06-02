@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => {
   // Load all env vars including .env
   const env = loadEnv(mode, process.cwd());
 
+  // Prevent placeholder build values from leaking into the production bundle.
+  if (!env.VITE_API_BASE_URL || env.VITE_API_BASE_URL === 'https://yourdomain.com/api') {
+    env.VITE_API_BASE_URL = 'https://hurshbin.com/api';
+  }
+
   // Safe fallback — no crash if env is missing
   const enablePWA = (env.VITE_ENABLE_PWA ?? 'false') !== 'false';
 
@@ -20,8 +25,8 @@ export default defineConfig(({ mode }) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'icons/*.png'],
         manifest: {
-          name: 'HurshBintech Learning Platform',
-          short_name: 'HurshBintech',
+          name: 'HurshBin Learning Platform',
+          short_name: 'HurshBin',
           description: 'Professional learning management platform for trainers and trainees',
           theme_color: '#1e40af',
           background_color: '#ffffff',
@@ -77,28 +82,28 @@ export default defineConfig(({ mode }) => {
               // 2. Real-time API endpoints - NEVER cache (always fetch fresh)
               urlPattern: ({ url }) => {
                 const path = url.pathname;
-                
+
                 // Session & Training endpoints (real-time)
                 const isSessionsApi = path.includes('/api/sessions');
                 const isCoachSessionsApi = path.includes('/api/coaches/sessions');
                 const isAssignedTrainings = path.includes('/api/assigned-trainings');
-                
+
                 // Communication & Scheduling (real-time)
                 const isWebinars = path.includes('/api/communication/webinars');
                 const isAppointments = path.includes('/api/appointments');
-                
+
                 // Session mutations (start, end, cancel, join, leave)
-                const isSessionMutation = path.includes('/sessions/') && 
-                  (path.endsWith('/start') || path.endsWith('/end') || 
-                   path.endsWith('/cancel') || path.endsWith('/join') || 
-                   path.endsWith('/leave'));
+                const isSessionMutation = path.includes('/sessions/') &&
+                  (path.endsWith('/start') || path.endsWith('/end') ||
+                    path.endsWith('/cancel') || path.endsWith('/join') ||
+                    path.endsWith('/leave'));
 
                 // Program assignment learner data — content can be added/modified at any time
                 const isProgramAssignmentLearner = path.includes('/program-assignments/learner/');
-                
-                return isSessionsApi || isCoachSessionsApi || isAssignedTrainings || 
-                       isWebinars || isAppointments || isSessionMutation ||
-                       isProgramAssignmentLearner;
+
+                return isSessionsApi || isCoachSessionsApi || isAssignedTrainings ||
+                  isWebinars || isAppointments || isSessionMutation ||
+                  isProgramAssignmentLearner;
               },
               handler: 'NetworkOnly', // No caching - always fetch fresh
             },
@@ -135,8 +140,8 @@ export default defineConfig(({ mode }) => {
             }
           ]
         },
-        devOptions: { 
-          enabled: true, 
+        devOptions: {
+          enabled: true,
           type: 'module',
           suppressWarnings: false
         }

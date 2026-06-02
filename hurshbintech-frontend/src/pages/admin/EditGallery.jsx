@@ -11,6 +11,8 @@ const EditGallery = () => {
     const navigate = useNavigate();
     const [status, setStatus] = useState('draft');
     const [photo, setPhoto] = useState(null);
+    const [video, setVideo] = useState(null);
+    const [currentGallery, setCurrentGallery] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
@@ -20,8 +22,9 @@ const EditGallery = () => {
             try {
                 const gallery = await galleryService.getGalleryById(id);
                 setStatus(gallery.status || 'draft');
+                setCurrentGallery(gallery);
             } catch {
-                setError('Failed to fetch gallery photo details');
+                setError('Failed to fetch gallery item details');
             } finally {
                 setLoading(false);
             }
@@ -31,8 +34,14 @@ const EditGallery = () => {
     }, [id]);
 
     const handleFileChange = (e) => {
-        const { files } = e.target;
-        setPhoto(files[0] || null);
+        const { name, files } = e.target;
+        if (name === 'photo') {
+            setPhoto(files[0] || null);
+            setVideo(null); // Clear video when photo is selected
+        } else if (name === 'video') {
+            setVideo(files[0] || null);
+            setPhoto(null); // Clear photo when video is selected
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -46,11 +55,14 @@ const EditGallery = () => {
             if (photo) {
                 formDataToSend.append('photo_file', photo);
             }
+            if (video) {
+                formDataToSend.append('video_file', video);
+            }
 
             await galleryService.updateGallery(id, formDataToSend);
             navigate('/admin/gallery');
         } catch {
-            setError('Failed to update gallery photo. Please try again.');
+            setError('Failed to update gallery item. Please try again.');
         } finally {
             setSaving(false);
         }
@@ -58,6 +70,9 @@ const EditGallery = () => {
 
     if (loading) return <Loader />;
     if (error) return <ErrorState message={error} />;
+
+    const isVideo = currentGallery?.video_url;
+    const isSaveable = photo || video || false;
 
     return (
         <div className="page-main">
@@ -82,7 +97,7 @@ const EditGallery = () => {
                     </button>
                     {/* Left Side: Title and Subtitle */}
                     <div>
-                        <h1 className="page-title">Replace Gallery Photo</h1>
+                        <h1 className="page-title">Edit Gallery {isVideo ? "Video" : "Photo"}</h1>
                     </div>
                 </div>
 
@@ -98,7 +113,7 @@ const EditGallery = () => {
                     <form onSubmit={handleSubmit}>
                         {/* File Upload Section */}
                         <div className="admin-edit-gallery-section">
-                            <h2 className="admin-edit-gallery-section-title">Photo Status</h2>
+                            <h2 className="admin-edit-gallery-section-title">Item Status</h2>
 
                             <div className="app-modal-form-field">
                                 <label className="app-modal-form-label">
@@ -115,30 +130,61 @@ const EditGallery = () => {
                                     <option value="published">Published</option>
                                 </select>
                                 <p className="form-hint">
-                                    💡 Draft photos are admin-only; published photos are visible publicly.
+                                    💡 Draft items are admin-only; published items are visible publicly.
                                 </p>
                             </div>
                         </div>
 
                         <div className="admin-edit-gallery-section">
-                            <h2 className="admin-edit-gallery-section-title">Image File</h2>
+                            <h2 className="admin-edit-gallery-section-title">Media File</h2>
 
                             {/* Photo File */}
                             <div className="app-modal-form-field">
                                 <label className="app-modal-form-label">
-                                    🖼️ Photo Image <span className="form-required">*</span>
+                                    🖼️ Photo Image {!isVideo && <span className="form-required">*</span>}
                                 </label>
                                 <input
                                     type="file"
                                     name="photo"
                                     accept="image/*"
                                     onChange={handleFileChange}
+                                    disabled={!!video}
                                     className="app-modal-form-input"
                                 />
                                 <p className="form-hint">
                                     💡 Upload an image to replace the current photo. Accepted formats: JPEG, PNG, WebP, GIF. Max size: 50MB.
                                 </p>
                             </div>
+
+                            <div style={{ textAlign: 'center', margin: '15px 0', color: '#999' }}>
+                                — OR —
+                            </div>
+
+                            {/* Video File */}
+                            <div className="app-modal-form-field">
+                                <label className="app-modal-form-label">
+                                    🎬 Video File {isVideo && <span className="form-required">*</span>}
+                                </label>
+                                <input
+                                    type="file"
+                                    name="video"
+                                    accept="video/*"
+                                    onChange={handleFileChange}
+                                    disabled={!!photo}
+                                    className="app-modal-form-input"
+                                />
+                                <p className="form-hint">
+                                    💡 Upload a video to replace the current video. Accepted formats: MP4, WebM, OGG, QuickTime. Max size: 500MB.
+                                </p>
+                            </div>
+
+                            {(photo || video) && (
+                                <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
+                                    <small>
+                                        <strong>Selected:</strong> {photo ? photo.name : video?.name}
+                                    </small>
+                                </div>
+                            )}
                         </div>
 
                         {/* Action Buttons */}
@@ -154,7 +200,7 @@ const EditGallery = () => {
                             <button
                                 type="submit"
                                 className="app-modal-btn app-modal-btn--primary"
-                                disabled={saving}
+                                disabled={saving || !isSaveable}
                             >
                                 {saving ? (
                                     <span className="btn-loading">

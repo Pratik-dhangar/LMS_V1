@@ -19,6 +19,25 @@ from app.schemas.coach_session import CoachSessionCreate
 logger = logging.getLogger(__name__)
 
 
+def _infer_duration_from_session_type(session_type: Optional[str]) -> int:
+    """Infer the appointment duration from the stored session type label."""
+    if not session_type:
+        return 60
+
+    normalized_session_type = session_type.strip().lower()
+
+    if "functional assessment" in normalized_session_type:
+        return 90
+
+    if "90" in normalized_session_type:
+        return 90
+
+    if "60" in normalized_session_type:
+        return 60
+
+    return 60
+
+
 async def create_session_from_appointment(
     db: AsyncSession, 
     session_data: CoachSessionCreate,
@@ -132,6 +151,11 @@ async def create_session_from_appointment(
         client_email = f"noemail_{client_user_id or 'guest'}@noemail.local"
     
     # Create session
+    resolved_duration = session_data.duration
+    inferred_duration = _infer_duration_from_session_type(appointment.session_type)
+    if resolved_duration == 60 and inferred_duration != 60:
+        resolved_duration = inferred_duration
+
     new_session = CoachAppointmentSession(
         session_id=session_id,
         appointment_id=appointment.id,
@@ -142,7 +166,7 @@ async def create_session_from_appointment(
         title=title,
         description=session_data.description or appointment.notes,
         scheduled_date=scheduled_datetime,
-        duration=session_data.duration,
+        duration=resolved_duration,
         session_type=appointment.session_type,
         status="scheduled",
     )
@@ -224,47 +248,15 @@ async def start_session(db: AsyncSession, session_id: str) -> CoachAppointmentSe
         # Session is already active, just return it (resume)
         return session
     
-    # For scheduled sessions, check if it's within 2 hours of scheduled time
+    # Start scheduled sessions immediately — removed hard 2-hour start-window restriction
     if session.status == "scheduled":
-        # Get appointment to check scheduled time
-        if session.appointment_id:
-            appointment_result = await db.execute(
-                select(Appointment).where(Appointment.id == session.appointment_id)
-            )
-            appointment = appointment_result.scalar_one_or_none()
-            
-            if appointment and appointment.scheduled_date and appointment.scheduled_time:
-                # Parse scheduled date and time to create a datetime object
-                try:
-                    from datetime import datetime, timedelta
-                    scheduled_date = appointment.scheduled_date
-                    # Parse time string like "10am", "1pm", "3pm", "5pm"
-                    time_str = appointment.scheduled_time.lower().replace(' ', '')
-                    # Convert time string to datetime
-                    time_obj = datetime.strptime(time_str, '%I%p').time()
-                    scheduled_datetime = datetime.combine(scheduled_date, time_obj)
-                    
-                    current_time = datetime.now()
-                    
-                    # Calculate 2 hours after scheduled time
-                    expiry_time = scheduled_datetime + timedelta(hours=2)
-                    
-                    # Check if current time is before expiry (session window is still open)
-                    if current_time > expiry_time:
-                        raise ValueError(f"Session window has expired. Sessions must be started within 2 hours of scheduled time.")
-                except (ValueError, AttributeError) as e:
-                    # If parsing fails, log but continue (don't block session start)
-                    import logging
-                    logging.warning(f"Failed to parse appointment time: {e}")
-        
-        # Start the session
         session.status = "active"
-        if not session.started_at:  # Only set if not already set
+        if not session.started_at:
             session.started_at = datetime.utcnow()
-        
+
         await db.commit()
         await db.refresh(session)
-        
+
         return session
     
     # If status is ended or any other status, don't allow restart

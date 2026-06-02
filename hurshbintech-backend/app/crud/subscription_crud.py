@@ -1310,6 +1310,106 @@ async def process_ended_sessions_and_update_subscriptions(db: AsyncSession) -> i
     return count
 
 
+async def process_single_ended_session(db: AsyncSession, session_id: str) -> bool:
+    """
+    Process a single ended session for subscription counting.
+    - Decrements sessions_remaining and increments sessions_completed
+    - Marks learner as inactive when sessions_remaining reaches 0
+    Returns True if session was successfully processed, False otherwise
+    """
+    from app.models.session_model import TrainingSession
+    from app.models.user_model import User
+    
+    # Get the specific session
+    result = await db.execute(
+        select(TrainingSession)
+        .where(
+            and_(
+                TrainingSession.session_id == session_id,
+                TrainingSession.session_counted == 0,
+                TrainingSession.subscription_id.isnot(None)
+            )
+        )
+    )
+    session = result.scalar_one_or_none()
+    
+    if not session:
+        return False
+        
+    try:
+        # Get the subscription
+        subscription = await db.execute(
+            select(LearnerSubscription)
+            .where(LearnerSubscription.id == session.subscription_id)
+        )
+        sub = subscription.scalar_one_or_none()
+        
+        if sub and sub.sessions_remaining > 0:
+            # Decrement remaining and increment completed
+            sub.sessions_remaining -= 1
+            sub.sessions_completed += 1
+            
+            # Mark session as counted
+            session.session_counted = 1
+            
+            # Log the adjustment
+            await db.flush()
+            
+            # Create event log
+            event_log = SubscriptionEventLog(
+                subscription_id=sub.id,
+                event_type="SESSION_COMPLETED",
+                event_description=f"Session {session.session_id} manually counted. Remaining: {sub.sessions_remaining}",
+                event_metadata={
+                    "session_id": session.session_id,
+                    "sessions_remaining": sub.sessions_remaining,
+                    "sessions_completed": sub.sessions_completed,
+                    "learner_id": sub.learner_id
+                }
+            )
+            db.add(event_log)
+            
+            # Check if sessions_remaining reached 0
+            if sub.sessions_remaining == 0:
+                # Mark subscription as EXPIRED
+                from app.models.subscription import SubscriptionStatus
+                sub.status = SubscriptionStatus.EXPIRED
+                
+                # Mark learner as inactive
+                learner = await db.execute(
+                    select(User).where(User.id == sub.learner_id)
+                )
+                learner_user = learner.scalar_one_or_none()
+                
+                if learner_user:
+                    learner_user.is_active = False
+                    
+                    # Log the inactivation
+                    event_log_inactive = SubscriptionEventLog(
+                        subscription_id=sub.id,
+                        event_type="LEARNER_INACTIVATED",
+                        event_description=f"Learner {sub.learner_id} marked as inactive - all subscription sessions exhausted",
+                        event_metadata={
+                            "learner_id": sub.learner_id,
+                            "reason": "sessions_exhausted"
+                        }
+                    )
+                    db.add(event_log_inactive)
+                    
+                    logger.info(f"Learner {sub.learner_id} marked as inactive due to subscription sessions exhausted")
+            
+            await db.commit()
+            logger.info(f"Successfully processed single ended session {session_id}")
+            return True
+            
+        return False
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Error manually processing session {session_id}: {str(e)}")
+        return False
+
+
 async def get_subscriptions_needing_reminders(
     db: AsyncSession,
     days_before_expiry: int

@@ -12,6 +12,7 @@ class LearningGoals(Base):
     id = Column(Integer, primary_key=True, index=True)
     goal = Column(String(255), nullable=False, index=True)
     goal_description = Column(Text, nullable=True)
+    delivery_instruction = Column(Text, nullable=True)
 
     # Metadata
     created_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=False)

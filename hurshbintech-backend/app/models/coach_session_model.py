@@ -39,7 +39,7 @@ class CoachAppointmentSession(Base):
     description = Column(Text)
     scheduled_date = Column(DateTime, nullable=False)
     duration = Column(Integer, default=60)  # Session duration in minutes
-    session_type = Column(String(50))  # e.g., "initial_consultation", "follow_up"
+    session_type = Column(String(255))  # e.g., "initial_consultation", "follow_up"
     
     # Session status: scheduled, active, ended, cancelled
     status = Column(String(50), default="scheduled", nullable=False)

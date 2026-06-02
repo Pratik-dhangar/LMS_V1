@@ -25,6 +25,12 @@ const learningGoalsService = {
       return response.data;
     },
   },
+  trainer: {
+    getAll: async () => {
+      const response = await api.get('/learning-goals/trainer');
+      return response.data;
+    },
+  },
   // Fallback for coaches to access learning goals with multiple endpoint attempts
   coach: {
     getAll: async () => {
