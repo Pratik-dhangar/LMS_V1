@@ -27,7 +27,7 @@ class InvoiceGenerator:
             region=settings.AWS_REGION
         )
         self.page_size = A4
-        self.company_name = "HurshBinTech"
+        self.company_name = "HurshBin"
         self.company_address = "India"
     
     def generate_invoice_pdf(
@@ -166,7 +166,7 @@ class InvoiceGenerator:
             header_data = [[
                 Paragraph("INVOICE", invoice_title_style),
                 Paragraph(
-                    "<b>HurshBinTech</b><br/>Professional Learning Materials<br/>India",
+                    "<b>HurshBin</b><br/>Professional Learning Materials<br/>India",
                     ParagraphStyle(
                         'CompanyInfo',
                         parent=styles['Normal'],
@@ -304,7 +304,7 @@ class InvoiceGenerator:
             # ===== BANK DETAILS SECTION =====
             elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#ddd'), spaceAfter=15))
             
-            bank_text = f"<b>Bank Name:</b> HurshBinTech Payment Gateway<br/><b>Contact:</b> support@hurshbintech.com"
+            bank_text = f"<b>Bank Name:</b> HurshBin Payment Gateway<br/><b>Contact:</b> support@hurshbintech.com"
             bank_para = Paragraph(bank_text, ParagraphStyle(
                 'Bank',
                 fontName='Helvetica',

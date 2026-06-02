@@ -39,10 +39,12 @@ import WhiteboardService from '../../api/services/whiteboardService';
 import WhiteboardToolsService from '../../api/services/WhiteboardToolsService';
 import Emoji from '../common/Emoji';
 import Whiteboard from '../common/Whiteboard';
+import Calculator from '../common/Calculator';
 import { normalizeItem } from '../../utils/drawingSync';
 import Exercise from './Exercise';
 import YouTubePopup from '../common/YouTubePopup';
 import LearningContentSidebar from '../../pages/trainer/LearningContentSidebar';
+import learningContentService from '../../api/services/learningContentService';
 import StopwatchDisplay from '../common/StopwatchDisplay';
 import { playFeedbackSound, playFeedbackSoundLoop, stopFeedbackSound, playFloatingAnimationSound } from '../../utils/feedbackSounds';
 
@@ -89,11 +91,6 @@ export const InstructorSessionHeader = ({
                     <div className="session-header-info">
                         Status: <strong>{connectionStatus}</strong>
                     </div>
-                    {timeLeft && (
-                        <div className="session-header-info">
-                            Time Left: <strong>{timeLeft}</strong>
-                        </div>
-                    )}
                     {showEndButton && (
                         <button className="btn-session btn-session-end" onClick={onEndSession}>
                             🏁 End Session
@@ -299,7 +296,8 @@ export const ToolAccessPanel = ({
         { key: 'select', label: 'Select', icon: '🔍' },
         { key: 'drag', label: 'Drag', icon: '👆' },
         { key: 'draw', label: 'Draw', icon: '✏️' },
-        { key: 'keyboard', label: 'Keyboard', icon: '⌨️' }
+        { key: 'keyboard', label: 'Keyboard', icon: '⌨️' },
+        { key: 'calculator', label: 'Calculator', icon: '🧮' }
     ];
 
     return (
@@ -666,7 +664,16 @@ export const instructorSessionStyles = `
     margin: 0;
     padding: 0;
     overflow: hidden;
+        overscroll-behavior-y: none;
+        overscroll-behavior: none;
+        touch-action: pan-x pan-y;
   }
+
+    html, body {
+        overscroll-behavior-y: none;
+        overscroll-behavior: none;
+        overflow-y: hidden;
+    }
 
   .instructor-main-content {
     display: flex;
@@ -1176,7 +1183,10 @@ export const setupInstructorWhiteboardCallbacks = ({
     setExerciseData,
     setBuckets,
     setErasePenTrigger,
-    setRedrawCanvasTrigger
+    setRedrawCanvasTrigger,
+    setCalculatorEnabled,
+    setRemoteCalculatorDisplay,
+    setRemoteCalculatorHistory
 }) => {
     if (!whiteboardService) return null;
 
@@ -1282,6 +1292,44 @@ export const setupInstructorWhiteboardCallbacks = ({
         };
     }
 
+    // Calculator updates from attendee
+    if (setRemoteCalculatorDisplay || setRemoteCalculatorHistory) {
+        whiteboardService.onCalculatorOperation = (data) => {
+            if (setCalculatorEnabled) setCalculatorEnabled(true);
+            if (setRemoteCalculatorDisplay && typeof data?.display !== 'undefined') {
+                setRemoteCalculatorDisplay(data.display);
+            }
+            if (setRemoteCalculatorHistory && Array.isArray(data?.history)) {
+                setRemoteCalculatorHistory(data.history);
+            }
+        };
+
+        whiteboardService.onCalculatorResult = (data) => {
+            if (setCalculatorEnabled) setCalculatorEnabled(true);
+            if (setRemoteCalculatorDisplay && typeof data?.result !== 'undefined') {
+                setRemoteCalculatorDisplay(String(data.result));
+            }
+            if (setRemoteCalculatorHistory && data?.calculation) {
+                setRemoteCalculatorHistory(prev => [...prev, data.calculation]);
+            }
+        };
+
+        whiteboardService.onCalculatorClear = () => {
+            if (setRemoteCalculatorDisplay) setRemoteCalculatorDisplay('0');
+            if (setRemoteCalculatorHistory) setRemoteCalculatorHistory([]);
+        };
+
+        whiteboardService.onCalculatorSync = (data) => {
+            if (setCalculatorEnabled) setCalculatorEnabled(true);
+            if (setRemoteCalculatorDisplay && typeof data?.display !== 'undefined') {
+                setRemoteCalculatorDisplay(data.display);
+            }
+            if (setRemoteCalculatorHistory && Array.isArray(data?.history)) {
+                setRemoteCalculatorHistory(data.history);
+            }
+        };
+    }
+
     // Return cleanup function
     return () => {
         if (whiteboardService) {
@@ -1293,6 +1341,10 @@ export const setupInstructorWhiteboardCallbacks = ({
             // Note: onBucketAdded and onBucketUpdate are handled by Whiteboard component — don't nullify
             whiteboardService.onFloatingAnimations = null;
             whiteboardService.onErasePen = null;
+            whiteboardService.onCalculatorOperation = null;
+            whiteboardService.onCalculatorResult = null;
+            whiteboardService.onCalculatorClear = null;
+            whiteboardService.onCalculatorSync = null;
         }
     };
 };
@@ -1312,6 +1364,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
     setIsEyeBlinking,
     setFeedbackMessage,
     setWaitingMessage,
+    setCalculatorPermission,
     setFloatingAnimations,
     floatingAnimations,
     setCanvasItems,
@@ -1370,6 +1423,13 @@ export const setupAttendeeWhiteboardCallbacks = ({
     if (setLineWidth) {
         whiteboardService.onPenSizeUpdate = (data) => {
             applyRemotePenSize(data?.lineWidth);
+        };
+    }
+
+    // Calculator permission control from instructor
+    if (setCalculatorPermission) {
+        whiteboardService.onCalculatorPermission = (data) => {
+            setCalculatorPermission(Boolean(data?.enabled));
         };
     }
 
@@ -1704,6 +1764,7 @@ export const setupAttendeeWhiteboardCallbacks = ({
         if (whiteboardService) {
             whiteboardService.onToolAccess = null;
             whiteboardService.onPenSizeUpdate = null;
+            whiteboardService.onCalculatorPermission = null;
             whiteboardService.onPromptUpdate = null;
             whiteboardService.onFeedbackMessage = null;
             whiteboardService.onWaitingMessage = null;
@@ -2032,25 +2093,33 @@ export const toggleToolAccess = (toolName, currentAccess, setToolAccess, whitebo
     setToolAccess(updated);
 
     if (whiteboardService) {
-        whiteboardService.send('tool_access', {
-            toolName,
-            enabled: updated[toolName],
-            allPermissions: updated
-        });
-
-        if (toolName === 'drag' && updated.drag) {
-            whiteboardService.send('tool_access', {
-                toolName: 'select',
-                enabled: true,
-                allPermissions: updated
-            });
-        }
-
-        if (toolName === 'draw' && updated.draw && currentLineWidth !== null) {
-            whiteboardService.send('pen_size_update', {
-                lineWidth: currentLineWidth,
+        // Handle calculator tool separately (sends different message type)
+        if (toolName === 'calculator') {
+            whiteboardService.send('calculator_permission', {
+                enabled: updated[toolName],
                 timestamp: Date.now()
             });
+        } else {
+            whiteboardService.send('tool_access', {
+                toolName,
+                enabled: updated[toolName],
+                allPermissions: updated
+            });
+
+            if (toolName === 'drag' && updated.drag) {
+                whiteboardService.send('tool_access', {
+                    toolName: 'select',
+                    enabled: true,
+                    allPermissions: updated
+                });
+            }
+
+            if (toolName === 'draw' && updated.draw && currentLineWidth !== null) {
+                whiteboardService.send('pen_size_update', {
+                    lineWidth: currentLineWidth,
+                    timestamp: Date.now()
+                });
+            }
         }
     }
 
@@ -2878,13 +2947,23 @@ export const createContentDragPayload = (content) => {
         youtubeVideoId = extractYoutubeVideoId(content.youtube_url);
     }
 
+    // Normalize file URL to a usable browser URL and set accurate mimeType
+    const resolvedUrl = content.file_url ? learningContentService.getFileUrl(content.file_url) : null;
+    let mime = content.mime_type || null;
+    if (!mime) {
+        if (content.content_type === 'image') mime = 'image/jpeg';
+        else if (content.content_type === 'pdf') mime = 'application/pdf';
+        else if (content.content_type === 'video') mime = 'video/mp4';
+        else mime = 'application/octet-stream';
+    }
+
     return {
         id: content.id,
         title: content.title,
         type: content.is_youtube ? 'youtube' : content.content_type,
-        url: content.file_url || null,
+        url: resolvedUrl,
         thumbnail: content.thumbnail_url || null,
-        mimeType: content.content_type === 'image' ? 'image/jpeg' : 'application/octet-stream',
+        mimeType: mime,
         originalFilename: content.title,
         is_youtube: content.is_youtube || false,
         youtube_url: content.youtube_url || null,
@@ -2992,6 +3071,12 @@ export const InstructorSessionPage = ({
     showStopwatch,
     setShowStopwatch,
     stopwatch,
+
+    // Calculator
+    calculatorEnabled,
+    setCalculatorEnabled,
+    remoteCalculatorDisplay,
+    remoteCalculatorHistory,
 
     // Music
     musicOptions,
@@ -3108,9 +3193,6 @@ export const InstructorSessionPage = ({
                     <div className="session-header-controls">
                         <div className="session-header-info">
                             Status: <strong>{connectionStatus}</strong>
-                        </div>
-                        <div className="session-header-info">
-                            Time Left: <strong>{timeLeft ?? '--:--'}</strong>
                         </div>
                         <button
                             className="btn-secondary"
@@ -3319,6 +3401,10 @@ export const InstructorSessionPage = ({
                         toggleToolAccess={toggleToolAccess}
                         showStopwatch={showStopwatch}
                         setShowStopwatch={setShowStopwatch}
+                        calculatorEnabled={calculatorEnabled}
+                        setCalculatorEnabled={setCalculatorEnabled}
+                        remoteCalculatorDisplay={remoteCalculatorDisplay}
+                        remoteCalculatorHistory={remoteCalculatorHistory}
                         showExercise={showExercise}
                         setShowExercise={setShowExercise}
                         activeIcons={activeIcons}
@@ -3492,6 +3578,10 @@ export const WhiteboardTools = ({
     toggleToolAccess,
     showStopwatch,
     setShowStopwatch,
+    calculatorEnabled = false,
+    setCalculatorEnabled = () => { },
+    remoteCalculatorDisplay = null,
+    remoteCalculatorHistory = [],
     showExercise,
     setShowExercise,
     activeIcons,
@@ -3548,6 +3638,17 @@ export const WhiteboardTools = ({
     };
 
     const selectedItems = getSelectedItemDetails();
+
+    const handleCalculatorToggle = () => {
+        const nextEnabled = !calculatorEnabled;
+        setCalculatorEnabled(nextEnabled);
+        if (whiteboardService) {
+            whiteboardService.send('calculator_permission', {
+                enabled: nextEnabled,
+                timestamp: Date.now()
+            });
+        }
+    };
     return (
         <div className="session-whiteboard-tools w-full flex flex-wrap items-center" style={{ gap: 'clamp(0.25rem, 1vw, 0.75rem)' }}>
             {/* Attendee Selected Content Display & Unselect Controls */}
@@ -3886,6 +3987,18 @@ export const WhiteboardTools = ({
                         <span className="hidden sm:inline">Stopwatch</span>
                     </button>
 
+                    {/* Calculator Tool Button */}
+                    <button
+                        onClick={handleCalculatorToggle}
+                        className={`${calculatorEnabled ? wbSmallBtnActive : wbSmallBtnBase}`}
+                        aria-expanded={calculatorEnabled}
+                        aria-controls="calculator-panel"
+                        title="Toggle calculator tool"
+                    >
+                        <Emoji emoji="🧮" size="base" />
+                        <span className="hidden sm:inline">Calculator</span>
+                    </button>
+
                     {[
                         { label: 'Good Job!', icon: '👍' },
                         { label: 'Wow!', icon: '🌟' },
@@ -3914,6 +4027,25 @@ export const WhiteboardTools = ({
                     })}
                 </div>
             </div>
+
+            {calculatorEnabled && (
+                <div
+                    id="calculator-panel"
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 120,
+                        pointerEvents: 'none'
+                    }}
+                >
+                    <Calculator
+                        isInstructor={true}
+                        hasPermission={calculatorEnabled}
+                        remoteDisplay={remoteCalculatorDisplay}
+                        remoteHistory={remoteCalculatorHistory}
+                    />
+                </div>
+            )}
 
             {/* Session Notes - Only for Trainer */}
             {showSessionNotes && handleNotesChange && handleClearNotes && (

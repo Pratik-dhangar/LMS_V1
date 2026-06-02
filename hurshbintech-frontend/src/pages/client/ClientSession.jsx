@@ -7,6 +7,7 @@ import { toast } from 'react-toastify';
 import coachSessionService from '../../api/services/coachSessionService';
 import sessionService from '../../api/services/sessionService';
 import Whiteboard from '../../components/common/Whiteboard';
+import Calculator from '../../components/common/Calculator';
 import Exercise from '../../components/session/Exercise';
 import MessageList from '../../components/common/MessageList';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
@@ -82,6 +83,7 @@ const ClientSession = () => {
     textBoxes, setTextBoxes,
     activeTextBoxId, setActiveTextBoxId,
     toolAccess, setToolAccess,
+    calculatorPermission,
     stopwatchElapsedTime, setStopwatchElapsedTime,
     stopwatchIsRunning, setStopwatchIsRunning,
     promptMeter, setPromptMeter,
@@ -303,42 +305,11 @@ const ClientSession = () => {
     }
   }, [waitingMessage, navigate]);
 
-  // Countdown timer
+  // Sessions no longer auto-end on a local timer.
   useEffect(() => {
-    if (!sessionInfo || !sessionInfo.started_at || !sessionInfo.duration) return;
-
-    const startTime = new Date(sessionInfo.started_at).getTime();
-    const durationMs = sessionInfo.duration * 60 * 1000;
-    const endTime = startTime + durationMs;
-
-    const intervalId = setInterval(() => {
-      const now = Date.now();
-      const remaining = endTime - now;
-
-      if (remaining <= 0) {
-        setTimeLeft('00:00');
-        clearInterval(intervalId);
-        toast.info('Session time has ended.');
-
-        // Auto-end: cleanup and redirect
-        setTimeout(() => {
-          try {
-            cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
-          } catch (error) {
-            console.error('[ClientSession] Error during auto-end cleanup:', error);
-          }
-          navigate('/my-appointments');
-        }, 1500);
-        return;
-      } else {
-        const minutes = Math.floor(remaining / 60000);
-        const seconds = Math.floor((remaining % 60000) / 1000);
-        setTimeLeft(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
-      }
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, [sessionInfo, webRTC, whiteboardService, toolsService, isInitializingRef, navigate]);
+    if (!sessionInfo) return;
+    setTimeLeft('No limit');
+  }, [sessionInfo, setTimeLeft]);
 
   // Auto-hide header after 5 seconds on mobile/tablet
   useEffect(() => {
@@ -506,9 +477,25 @@ const ClientSession = () => {
     );
   }
 
+  // Admission denied by coach
+  if (admissionDenied) {
+    return (
+      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
+        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
+          <div style={{ fontSize: '56px', marginBottom: '16px' }}>🚫</div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Access Denied</h2>
+          <p className="text-gray-600 mb-4">
+            Your request to join the session was not accepted by the coach.
+          </p>
+          <p className="text-sm text-gray-500">Redirecting you back...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Show waiting overlay if coach hasn't joined yet and session is not yet started
   // Only show waiting screen if session status is 'scheduled', not 'in_progress'
-  if (!loading && !instructorJoined && (sessionInfo?.status === 'scheduled' || showWaitingModal)) {
+  if (!loading && !instructorJoined && !awaitingAdmission && (sessionInfo?.status === 'scheduled' || showWaitingModal)) {
     return (
       <AttendeeWaitingScreen
         sessionInfo={sessionInfo}
@@ -524,22 +511,6 @@ const ClientSession = () => {
         onToggleMic={handleToggleMic}
         onToggleCamera={handleToggleCamera}
       />
-    );
-  }
-
-  // Admission denied by coach
-  if (admissionDenied) {
-    return (
-      <div className="flex items-center justify-center" style={{ minHeight: '100dvh', background: '#f8f8f8' }}>
-        <div className="text-center p-8 bg-white rounded-2xl shadow-xl max-w-md mx-4">
-          <div style={{ fontSize: '56px', marginBottom: '16px' }}>🚫</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">Access Denied</h2>
-          <p className="text-gray-600 mb-4">
-            Your request to join the session was not accepted by the coach.
-          </p>
-          <p className="text-sm text-gray-500">Redirecting you back...</p>
-        </div>
-      </div>
     );
   }
 
@@ -603,6 +574,9 @@ const ClientSession = () => {
         sessionType="client"
       />
 
+      {/* iOS / PWA floating nav (back + refresh) - placed below voice input (attendee upper section) */}
+      {/* IOSNavBar is now anchored inside AttendeeUpperSection */}
+
       {/* Main Container - Whiteboard */}
       <div className="learner-main-container">
         <AttendeeWhiteboardSection>
@@ -653,6 +627,44 @@ const ClientSession = () => {
               inlineMedia={inlineMedia}
               setInlineMedia={setInlineMedia}
             />
+
+            {calculatorPermission && (
+              <div style={{ position: 'absolute', inset: 0, zIndex: 80, pointerEvents: 'none' }}>
+                <Calculator
+                  hasPermission={calculatorPermission}
+                  onCalculatorChange={(payload) => {
+                    if (!whiteboardService) return;
+
+                    if (payload.action === 'clear') {
+                      whiteboardService.send('calculator_clear', {
+                        timestamp: Date.now()
+                      });
+                      return;
+                    }
+
+                    if (payload.action === 'equals') {
+                      whiteboardService.send('calculator_result', {
+                        result: payload.result,
+                        calculation: payload.calculation,
+                        display: payload.display,
+                        history: payload.history || [],
+                        timestamp: Date.now()
+                      });
+                      return;
+                    }
+
+                    whiteboardService.send('calculator_operation', {
+                      action: payload.action,
+                      display: payload.display,
+                      previousValue: payload.previousValue,
+                      operation: payload.operation,
+                      history: payload.history || [],
+                      timestamp: Date.now()
+                    });
+                  }}
+                />
+              </div>
+            )}
           </div>
         </AttendeeWhiteboardSection>
       </div>

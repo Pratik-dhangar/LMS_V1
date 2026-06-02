@@ -1,7 +1,7 @@
 /* Navbar.css */
 
 .navbar {
-    background-color: #5C1E1E;
+    /* background-color: #4d1919; */
     padding: 0;
     position: sticky;
     top: 0;
@@ -12,9 +12,6 @@
 }
 
 .navbar-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -89,9 +86,10 @@
 }
 
 .navbar-btn {
-    color: white;
+    background: #5C1E1E;
+    color: #ffffff;
     border: 1px solid #ffffff;
-    padding: 0.6rem 1.2rem;
+    padding: 0.5rem;
     border-radius: 0.525rem;
     font-size: 0.95rem;
     font-weight: 600;
@@ -104,8 +102,8 @@
 }
 
 .navbar-btn:hover:not(:disabled) {
-    background-color: #DB9D32;
-    border-color: #DB9D32;
+    background-color: #4d1919e1;
+    border-color: #4d1919e1;
     transform: translateY(-1px);
 }
 
@@ -122,8 +120,8 @@
 
 
 .navbar-toggle {
-    display: block;
-    color: white;
+    background: #5C1E1E;
+    color: #ffffff;
     padding: 0.25rem;
     background: none;
     border: none;
@@ -131,8 +129,11 @@
 }
 
 .navbar-toggle svg {
-    width: 1.5rem;
-    height: 1.5rem;
+    background: #5C1E1E;
+    color: #ffffff;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
 }
 
 .navbar-mobile-menu {
@@ -141,7 +142,7 @@
     flex-direction: column;
     align-items: stretch;
     gap: 0.6rem;
-    padding: 0 1.5rem 1.5rem 1.5rem;
+    padding: 1.5rem ;
     background-color: #5C1E1E;
     order: 3;
 }
@@ -154,20 +155,39 @@
     justify-content: flex-start;
 }
 
+.logo-wrapper {
+    /* background: #ffffff; */
+    backdrop-filter: blur(8px);
+    height: 6rem;
+    width: auto;
+    transition: transform 0.3s ease, filter 0.3s ease;
+    cursor: pointer;
+}
+
+.logo-wrapper:hover {
+    transform: scale(1.05);
+}
+
+
 /* Responsive design */
 @media (min-width: 640px) {
     .navbar-container {
-        padding: 1.25rem 1.75rem;
+        padding: 1rem;
     }
 
     .navbar-logo {
         height: 3.5rem;
     }
+
+    .logo-wrapper {
+        height: 6rem;
+        max-width: 260px;
+    }
 }
 
 @media (min-width: 768px) {
     .navbar-container {
-        padding: 1.5rem 2rem;
+        padding: 1rem;
     }
 
     .navbar-logo {
@@ -202,11 +222,16 @@
 
 @media (min-width: 1300px) {
     .navbar-container {
-        padding: 1.75rem 2rem;
+        padding: 1rem;
     }
 
     .navbar-logo {
         height: 4.25rem;
+    }
+
+    .logo-wrapper {
+        height: 7rem;
+        max-width: 280px;
     }
 
     .navbar-brand {

@@ -193,8 +193,11 @@ class Order(Base):
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid())
     order_number = Column(String(20), nullable=False, unique=True, index=True)  # ORD-2025-001234
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)  # Nullable for guest checkout
     customer_email = Column(String(255), nullable=True, index=True)  # Email provided during checkout (may differ from user.email)
+    customer_name = Column(String(255), nullable=True)  # Name of customer (required for guests)
+    customer_contact_number = Column(String(20), nullable=True)  # Contact number for delivery (required for guests)
+    guest_token = Column(String(64), nullable=True, unique=True, index=True)  # Unique token for guest order tracking
     status = Column(SAEnum(OrderStatus, name="orderstatus"), nullable=False, default=OrderStatus.CREATED, server_default="CREATED", index=True)
     payment_method = Column(SAEnum(PaymentMethod, name="paymentmethod"), nullable=True)
     subtotal = Column(Numeric(10, 2), nullable=False)
@@ -258,7 +261,7 @@ class PaymentReceipt(Base):
     file_name = Column(String(255), nullable=False)
     file_size = Column(Integer, nullable=False)
     file_type = Column(String(20), nullable=False)  # PNG, JPG, PDF
-    uploaded_by_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    uploaded_by_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     uploaded_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, server_default=func.now())
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now())
@@ -274,7 +277,7 @@ class OrderAuditLog(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, server_default=func.gen_random_uuid())
     order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
     action = Column(String(50), nullable=False)  # CREATED, PAYMENT_UPLOADED, PAYMENT_APPROVED, etc.
-    performed_by_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    performed_by_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     old_status = Column(String(50), nullable=True)
     new_status = Column(String(50), nullable=False)
     reason = Column(Text, nullable=True)

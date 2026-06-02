@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import cartService from '../../api/services/ecommerce/cartService';
+import guestCartService from '../../utils/guestCartService';
 import orderService from '../../api/services/ecommerce/orderService';
 import axiosInstance from '../../api/axios';
 import { toast } from 'react-toastify';
@@ -18,9 +19,10 @@ const Checkout = () => {
     const [orderData, setOrderData] = useState(null);
     const [createdOrderId, setCreatedOrderId] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
-    const [emailVerified, setEmailVerified] = useState(false);
+    const isGuestUser = !user;
 
     const [formData, setFormData] = useState({
+        name: '',
         delivery_address: '',
         delivery_city: '',
         delivery_pincode: '',
@@ -28,11 +30,14 @@ const Checkout = () => {
         email: '',
         contact_number: ''
     });
+    const [fieldErrors, setFieldErrors] = useState({});
 
     useEffect(() => {
         loadCart();
-        loadUserData();
-    }, []);
+        if (user) {
+            loadUserData();
+        }
+    }, [user]);
 
     const loadUserData = async () => {
         try {
@@ -44,40 +49,46 @@ const Checkout = () => {
                 return;
             }
 
-            // Extract email and contact_number directly from response
+            // Extract email, name, and contact_number directly from response
             const userEmail = response.data.email || '';
+            const userName = response.data.name || '';
             const userContactNumber = response.data.contact_number || '';
-
-            console.log('=== USER DATA FETCHED ===');
-            console.log('Email:', userEmail);
-            console.log('Contact Number:', userContactNumber);
-            console.log('========================');
 
             // Update form data with fetched values
             setFormData(prevData => ({
                 ...prevData,
                 email: userEmail,
+                name: userName,
                 contact_number: userContactNumber
             }));
-
-            // Set email verification status
-            if (userEmail) {
-                setEmailVerified(true);
-            }
 
             // Store user data in state
             setCurrentUser(response.data);
 
         } catch (error) {
             console.error('Failed to load user data:', error);
-            toast.error('Could not load user information');
+            // Silently fail - no toast for guest users
         }
     };
 
     const loadCart = async () => {
         try {
             setLoading(true);
-            const data = await cartService.getCart();
+            let data;
+
+            if (user) {
+                // Authenticated user - fetch from API
+                data = await cartService.getCart();
+            } else {
+                // Guest user - load from localStorage
+                data = guestCartService.getCart();
+                if (!data) {
+                    toast.info('Your cart is empty');
+                    navigate('/store');
+                    return;
+                }
+            }
+
             if (!data.items || data.items.length === 0) {
                 toast.info('Your cart is empty');
                 navigate('/store');
@@ -85,13 +96,9 @@ const Checkout = () => {
             }
             setCart(data);
         } catch (error) {
-            if (error.response?.status === 401) {
-                toast.info('Please login to checkout');
-                navigate('/auth/login');
-            } else {
-                toast.error('Failed to load cart');
-                navigate('/store/cart');
-            }
+            console.error('Failed to load cart:', error);
+            toast.error('Failed to load cart');
+            navigate('/store/cart');
         } finally {
             setLoading(false);
         }
@@ -100,13 +107,6 @@ const Checkout = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-
-        // Update email verification status when email is changed by user
-        if (name === 'email' && currentUser && value !== currentUser.email) {
-            setEmailVerified(false);
-        } else if (name === 'email' && currentUser && value === currentUser.email) {
-            setEmailVerified(true);
-        }
     };
 
     const handleFileChange = (e) => {
@@ -139,22 +139,49 @@ const Checkout = () => {
     };
 
     const handleCheckout = async () => {
-        // Validate form
+        const newErrors = {};
+
+        // Validate form - common fields
         if (!formData.delivery_address || !formData.delivery_city || !formData.delivery_pincode) {
+            if (!formData.delivery_address) newErrors.delivery_address = 'Delivery address is required';
+            if (!formData.delivery_city) newErrors.delivery_city = 'City is required';
+            if (!formData.delivery_pincode) newErrors.delivery_pincode = 'Postal code is required';
+            setFieldErrors(newErrors);
             toast.error('Please fill in all delivery details');
             return;
         }
+        if (formData.delivery_address.trim().length < 10) {
+            newErrors.delivery_address = 'Please enter your full address properly';
+            setFieldErrors(newErrors);
+            toast.error('Please enter your full address properly');
+            return;
+        }
         if (!formData.email) {
+            newErrors.email = 'Email is required';
+            setFieldErrors(newErrors);
             toast.error('Please provide your email address');
             return;
         }
         if (!formData.contact_number) {
+            newErrors.contact_number = 'Contact number is required';
+            setFieldErrors(newErrors);
             toast.error('Please provide your contact number');
             return;
         }
+
+        // Guest users must provide name
+        if (isGuestUser && !formData.name) {
+            newErrors.name = 'Name is required';
+            setFieldErrors(newErrors);
+            toast.error('Please provide your name');
+            return;
+        }
+
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
+            newErrors.email = 'Please enter a valid email address';
+            setFieldErrors(newErrors);
             toast.error('Please enter a valid email address');
             return;
         }
@@ -163,21 +190,36 @@ const Checkout = () => {
             return;
         }
 
+        // Clear errors if validation passes
+        setFieldErrors({});
+
         try {
             setSubmitting(true);
+
+            // For guest users, include cart items in the checkout payload
+            let checkoutPayload = { ...formData };
+
+            if (isGuestUser && cart && cart.items) {
+                checkoutPayload.items = cart.items.map(item => ({
+                    product_id: item.product_id,
+                    quantity: item.quantity
+                }));
+            }
+
             // Create order
-            const order = await orderService.checkout(formData);
+            const order = await orderService.checkout(checkoutPayload, isGuestUser);
 
             // Store the created order ID in state so it displays
             setCreatedOrderId(order.order_number);
 
             // Upload receipt (use order_id from response)
-            await orderService.uploadReceipt(order.order_id, receiptFile);
+            await orderService.uploadReceipt(order.order_id, receiptFile, order.guest_token);
 
             toast.success('Order placed successfully! Admin will verify payment shortly.');
 
-            // Redirect to appropriate dashboard based on user role
+            // Redirect based on user type
             if (user && user.role) {
+                // Registered user - redirect to dashboard
                 const dashboardMap = {
                     'head': '/head/dashboard',
                     'trainer': '/trainer/dashboard',
@@ -188,7 +230,12 @@ const Checkout = () => {
                 const redirectUrl = dashboardMap[user.role] || '/store';
                 navigate(redirectUrl);
             } else {
+                // Guest user - redirect to tracking page
                 navigate('/store');
+            }
+            // Clear guest cart from localStorage if guest user
+            if (isGuestUser) {
+                localStorage.removeItem('guestCart');
             }
         } catch (error) {
             toast.error(error.response?.data?.detail || 'Failed to place order');
@@ -221,29 +268,51 @@ const Checkout = () => {
                     borderTop: '4px solid #f39c12'
                 }}>
                     <h1 style={{ fontSize: '28px', fontWeight: '600', color: '#2c3e50', marginBottom: '20px' }}>
-                        Checkout - Payment via QR Code or Bank Transfer
+                        {isGuestUser ? 'Guest Checkout' : 'Checkout'} - Payment via QR Code or Bank Transfer
                     </h1>
 
                     <div style={{ display: 'flex', gap: '30px' }}>
                         {/* Checkout Form */}
                         <div style={{ flex: 2 }}>
-                            {/* Email Verification */}
+                            {/* Guest User Info / Email */}
                             <div style={{
-                                background: emailVerified ? '#d4edda' : '#fff3cd',
-                                border: `1px solid ${emailVerified ? '#28a745' : '#ffc107'}`,
+                                background: 'white',
+                                border: '1px solid #e0e0e0',
                                 borderRadius: '8px',
-                                padding: '20px',
+                                padding: '25px',
                                 marginBottom: '20px'
                             }}>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                                    <Mail size={20} style={{ color: emailVerified ? '#28a745' : '#ff9800', marginTop: '2px' }} />
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                                            <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#2c3e50' }}>
-                                                Email for Payment Instructions
-                                            </h4>
+                                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#2c3e50' }}>
+                                    {isGuestUser ? '1. Your Information' : '1. Contact Information'}
+                                </h3>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
+                                    {/* Name field - required for guests, shown for all */}
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                            Full Name {isGuestUser ? '*' : ''}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            value={formData.name}
+                                            onChange={handleInputChange}
+                                            placeholder="Your full name"
+                                            required={isGuestUser}
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '6px',
+                                                fontSize: '14px'
+                                            }}
+                                        />
+                                    </div>
 
-                                        </div>
+                                    {/* Email field */}
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                            Email Address *
+                                        </label>
                                         <input
                                             type="email"
                                             name="email"
@@ -253,15 +322,37 @@ const Checkout = () => {
                                             required
                                             style={{
                                                 width: '100%',
-                                                padding: '12px',
-                                                border: `2px solid ${emailVerified ? '#28a745' : '#ffc107'}`,
+                                                padding: '10px',
+                                                border: '1px solid #ddd',
                                                 borderRadius: '6px',
-                                                fontSize: '14px',
-                                                background: 'white',
-                                                boxSizing: 'border-box'
+                                                fontSize: '14px'
                                             }}
                                         />
+                                        <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                                            Order confirmation will be sent to this email
+                                        </p>
+                                    </div>
 
+                                    {/* Contact Number field */}
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
+                                            Contact Number *
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            name="contact_number"
+                                            value={formData.contact_number}
+                                            onChange={handleInputChange}
+                                            placeholder="Enter your contact number"
+                                            required
+                                            style={{
+                                                width: '100%',
+                                                padding: '10px',
+                                                border: '1px solid #ddd',
+                                                borderRadius: '6px',
+                                                fontSize: '14px'
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -275,7 +366,7 @@ const Checkout = () => {
                                 marginBottom: '20px'
                             }}>
                                 <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#2c3e50' }}>
-                                    1. Delivery Address
+                                    2. Delivery Address
                                 </h3>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
                                     <div>
@@ -291,11 +382,26 @@ const Checkout = () => {
                                             style={{
                                                 width: '100%',
                                                 padding: '10px',
-                                                border: '1px solid #ddd',
+                                                border: fieldErrors.delivery_address ? '2px solid #dc2626' : '1px solid #ddd',
                                                 borderRadius: '6px',
-                                                fontSize: '14px'
+                                                fontSize: '14px',
+                                                backgroundColor: fieldErrors.delivery_address ? '#fef2f2' : 'white'
                                             }}
                                         />
+                                        {fieldErrors.delivery_address && (
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                marginTop: '6px',
+                                                fontSize: '13px',
+                                                color: '#dc2626',
+                                                fontWeight: '500'
+                                            }}>
+                                                <AlertCircle size={16} />
+                                                {fieldErrors.delivery_address}
+                                            </div>
+                                        )}
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                         <div>
@@ -337,25 +443,6 @@ const Checkout = () => {
                                             />
                                         </div>
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '6px', color: '#2c3e50' }}>
-                                            Contact Number *
-                                        </label>
-                                        <input
-                                            type="tel"
-                                            name="contact_number"
-                                            value={formData.contact_number}
-                                            onChange={handleInputChange}
-                                            placeholder="Enter your contact number"
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px',
-                                                border: '1px solid #ddd',
-                                                borderRadius: '6px',
-                                                fontSize: '14px'
-                                            }}
-                                        />
-                                    </div>
                                 </div>
                             </div>
 
@@ -367,7 +454,7 @@ const Checkout = () => {
                                 padding: '25px'
                             }}>
                                 <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#2c3e50' }}>
-                                    2. Payment Method - Choose One
+                                    3. Payment Method - Choose One
                                 </h3>
 
                                 {/* QR Code Payment */}
@@ -469,7 +556,7 @@ const Checkout = () => {
                                     marginTop: '20px'
                                 }}>
                                     <div style={{ fontWeight: '600', marginBottom: '15px', fontSize: '16px', color: '#27ae60' }}>
-                                        3️⃣ Upload Payment Receipt *
+                                        4️⃣ Upload Payment Receipt *
                                     </div>
 
                                     <label

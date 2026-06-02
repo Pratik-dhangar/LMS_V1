@@ -4,6 +4,7 @@ class WhiteboardService {
         this.sessionId = sessionId;
         this.role = role;
         this.ws = null;
+        this._listeners = new Map();
         this.onDraw = null;
         this.onClear = null;
         this.onImage = null;
@@ -42,6 +43,11 @@ class WhiteboardService {
         this.onExerciseClosed = null; // New callback for exercise closed by trainer
         this.onCommentUpdate = null; // New callback for comment updates
         this.onCommentsToggle = null; // New callback for comments tool toggle
+        this.onCalculatorOperation = null; // New callback for calculator operations
+        this.onCalculatorResult = null; // New callback for calculator results
+        this.onCalculatorClear = null; // New callback for calculator clear
+        this.onCalculatorPermission = null; // New callback for calculator permission changes
+        this.onCalculatorSync = null; // New callback for calculator state sync
         this._onWhiteboardRestore = null; // Internal callback holder
         this._restorationBuffer = null; // Buffer for restoration message if received before callback is set
 
@@ -51,6 +57,40 @@ class WhiteboardService {
         this.reconnectDelayMs = 1000;
         this.maxReconnectDelayMs = 30000;
         this.reconnectTimer = null;
+    }
+
+    on(eventName, handler) {
+        if (!this._listeners.has(eventName)) {
+            this._listeners.set(eventName, new Set());
+        }
+
+        this._listeners.get(eventName).add(handler);
+        return this;
+    }
+
+    off(eventName, handler) {
+        const listeners = this._listeners.get(eventName);
+        if (!listeners) return this;
+
+        listeners.delete(handler);
+        if (listeners.size === 0) {
+            this._listeners.delete(eventName);
+        }
+
+        return this;
+    }
+
+    emit(eventName, data) {
+        const listeners = this._listeners.get(eventName);
+        if (!listeners) return;
+
+        listeners.forEach((handler) => {
+            try {
+                handler(data);
+            } catch (error) {
+                console.error(`[WhiteboardService] Error in ${eventName} listener:`, error);
+            }
+        });
     }
 
     initialize() {
@@ -70,7 +110,12 @@ class WhiteboardService {
             return;
         }
 
-        const wsUrl = this.wsUrl.replace('http', 'ws');
+        const wsUrl = (this.wsUrl || 'ws://localhost:8000')
+            .trim()
+            .replace(/^https:/, 'wss:')
+            .replace(/^http:/, 'ws:')
+            .replace(/\/+$/, '')
+            .replace(/\/ws$/i, '');
         const fullWsUrl = `${wsUrl}/ws/whiteboard/${this.sessionId}`;
 
         try {
@@ -244,6 +289,11 @@ class WhiteboardService {
                     if (this.onWaitingMessage) {
                         this.onWaitingMessage(message.data);
                     }
+                    this.emit('waiting_message', message.data);
+                    break;
+
+                case 'participant_joined':
+                    this.emit('participant_joined', message.data);
                     break;
 
                 case 'floating_animations':
@@ -361,6 +411,36 @@ class WhiteboardService {
                 case 'comments_toggle':
                     if (this.onCommentsToggle) {
                         this.onCommentsToggle(message.data);
+                    }
+                    break;
+
+                case 'calculator_operation':
+                    if (this.onCalculatorOperation) {
+                        this.onCalculatorOperation(message.data);
+                    }
+                    break;
+
+                case 'calculator_result':
+                    if (this.onCalculatorResult) {
+                        this.onCalculatorResult(message.data);
+                    }
+                    break;
+
+                case 'calculator_clear':
+                    if (this.onCalculatorClear) {
+                        this.onCalculatorClear();
+                    }
+                    break;
+
+                case 'calculator_permission':
+                    if (this.onCalculatorPermission) {
+                        this.onCalculatorPermission(message.data);
+                    }
+                    break;
+
+                case 'calculator_sync':
+                    if (this.onCalculatorSync) {
+                        this.onCalculatorSync(message.data);
                     }
                     break;
 

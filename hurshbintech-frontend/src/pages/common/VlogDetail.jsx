@@ -39,7 +39,7 @@ const VlogDetail = () => {
             setError(null);
 
             // Update page title for SEO
-            document.title = `${data.title} | HurshBinTech Vlogs`;
+            document.title = `${data.title} | HurshBin Vlogs`;
         } catch (err) {
             console.error('Error fetching vlog:', err);
             if (err.response?.status === 404) {

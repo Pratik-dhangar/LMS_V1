@@ -13,6 +13,9 @@ from pathlib import Path
 import logging
 
 from app.core.deps import get_current_head, get_current_admin
+from fastapi import Body
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.session import get_db
 from app.core.security import decrypt_passcode
 from app.core.config import settings
 from app.crud import user_crud
@@ -58,6 +61,28 @@ router = APIRouter(prefix="/head", tags=["Head Operations"])
 
 
 # ---trainer management---
+
+
+# --- Head settings ---
+@router.get("/settings")
+async def get_head_settings(
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Return head-level settings visible to the Head."""
+    return {"can_trainers_schedule_ilp": getattr(current_head, "can_trainers_schedule_ilp", False)}
+
+
+@router.put("/settings/ilp_permission")
+async def set_head_ilp_permission(
+    allowed: bool = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Head-only: toggle whether trainers are allowed to schedule ILP."""
+    current_head.can_trainers_schedule_ilp = bool(allowed)
+    await db.commit()
+    await db.refresh(current_head)
+    return {"can_trainers_schedule_ilp": current_head.can_trainers_schedule_ilp}
 
 
 #  create trainer
@@ -242,6 +267,36 @@ async def get_trainer_details(
     return TrainerResponse.from_orm_with_user(trainer)
 
 
+@router.put("/trainers/{trainer_id}/ilp_permission")
+async def set_trainer_ilp_permission(
+    trainer_id: int,
+    allowed: bool = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    """Head-only: grant or revoke ILP scheduling access for a specific trainer."""
+    trainer = await user_crud.get_trainer_by_id(db, trainer_id)
+
+    if not trainer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trainer not found")
+
+    if trainer.created_by_head_id != current_head.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update this trainer",
+        )
+
+    trainer.can_schedule_ilp = bool(allowed)
+    await db.commit()
+    await db.refresh(trainer)
+
+    return {
+        "trainer_id": trainer.id,
+        "can_schedule_ilp": bool(trainer.can_schedule_ilp),
+        "trainer_ilp_override": trainer.can_schedule_ilp,
+    }
+
+
 @router.patch("/trainers/{trainer_id}", response_model=TrainerResponse)
 async def update_trainer_profile(
     trainer_id: int,
@@ -327,13 +382,33 @@ async def update_trainer_profile(
         message_box=message_box,
     )
 
-    updated_trainer = await user_crud.update_trainer(db, trainer_id, trainer_update)
+    try:
+        updated_trainer = await user_crud.update_trainer(db, trainer_id, trainer_update)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Error updating trainer: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update trainer profile",
+        )
     
     # Update User record with contact_number
     if contact_number is not None:
-        updated_trainer.user.contact_number = contact_number
-        await db.commit()
-        await db.refresh(updated_trainer.user)
+        try:
+            updated_trainer.user.contact_number = contact_number
+            await db.commit()
+            await db.refresh(updated_trainer.user)
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Error updating contact number: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to update contact number",
+            )
     
     # Handle reference files upload
     if reference_files:
@@ -955,7 +1030,19 @@ async def update_learner_profile(
                 detail=f"Invalid learner data format: {str(e)}"
             )
         
-        updated_learner = await user_crud.update_learner(db, learner_id, learner_update_obj)
+        try:
+            updated_learner = await user_crud.update_learner(db, learner_id, learner_update_obj)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e),
+            )
+        except Exception as e:
+            logger.error(f"Error updating learner: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update learner profile",
+            )
     else:
         updated_learner = learner
     

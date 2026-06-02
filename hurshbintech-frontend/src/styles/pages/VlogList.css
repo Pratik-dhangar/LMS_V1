@@ -1,78 +1,84 @@
 /* Search Section */
 .vlog-search-section {
-    padding: 1rem;
-    margin-bottom: 2rem;
+  padding: 1rem;
+  margin-bottom: 2rem;
 }
 
 .vlog-search-form {
-    max-width: 500px;
-    margin: 0 auto;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .vlog-search-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .vlog-search-input {
-    flex: 1;
-    padding: 0.75rem 1rem 0.75rem 2.5rem;
-    border: 2px solid #cbd5e1;
-    border-radius: 1.5rem;
-    font-size: 0.95rem;
-    transition: all 0.2s ease;
+  flex: 1;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  border: 2px solid #cbd5e1;
+  border-radius: 1.5rem;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
 .vlog-search-input:focus {
-    outline: none;
-    border-color: #f6bb3b;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+  border-color: #f6bb3b;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .vlog-search-icon {
-     position: absolute;
-    left: 0.875rem;
-    color: #64748b;
-    pointer-events: none;
+  position: absolute;
+  left: 0.875rem;
+  color: #64748b;
+  pointer-events: none;
 }
 
 .vlog-search-clear-btn {
-    margin-left: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: #db9d32;
-    color: white;
-    border: none;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
+  margin-left: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #db9d32;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .vlog-search-clear-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
 }
 
 /* Vlog Grid */
 .vlog-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2rem;
+  gap: 1.5rem;
   margin-bottom: 4rem;
   justify-content: center;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .vlog-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 1024px) {
   .vlog-grid {
-    grid-template-columns: repeat(auto-fit, minmax(300px, 350px));
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1280px) {
+  .vlog-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
@@ -326,219 +332,223 @@
   color: #DB9D32;
   font-weight: 700;
 }
+
 /* Vlog Detail Page Styles */
 .vlog-detail-container {
-    background-color: #f9fafb;
-    min-height: 100vh;
+  background-color: #f9fafb;
+  min-height: 100vh;
 }
 
 .vlog-detail-article {
-    max-width: 56rem;
-    margin: 0 auto;
-    padding: 1rem;
-    padding-bottom: 3rem;
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 1rem;
+  padding-bottom: 3rem;
 }
 
 .vlog-detail-header {
-    margin-bottom: 2rem;
+  margin-bottom: 2rem;
 }
 
 .vlog-detail-title {
-    font-size: 2.25rem;
-    font-weight: 700;
-    color: #111827;
-    margin-bottom: 1rem;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 1rem;
 }
 
 @media (min-width: 768px) {
-    .vlog-detail-title {
-        font-size: 3rem;
-    }
+  .vlog-detail-title {
+    font-size: 3rem;
+  }
 }
 
 .vlog-detail-meta {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    color: #4b5563;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  color: #4b5563;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 1.5rem;
 }
 
 .vlog-detail-meta-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .vlog-detail-meta-icon {
-    color: #db9d32;
+  color: #db9d32;
 }
 
 .vlog-detail-video-container {
-    margin-bottom: 3rem;
-    width: 100%;
-    position: relative;
-    background-color: black;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  margin-bottom: 3rem;
+  width: 100%;
+  max-width: 100%;
+  position: relative;
+  background-color: black;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  aspect-ratio: 16 / 9;
 }
 
 .vlog-detail-video {
-    width: 100%;
-    height: auto;
-    display: block;
-    max-width: 100%;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background-color: black;
 }
 
 .vlog-detail-controls {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
-    padding: 20px 15px 15px;
-    transition: opacity 0.3s;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+  padding: 20px 15px 15px;
+  transition: opacity 0.3s;
 }
 
 .vlog-detail-controls.hidden {
-    opacity: 0;
+  opacity: 0;
 }
 
 .vlog-detail-progress {
-    margin-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .vlog-detail-progress-bar {
-    width: 100%;
-    height: 0.5rem;
-    border-radius: 0.5rem;
-    appearance: none;
-    cursor: pointer;
-    transition: all 0.2s;
-    outline: none;
+  width: 100%;
+  height: 0.5rem;
+  border-radius: 0.5rem;
+  appearance: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
 }
 
 .vlog-detail-progress-bar:hover {
-    height: 0.75rem;
+  height: 0.75rem;
 }
 
 .vlog-detail-control-buttons {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: white;
 }
 
 .vlog-detail-control-left {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .vlog-detail-control-button {
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 0.5rem;
-    transition: color 0.2s;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color 0.2s;
 }
 
 .vlog-detail-control-button:hover {
-    color: #db9d32;
+  color: #db9d32;
 }
 
 .vlog-detail-volume-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .vlog-detail-volume-bar {
-    width: 5rem;
-    height: 0.25rem;
-    background-color: #4b5563;
-    border-radius: 0.5rem;
-    appearance: none;
-    cursor: pointer;
+  width: 5rem;
+  height: 0.25rem;
+  background-color: #4b5563;
+  border-radius: 0.5rem;
+  appearance: none;
+  cursor: pointer;
 }
 
 .vlog-detail-time {
-    font-size: 0.875rem;
-    font-weight: 500;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .vlog-detail-play-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: rgba(0, 0, 0, 0.3);
-    cursor: pointer;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
 }
 
 .vlog-detail-play-button {
-    width: 5rem;
-    height: 5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #db9d32;
-    border-radius: 9999px;
-    transition: background-color 0.2s;
+  width: 5rem;
+  height: 5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #db9d32;
+  border-radius: 9999px;
+  transition: background-color 0.2s;
 }
 
 .vlog-detail-play-button:hover {
-    background-color: #c48b2a;
+  background-color: #c48b2a;
 }
 
 .vlog-detail-play-icon {
-    color: white;
-    margin-left: 0.25rem;
+  color: white;
+  margin-left: 0.25rem;
 }
 
 .vlog-detail-description {
-    margin-bottom: 3rem;
+  margin-bottom: 3rem;
 }
 
 .vlog-detail-description-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #111827;
-    margin-bottom: 1rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 1rem;
 }
 
 .vlog-detail-description-text {
-    font-size: 1.125rem;
-    line-height: 1.75;
-    color: #374151;
-    max-width: none;
+  font-size: 1.125rem;
+  line-height: 1.75;
+  color: #374151;
+  max-width: none;
 }
 
 .vlog-detail-navigation {
-    margin-top: 3rem;
-    padding-top: 2rem;
-    border-top: 1px solid #e5e7eb;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 .vlog-detail-back-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: #db9d32;
-    color: white;
-    text-decoration: none;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #db9d32;
+  color: white;
+  text-decoration: none;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: all 0.3s;
 }
 
 .vlog-detail-back-button:hover {
-    background: #c48b2a;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: #c48b2a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }

@@ -203,7 +203,10 @@ async def check_slot_availability(
     Validates:
     1. Coach's availability_days (e.g., only books Monday, Wednesday)
     2. Coach's time_slots (e.g., only 10am, 1pm, 3pm, 5pm)
-    3. No existing appointments at that time
+    3. No existing appointments at that time (with pessimistic locking to prevent race condition)
+    
+    Uses SELECT FOR UPDATE to lock the row during the check, preventing concurrent
+    bookings of the same time slot (race condition prevention).
     
     Args:
         db: Database session
@@ -240,9 +243,12 @@ async def check_slot_availability(
         if scheduled_time not in available_slots:
             return False, f"Time slot {scheduled_time} is not available. Available slots: {coach.time_slots}"
     
-    # Check for existing appointments at this time
+    # ✅ PESSIMISTIC LOCKING: Use SELECT FOR UPDATE to lock the row
+    # This prevents race conditions when multiple users try to book the same slot concurrently
     result = await db.execute(
-        select(Appointment).where(
+        select(Appointment)
+        .with_for_update(skip_locked=False)  # Lock and wait for other transactions to finish
+        .where(
             and_(
                 Appointment.coach_id == coach_id,
                 Appointment.scheduled_date == scheduled_date,

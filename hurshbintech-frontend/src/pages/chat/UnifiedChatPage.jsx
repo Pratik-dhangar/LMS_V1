@@ -6,10 +6,10 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getFileUrl } from '../../utils/urlHelper';
-import { 
-  ArrowLeft, 
-  Send, 
-  Paperclip, 
+import {
+  ArrowLeft,
+  Send,
+  Paperclip,
   Search,
   MoreVertical,
   Users,
@@ -61,7 +61,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [imageModal, setImageModal] = useState(null);
   const [showChatInfo, setShowChatInfo] = useState(false);
-  
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const emojiButtonRef = useRef(null);
@@ -92,7 +92,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
   const filteredConversations = conversations.filter(conv => {
     const name = conv.name?.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
-    
+
     // Search filter
     if (query && !name.includes(query)) {
       return false;
@@ -122,8 +122,8 @@ const UnifiedChatPage = ({ isModal = false }) => {
         });
       }
     });
-    
-    return allUsers.filter(u => 
+
+    return allUsers.filter(u =>
       u.id !== currentUser?.id && !conversationUserIds.has(u.id)
     );
   }, [allUsers, conversations, currentUser?.id]);
@@ -150,11 +150,11 @@ const UnifiedChatPage = ({ isModal = false }) => {
   useEffect(() => {
     if (selectedChat && messages[selectedChat.id]?.length > 0) {
       const unreadMessages = messages[selectedChat.id].filter(
-        msg => !msg.is_read && 
-               msg.sender_id !== currentUser?.id && 
-               !markedAsReadRef.current.has(msg.id)
+        msg => !msg.is_read &&
+          msg.sender_id !== currentUser?.id &&
+          !markedAsReadRef.current.has(msg.id)
       );
-      
+
       if (unreadMessages.length > 0) {
         const messageIds = unreadMessages.map(msg => msg.id);
         messageIds.forEach(id => markedAsReadRef.current.add(id));
@@ -192,7 +192,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
   // Handle send message
   const handleSendMessage = async (e) => {
     e?.preventDefault();
-    
+
     if (!messageInput.trim() || !selectedChat) return;
 
     const content = messageInput.trim();
@@ -222,7 +222,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
     }
 
     setUploadingFile(true);
-    
+
     try {
       await sendFileMessage(selectedChat.id, file);
     } catch (error) {
@@ -256,8 +256,10 @@ const UnifiedChatPage = ({ isModal = false }) => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download failed:', error);
-      // Fallback: open in new tab
-      window.open(fileUrl, '_blank');
+      // Fallback: open in new tab with proper URL conversion
+      const convertedUrl = getFileUrl(fileUrl);
+      console.log('[💬 CHAT FILE] Fallback view:', { original: fileUrl, final: convertedUrl });
+      window.open(convertedUrl, '_blank');
     }
   };
 
@@ -329,26 +331,26 @@ const UnifiedChatPage = ({ isModal = false }) => {
   // Get typing users
   const getTypingUsersNames = () => {
     if (!selectedChat || !typingUsers[selectedChat.id]) return [];
-    
+
     const typingSet = typingUsers[selectedChat.id];
     const typingArray = Array.from(typingSet).filter(id => id !== currentUser?.id);
-    
+
     const names = selectedChat.members
       ?.filter(m => typingArray.includes(m.user_id))
       .map(m => m.user_name.split(' ')[0]) || [];
-    
+
     return names;
   };
 
   const canCreateGroups = ['ADMIN', 'HEAD', 'TRAINER', 'COACH'].includes(currentUser?.role?.toUpperCase());
   const conversationMessages = selectedChat ? (messages[selectedChat.id] || []) : [];
   const typingNames = getTypingUsersNames();
-  
+
   // Get other user ID for direct chats (direct approach like in modal)
-  const otherUserId = selectedChat?.type === 'DIRECT' 
+  const otherUserId = selectedChat?.type === 'DIRECT'
     ? selectedChat.member_ids?.find(id => id !== currentUser?.id)
     : null;
-  
+
   // Debug logging
   if (selectedChat?.type === 'DIRECT') {
     console.log('[OnlineStatus Debug]', {
@@ -373,7 +375,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
             </div>
             <h2 className="chat-sidebar-title">Chats</h2>
           </div>
-          
+
           <div className="chat-sidebar-actions">
             <div className={`chat-connection-indicator ${isConnected ? 'connected' : 'disconnected'}`} />
             <button
@@ -403,13 +405,13 @@ const UnifiedChatPage = ({ isModal = false }) => {
 
         {/* Filter Tags */}
         <div className="chat-filter-tags">
-          <button 
+          <button
             className={`chat-filter-tag ${filterTag === 'ALL' ? 'active' : ''}`}
             onClick={() => setFilterTag('ALL')}
           >
             All
           </button>
-          <button 
+          <button
             className={`chat-filter-tag ${filterTag === 'GROUPS' ? 'active' : ''}`}
             onClick={() => setFilterTag('GROUPS')}
           >
@@ -527,7 +529,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
                 >
                   <ArrowLeft size={20} />
                 </button>
-                
+
                 <div className="chat-avatar-wrapper">
                   <div className="chat-user-avatar">
                     {selectedChat.type === 'GROUP' ? (
@@ -549,7 +551,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
                 </div>
               </div>
 
-              <button 
+              <button
                 className="chat-icon-btn"
                 onClick={() => setShowChatInfo(!showChatInfo)}
                 title="Chat info"
@@ -562,7 +564,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
                 <div className="chat-info-dropdown">
                   <div className="chat-info-header">
                     <h3>{selectedChat.type === 'DIRECT' ? 'Contact Info' : 'Group Info'}</h3>
-                    <button 
+                    <button
                       onClick={() => setShowChatInfo(false)}
                       className="chat-info-close"
                     >
@@ -627,8 +629,8 @@ const UnifiedChatPage = ({ isModal = false }) => {
             {/* Disappearing Messages Alert */}
             <div className="chat-alert-banner">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-                <path d="M12 8v4M12 16h.01"/>
+                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+                <path d="M12 8v4M12 16h.01" />
               </svg>
               <span>Messages will disappear in 7 days</span>
             </div>
@@ -828,13 +830,13 @@ const UnifiedChatPage = ({ isModal = false }) => {
             <div style={{ maxWidth: '28rem', textAlign: 'center' }}>
               <div className="chat-welcome-icon">
                 <svg viewBox="0 0 303 172" style={{ width: '100%', height: '100%' }}>
-                  <path fill="currentColor" d="M151.5 0C67.9 0 0 67.9 0 151.5S67.9 303 151.5 303 303 235.1 303 151.5 235.1 0 151.5 0zm0 282C79 282 21 224 21 151.5S79 21 151.5 21 282 79 282 151.5 224 282 151.5 282z"/>
+                  <path fill="currentColor" d="M151.5 0C67.9 0 0 67.9 0 151.5S67.9 303 151.5 303 303 235.1 303 151.5 235.1 0 151.5 0zm0 282C79 282 21 224 21 151.5S79 21 151.5 21 282 79 282 151.5 224 282 151.5 282z" />
                 </svg>
               </div>
-              <h2 className="chat-welcome-title">HurshbinTech Chat</h2>
+              <h2 className="chat-welcome-title">Hurshbin Chat</h2>
               <p className="chat-welcome-description">
                 Send and receive messages without keeping your phone online.
-                Use HurshbinTech Chat on up to 4 linked devices and 1 mobile phone.
+                Use Hurshbin Chat on up to 4 linked devices and 1 mobile phone.
               </p>
               <div className="chat-welcome-divider" />
               <p className="chat-welcome-encrypted">
@@ -895,7 +897,7 @@ const UnifiedChatPage = ({ isModal = false }) => {
                   key={availUser.id}
                   onClick={() => {
                     if (isCreatingGroup) {
-                      setSelectedUsers(prev => 
+                      setSelectedUsers(prev =>
                         prev.find(u => u.id === availUser.id)
                           ? prev.filter(u => u.id !== availUser.id)
                           : [...prev, availUser]

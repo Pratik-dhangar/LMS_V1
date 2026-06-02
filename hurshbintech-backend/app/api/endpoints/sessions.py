@@ -144,6 +144,7 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
                 "description": prog.skill,
                 "goal_ids": prog.goal_ids or [],
                 "content_ids": prog.content_ids or [],
+                "skills": prog.skills or [],
             }
     
     return SessionResponse(
@@ -162,8 +163,7 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
         created_by_name=session.created_by.name if session.created_by else "Unknown",
         created_at=session.created_at,
         updated_at=session.updated_at,
-        # Fallback to 60 if duration is None in DB (for old sessions) — otherwise use stored value
-        duration=session.duration if session.duration is not None else 60,
+        duration=session.duration,
         total_duration=session.total_duration,
         session_start_time=session.session_start_time,
         subscription_id=session.subscription_id,
@@ -213,33 +213,55 @@ async def create_training_session(
     """Head creates a new training session"""
     logger.info(f"User {current_user.id} ({current_user.role}) attempting to create session")
 
-    # Only Head can create sessions
-    # Handle both enum and string comparison
-    from app.models.user_model import UserRole
+    # Allow Head to create sessions as before. Allow Trainers to create sessions
+    # only when their Head has enabled the permission flag.
+    from app.models.user_model import UserRole, TrainerProfile, HeadProfile
 
-    is_head = (
-        (current_user.role == UserRole.HEAD)
-        or (str(current_user.role).upper() == "HEAD")
-        or (current_user.role == "head")
-    )
-    logger.info(
-        f"Is head check: {is_head}, role value: {current_user.role}, role type: {type(current_user.role)}"
-    )
+    role_val = str(current_user.role).upper() if current_user.role else ''
+    is_head = (role_val == "HEAD" or current_user.role == UserRole.HEAD)
+    is_trainer = (role_val == "TRAINER" or current_user.role == UserRole.TRAINER)
 
-    if not is_head:
-        logger.warning(
-            f"User {current_user.id} with role {current_user.role} attempted to create session"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Only Head users can create sessions"
-        )
+    logger.info(f"Create session request by user {current_user.id} role={current_user.role}")
 
-    # Head must specify trainer_id
-    if not session_data.trainer_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Head must specify trainer_id when creating session",
+    if is_head:
+        # Head must specify trainer_id
+        if not session_data.trainer_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Head must specify trainer_id when creating session",
+            )
+    elif is_trainer:
+        # Trainers can only create sessions for themselves and only when head permission enabled
+        # Resolve trainer profile and head
+        trainer_result = await db.execute(select(TrainerProfile).where(TrainerProfile.user_id == current_user.id))
+        trainer_profile = trainer_result.scalar_one_or_none()
+        if not trainer_profile:
+            raise HTTPException(status_code=404, detail="Trainer profile not found")
+
+        head_id = getattr(trainer_profile, 'created_by_head_id', None)
+        if not head_id:
+            raise HTTPException(status_code=403, detail="Trainer is not associated with a Head")
+
+        head_result = await db.execute(select(HeadProfile).where(HeadProfile.id == head_id))
+        head_profile = head_result.scalar_one_or_none()
+        effective_permission = (
+            trainer_profile.can_schedule_ilp
+            if getattr(trainer_profile, 'can_schedule_ilp', None) is not None
+            else bool(getattr(head_profile, 'can_trainers_schedule_ilp', False))
         )
+        if not head_profile or not effective_permission:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Scheduling ILP is disabled by your Head")
+
+        # Ensure trainer_id matches current trainer
+        # Mutate session_data to set trainer_id to current user
+        try:
+            session_data = session_data.model_copy(update={"trainer_id": current_user.id})
+        except Exception:
+            # Fallback for older pydantic
+            setattr(session_data, 'trainer_id', current_user.id)
+    else:
+        logger.warning(f"User {current_user.id} with role {current_user.role} attempted to create session")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only Head or Trainer users can create sessions")
 
     logger.info(
         f"Head {current_user.id} creating session for trainer {session_data.trainer_id} and learner {session_data.learner_id}"
@@ -1534,13 +1556,13 @@ async def get_recording_playback_url(
         )
     
     # Verify user access
-    # Admin can access any recording. Others must be participants/creator.
-    is_admin = (
-        current_user.role == UserRole.ADMIN
-        or str(current_user.role).upper() == "ADMIN"
-        or current_user.role == "admin"
+    # Admin and Head can access any recording. Others must be participants/creator.
+    is_admin_or_head = (
+        current_user.role in [UserRole.ADMIN, UserRole.HEAD]
+        or str(current_user.role).upper() in ["ADMIN", "HEAD"]
+        or current_user.role in ["admin", "head"]
     )
-    if (not is_admin) and current_user.id not in [session.trainer_id, session.learner_id, session.created_by_id]:
+    if (not is_admin_or_head) and current_user.id not in [session.trainer_id, session.learner_id, session.created_by_id]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this session recording"
@@ -1638,6 +1660,96 @@ async def get_trainer_recordings(
         
     except Exception as e:
         logger.error(f"Error fetching trainer recordings: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch recordings: {str(e)}"
+        )
+
+
+@router.get("/recordings/all")
+async def get_all_recordings(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all recordings in the system (admin/head only).
+    
+    Returns a list of all sessions with recordings including playback URLs.
+    
+    Returns:
+        List of sessions with recordings and their playback URLs
+    """
+    # Check if user is admin or head
+    is_admin_or_head = (
+        current_user.role in [UserRole.ADMIN, UserRole.HEAD]
+        or str(current_user.role).upper() in ["ADMIN", "HEAD"]
+        or current_user.role in ["admin", "head"]
+    )
+    if not is_admin_or_head:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admin/head can access all recordings",
+        )
+    
+    logger.info(f"Fetching all recordings for {current_user.role} {current_user.id}")
+    
+    try:
+        from sqlalchemy import select
+        from sqlalchemy.orm import selectinload
+        
+        # Query all sessions where recording exists with eager loaded User relationships
+        stmt = select(TrainingSession).where(
+            TrainingSession.recording_url.isnot(None)
+        ).options(
+            selectinload(TrainingSession.trainer),
+            selectinload(TrainingSession.learner)
+        ).order_by(TrainingSession.updated_at.desc())
+        
+        result = await db.execute(stmt)
+        sessions = result.scalars().all()
+        
+        if not sessions:
+            return {
+                "recordings": [],
+                "total": 0,
+                "message": "No recordings found"
+            }
+        
+        # Build response with playback URLs
+        recordings = []
+        storage = get_recording_storage()
+        
+        for session in sessions:
+            try:
+                playback_url = await storage.get_playback_url(session.recording_url)
+            except Exception as e:
+                logger.error(f"Failed to generate playback URL for session {session.id}: {e}")
+                playback_url = None
+            
+            recordings.append({
+                "id": session.id,
+                "session_id": session.session_id,
+                "title": session.title,
+                "trainer_id": session.trainer_id,
+                "trainer_name": session.trainer.name if session.trainer else "Unknown",
+                "learner_id": session.learner_id,
+                "learner_name": session.learner.name if session.learner else "Unknown",
+                "status": session.status,
+                "recording_status": session.recording_status,
+                "recorded_at": session.recording_uploaded_at,
+                "playback_url": playback_url,
+                "scheduled_date": session.scheduled_date,
+                "duration": session.duration
+            })
+        
+        return {
+            "recordings": recordings,
+            "total": len(recordings),
+            "message": f"Found {len(recordings)} recording(s)"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching all recordings: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch recordings: {str(e)}"

@@ -3,10 +3,11 @@ import PropTypes from 'prop-types';
 import { FaTimes, FaPlay, FaPause, FaStepBackward, FaStepForward, FaExpand, FaCompress } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import '../../styles/components/common/MediaPopup.css';
 
 // Set up PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 /**
  * MediaPopup Component
@@ -112,14 +113,28 @@ const MediaPopup = ({
         try {
             const page = await pdfDocRef.current.getPage(pageNumber);
             const viewport = page.getViewport({ scale: pdfScale });
+            const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+            const renderViewport = page.getViewport({ scale: pdfScale * dpr });
             const canvas = canvasRef.current;
 
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
+            // Backing store at devicePixelRatio for sharp rendering
+            canvas.width = Math.max(1, Math.floor(renderViewport.width));
+            canvas.height = Math.max(1, Math.floor(renderViewport.height));
+            canvas.style.width = `${Math.floor(viewport.width)}px`;
+            canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.save();
+                ctx.imageSmoothingEnabled = false;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.restore();
+            }
 
             const renderContext = {
-                canvasContext: canvas.getContext('2d'),
-                viewport: viewport
+                canvasContext: ctx,
+                viewport: renderViewport
             };
 
             await page.render(renderContext).promise;

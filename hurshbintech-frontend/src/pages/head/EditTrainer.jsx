@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { getFileUrl } from "../../utils/urlHelper";
 import headService from "../../api/services/headService";
 import Loader from "../../components/common/Loader";
 import ErrorState from "../../components/common/ErrorState";
@@ -157,18 +158,12 @@ const EditTrainer = () => {
       e.stopPropagation();
     }
 
-    // If it's already a full URL (http/https), open directly
-    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-      window.open(filePath, "_blank");
-      return;
-    }
+    if (!filePath) return;
 
-    // Otherwise, construct URL with backend base
-    const apiBaseUrl =
-      import.meta.env.VITE_API_BASE_URL || "http://192.168.1.102:8000/api";
-    const backendUrl = apiBaseUrl.replace("/api", "");
-    const fullUrl = `${backendUrl}${filePath}`;
-    window.open(fullUrl, "_blank");
+    // Use getFileUrl to properly handle S3 URLs, local paths, and presigned URLs
+    const fileUrl = getFileUrl(filePath);
+    console.log('[📄 VIEW FILE] Trainer document:', { original: filePath, final: fileUrl });
+    window.open(fileUrl, "_blank");
   };
 
   const validate = () => {
@@ -193,8 +188,6 @@ const EditTrainer = () => {
 
     if (!formData.date_of_joining) {
       newErrors.date_of_joining = "Date of joining is required";
-    } else if (new Date(formData.date_of_joining) > new Date()) {
-      newErrors.date_of_joining = "Date of joining cannot be in the future";
     }
 
     if (!formData.address.trim()) {
@@ -330,7 +323,7 @@ const EditTrainer = () => {
       });
 
       setTimeout(() => {
-        navigate("/");
+        navigate("/head/manage-trainers");
       }, 1500);
     } catch (error) {
       console.error("Error deleting trainer:", error);

@@ -1,25 +1,32 @@
 import React, { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import { Search } from "lucide-react";
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import learningGoalsService from "../../api/services/learningGoalsService";
 import { useNavigate } from "react-router-dom";
 import headService from "../../api/services/headService";
 import sessionService from "../../api/services/sessionService";
 import learningContentService from "../../api/services/learningContentService";
 import programService from "../../api/services/programService";
+import trainerService from "../../api/services/trainerService";
+import { useAuth } from "../../context/AuthContext";
 import { downloadLearningProgramPDF } from "../../utils/pdfGenerator";
 import "../../styles/ManageUsersLayout.css";
 import "../../styles/Table.css";
+import "../../styles/Subscription.css";
 import "../../styles/head/ScheduleSession.css";
 
-const ScheduleSession = () => {
+const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [trainers, setTrainers] = useState([]);
   const [learners, setLearners] = useState([]);
   const [contents, setContents] = useState([]);
   const [learningGoals, setLearningGoals] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [canTrainerSchedule, setCanTrainerSchedule] = useState(true);
 
   // Program state
   const [programList, setProgramList] = useState([]);
@@ -33,13 +40,14 @@ const ScheduleSession = () => {
   const contentSentinelRef = useRef(null);
   const CONTENT_PAGE_SIZE = 12;
   const [contentVisibleCount, setContentVisibleCount] = useState(CONTENT_PAGE_SIZE);
+  const GOALS_PAGE_SIZE = 5;
+  const [goalCurrentPage, setGoalCurrentPage] = useState(1);
 
   const [formData, setFormData] = useState({
     title: "",
     trainer_id: "",
     learner_id: "",
-    scheduled_date: "",
-    duration: "",
+    scheduled_dates: [],
     content_ids: [],
     goal_ids: [],
   });
@@ -55,6 +63,11 @@ const ScheduleSession = () => {
     trainer: false,
     learner: false,
   });
+
+  const isTrainerMode = mode === 'trainer';
+  const rootClassName = embedded
+    ? 'page-container schedule-session schedule-session--embedded'
+    : 'page-container schedule-session';
 
   const normalizedContentSearch = searchTerm.content.toLowerCase();
   const filteredContentCount = contents.filter(
@@ -129,17 +142,25 @@ const ScheduleSession = () => {
   const fetchData = async () => {
     try {
       setLoadingData(true);
-      const [trainersData, learnersData, contentsData, goalsData] =
-        await Promise.all([
-          headService.getAllTrainers(),
-          headService.getLearnersForSessionScheduling(), // Fetch learners with subscription and status info
-          learningContentService.head.getAll(),
-          learningGoalsService.head.getAll(),
-        ]);
-      setTrainers(trainersData);
-      setLearners(learnersData);
+      const [contentsData, goalsData] = await Promise.all([
+        isTrainerMode ? learningContentService.trainer.getAll() : learningContentService.head.getAll(),
+        isTrainerMode ? learningGoalsService.trainer.getAll() : learningGoalsService.head.getAll(),
+      ]);
+      const learnersData = isTrainerMode
+        ? await trainerService.getLearnersForScheduling()
+        : await headService.getLearnersForSessionScheduling();
+      const trainersData = isTrainerMode ? [] : await headService.getAllTrainers();
+      if (isTrainerMode) {
+        const permission = await trainerService.getIlpPermission();
+        setCanTrainerSchedule(!!permission?.can_trainers_schedule_ilp);
+      }
+      setTrainers(trainersData || []);
+      setLearners(learnersData || []);
       setContents(contentsData);
       setLearningGoals(goalsData);
+      if (isTrainerMode && user?.id) {
+        setFormData((prev) => ({ ...prev, trainer_id: String(user.id) }));
+      }
     } catch {
       toast.error("Failed to load data");
     } finally {
@@ -172,35 +193,66 @@ const ScheduleSession = () => {
     });
   };
 
+  const formatDateKey = (dateObj) => {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const handleScheduledDateSelect = (selectedDate) => {
+    if (!selectedDate) {
+      return;
+    }
+
+    const normalizedDate = formatDateKey(selectedDate);
+    setFormData((prev) => {
+      if (prev.scheduled_dates.includes(normalizedDate)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        scheduled_dates: [...prev.scheduled_dates, normalizedDate].sort(),
+      };
+    });
+  };
+
+  const handleRemoveScheduledDate = (dateToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      scheduled_dates: prev.scheduled_dates.filter((date) => date !== dateToRemove),
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (isTrainerMode && !canTrainerSchedule) {
+      toast.error("Scheduling ILP is disabled by your Head.");
+      return;
+    }
+
     if (
       !formData.title ||
-      !formData.trainer_id ||
+      (!isTrainerMode && !formData.trainer_id) ||
       !formData.learner_id ||
-      !formData.scheduled_date ||
-      !formData.duration
+      !formData.scheduled_dates.length
     ) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    // Validate scheduled_date
-    const dateObj = new Date(formData.scheduled_date);
-    if (isNaN(dateObj.getTime())) {
-      toast.error("Please select a valid date and time.");
+    const uniqueScheduledDates = [...new Set(formData.scheduled_dates)].sort();
+    if (!uniqueScheduledDates.length) {
+      toast.error("Please select at least one valid date.");
       return;
     }
 
-    const scheduled_date = formData.scheduled_date + ":00";
-
-    const sessionPayload = {
+    const baseSessionPayload = {
       ...formData,
-      trainer_id: parseInt(formData.trainer_id),
+      trainer_id: isTrainerMode ? Number(user?.id) : parseInt(formData.trainer_id),
       learner_id: parseInt(formData.learner_id),
-      scheduled_date,
-      duration: parseInt(formData.duration),
       content_ids: formData.content_ids.map(Number),
       goal_ids: formData.goal_ids.map(Number),
       ...(selectedProgramId ? { program_id: selectedProgramId } : {}),
@@ -208,9 +260,40 @@ const ScheduleSession = () => {
 
     try {
       setLoading(true);
-      await sessionService.createSession(sessionPayload);
-      toast.success("Session scheduled successfully!");
-      navigate("/head/manage-sessions");
+
+      const results = await Promise.allSettled(
+        uniqueScheduledDates.map((scheduledDate) =>
+          sessionService.createSession({
+            ...baseSessionPayload,
+            scheduled_date: `${scheduledDate}T00:00:00`,
+          })
+        )
+      );
+
+      const failedDates = results
+        .map((result, index) => (result.status === "rejected" ? uniqueScheduledDates[index] : null))
+        .filter(Boolean);
+      const successCount = results.length - failedDates.length;
+
+      if (failedDates.length === 0) {
+        toast.success(
+          successCount === 1
+            ? "Session scheduled successfully!"
+            : `${successCount} sessions scheduled successfully!`
+        );
+        navigate(isTrainerMode ? "/trainer/dashboard" : "/head/manage-sessions");
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        scheduled_dates: failedDates,
+      }));
+      toast.error(
+        successCount > 0
+          ? `${successCount} session(s) scheduled, but ${failedDates.length} date(s) failed. Please review the remaining dates and try again.`
+          : `Failed to schedule sessions for ${failedDates.length} date(s).`
+      );
     } catch (error) {
       if (error.response?.data?.detail) {
         if (Array.isArray(error.response.data.detail)) {
@@ -267,12 +350,36 @@ const ScheduleSession = () => {
     ? programList.find((p) => p.id === selectedProgramId) || null
     : null;
 
+  const getProgramMetaText = (prog) => {
+    const skills = Array.isArray(prog?.skills) ? prog.skills : [];
+    const skillCount = skills.length;
+    const skillNames = skills
+      .map((skill) => (skill?.skill_name || '').trim())
+      .filter(Boolean);
+
+    const subProgramCount = (prog?.goal_ids || []).length;
+
+    if (skillCount > 0) {
+      const skillLabel = skillNames.length > 0 ? skillNames.join(', ') : `${skillCount} skill(s)`;
+      return ` | Skill: ${skillLabel} — Sub-programs: ${subProgramCount}, Learning-Content: ${(prog?.content_ids || []).length}`;
+    }
+
+    if (prog?.skill) {
+      return ` | Skill: ${prog.skill} — Sub-programs: ${subProgramCount}, Learning-Content: ${(prog?.content_ids || []).length}`;
+    }
+
+    return ` — Sub-programs: ${subProgramCount}, Learning-Content: ${(prog?.content_ids || []).length}`;
+  };
+
   // Goals resolved for read-only display when a program is active
   const lockedGoals = selectedProgram
     ? learningGoals.filter((g) => (selectedProgram.goal_ids || []).includes(g.id))
     : [];
 
   const getSelectedTrainerName = () => {
+    if (isTrainerMode) {
+      return `${user?.name || 'Trainer'} (ID: ${user?.id || 'current'})`;
+    }
     const trainer = trainers.find(
       (t) => t.user_id === parseInt(formData.trainer_id)
     );
@@ -289,6 +396,7 @@ const ScheduleSession = () => {
   };
 
   const handleTrainerSelect = (trainerId) => {
+    if (isTrainerMode) return;
     setFormData({ ...formData, trainer_id: trainerId });
     setShowDropdown({ ...showDropdown, trainer: false });
     setSearchTerm({ ...searchTerm, trainer: "" });
@@ -311,9 +419,12 @@ const ScheduleSession = () => {
     if (!learnerId) return;
     try {
       setLoadingPrograms(true);
-      const programs = await programService.getPrograms(learnerId);
+      const programs = isTrainerMode
+        ? await programService.trainer.getPrograms(learnerId)
+        : await programService.getPrograms(learnerId);
       setProgramList(programs || []);
-    } catch {
+    } catch (error) {
+      console.error("[ScheduleSession] Failed to load programs for learner:", error);
       // Non-fatal — programs are optional
     } finally {
       setLoadingPrograms(false);
@@ -348,25 +459,45 @@ const ScheduleSession = () => {
     }
 
     try {
-      const programDetail = await programService.getProgramById(selectedProgramId);
+      const programDetail = isTrainerMode
+        ? await programService.trainer.getProgramById(selectedProgramId)
+        : await programService.getProgramById(selectedProgramId);
 
-      const selectedGoalIds = programDetail?.goal_ids || [];
-      const selectedGoals = learningGoals.filter((goal) => selectedGoalIds.includes(goal.id));
-      const subProgramText = selectedGoals.length
-        ? selectedGoals.map((goal) => goal.goal || `Program #${goal.id}`).join(", ")
-        : "-";
+      let rows = [];
 
-      const rows = [{
-        skill: programDetail?.skill || selectedProgram?.skill || "-",
-        subPrograms: subProgramText,
-      }];
+      // Check if program has multi-skill structure
+      if (programDetail?.skills && Array.isArray(programDetail.skills) && programDetail.skills.length > 0) {
+        // Use new multi-skill structure
+        rows = programDetail.skills.map(skill => {
+          const skillGoals = learningGoals.filter(goal => skill.goal_ids?.includes(goal.id));
+          const subProgramText = skillGoals.length
+            ? skillGoals.map(goal => goal.goal || `Goal #${goal.id}`).join(", ")
+            : "-";
+          return {
+            skill: skill.skill_name || "-",
+            subPrograms: subProgramText,
+          };
+        });
+      } else {
+        // Fall back to old single-skill structure for backward compatibility
+        const selectedGoalIds = programDetail?.goal_ids || [];
+        const selectedGoals = learningGoals.filter((goal) => selectedGoalIds.includes(goal.id));
+        const subProgramText = selectedGoals.length
+          ? selectedGoals.map((goal) => goal.goal || `Program #${goal.id}`).join(", ")
+          : "-";
+
+        rows = [{
+          skill: programDetail?.skill || selectedProgram?.skill || "-",
+          subPrograms: subProgramText,
+        }];
+      }
 
       const selectedLearner = learners.find((l) => l.id === parseInt(formData.learner_id));
       const selectedTrainer = trainers.find((t) => t.user_id === parseInt(formData.trainer_id));
 
       await downloadLearningProgramPDF({
         programName: selectedProgram.name,
-        date: formData.scheduled_date || new Date().toISOString(),
+        date: formData.scheduled_dates[0] || new Date().toISOString(),
         childName: selectedLearner?.name || "-",
         programStartDate: programDetail?.created_at || null,
         executerName: selectedTrainer?.name || "-",
@@ -379,17 +510,6 @@ const ScheduleSession = () => {
     }
   };
 
-  // State to hold the unconfirmed date/time from the input
-  const [tempDate, setTempDate] = useState(formData.scheduled_date || "");
-
-  // Handler for the "Set" button
-  const handleSetDate = () => {
-    // Commit the temporary date to the main form state
-    setFormData({ ...formData, scheduled_date: tempDate });
-    // You could also add a console.log or alert here for confirmation
-    console.log("Date set:", tempDate);
-  };
-
   // When an existing program is selected, bubble its goals/content to the top
   const sortedFilteredGoals = selectedProgramId
     ? [
@@ -398,6 +518,22 @@ const ScheduleSession = () => {
     ]
     : filteredGoals;
 
+  const goalTotalPages = Math.max(1, Math.ceil(sortedFilteredGoals.length / GOALS_PAGE_SIZE));
+  const paginatedGoals = sortedFilteredGoals.slice(
+    (goalCurrentPage - 1) * GOALS_PAGE_SIZE,
+    goalCurrentPage * GOALS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setGoalCurrentPage(1);
+  }, [searchTerm.goal, selectedProgramId]);
+
+  useEffect(() => {
+    if (goalCurrentPage > goalTotalPages) {
+      setGoalCurrentPage(goalTotalPages);
+    }
+  }, [goalCurrentPage, goalTotalPages]);
+
   const sortedFilteredContents = selectedProgramId
     ? [
       ...filteredContents.filter((c) => formData.content_ids.includes(c.id)),
@@ -405,24 +541,72 @@ const ScheduleSession = () => {
     ]
     : filteredContents;
 
+  const handleExit = () => {
+    if (embedded && onClose) {
+      onClose();
+      return;
+    }
+
+    navigate(isTrainerMode ? "/trainer/dashboard" : "/head/manage-sessions");
+  };
+
   if (loadingData) {
     return (
-      <>
+      <div className={rootClassName}>
         <div className="loading-container">
           <div className="loading-spinner"></div>
         </div>
-      </>
+      </div>
+    );
+  }
+
+  if (isTrainerMode && !canTrainerSchedule) {
+    return (
+      <div className={rootClassName}>
+        <div className="page-main">
+          <div className="page-content">
+            <div className="page-header">
+              <button
+                onClick={handleExit}
+                className="back-button"
+              >
+                <svg
+                  className="back-icon"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path d="M15 19l-7-7 7-7"></path>
+                </svg>
+                {embedded ? "Close" : "Back to Dashboard"}
+              </button>
+              <div>
+                <h1 className="page-title">Schedule ILP</h1>
+                <p className="page-description">This feature is currently disabled by your Head.</p>
+              </div>
+            </div>
+            <div className="modern-form-card" style={{ padding: '2rem', textAlign: 'center' }}>
+              <p className="modern-form-section-description" style={{ marginBottom: 0 }}>
+                You can return here once the Head enables trainer ILP scheduling.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="page-container schedule-session">
+    <div className={rootClassName}>
       <div className="page-main">
         <div className="page-content">
           {/* Header */}
           <div className="page-header">
             <button
-              onClick={() => navigate("/head/manage-sessions")}
+              onClick={handleExit}
               className="back-button"
             >
               <svg
@@ -436,12 +620,12 @@ const ScheduleSession = () => {
               >
                 <path d="M15 19l-7-7 7-7"></path>
               </svg>
-              Back to Manage Sessions
+              {embedded ? "Close" : (isTrainerMode ? "Back to Dashboard" : "Back to Manage Sessions")}
             </button>
             <div>
-              <h1 className="page-title">Schedule Training Session</h1>
+              <h1 className="page-title">Schedule ILP</h1>
               <p className="page-description">
-                Create new training sessions
+                {isTrainerMode ? "Create new ILP sessions for your learners" : "Create new training sessions"}
               </p>
             </div>
           </div>
@@ -449,59 +633,69 @@ const ScheduleSession = () => {
             {/* Trainer & Learner Selection */}
             <div className="modern-form-section">
               <div className="modern-form-grid-two-col">
-                {/* Select Trainer with Searchable Dropdown */}
-                <div className="dropdown-field" ref={trainerDropdownRef}>
-                  <label className="modern-form-label">
-                    Select Trainer <span className="required-indicator">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Search trainer by name or ID..."
-                    value={
-                      formData.trainer_id
-                        ? getSelectedTrainerName()
-                        : searchTerm.trainer
-                    }
-                    onChange={(e) => {
-                      // Clear selection when user starts typing
-                      if (formData.trainer_id) {
-                        setFormData({ ...formData, trainer_id: "" });
-                      }
-                      setSearchTerm({ ...searchTerm, trainer: e.target.value });
-                      setShowDropdown({ ...showDropdown, trainer: true });
-                    }}
-                    onFocus={() =>
-                      setShowDropdown({ ...showDropdown, trainer: true })
-                    }
-                    className="modern-form-input"
-                    required={!formData.trainer_id}
-                  />
-                  {showDropdown.trainer && (
-                    <div className="dropdown-menu">
-                      {filteredTrainers.length > 0 ? (
-                        filteredTrainers.map((trainer) => (
-                          <div
-                            key={trainer.id}
-                            onClick={() => handleTrainerSelect(trainer.user_id)}
-                            className={`dropdown-item ${formData.trainer_id === trainer.user_id
-                              ? "dropdown-item-selected"
-                              : ""
-                              }`}
-                          >
-                            {trainer.name}{" "}
-                            <span className="dropdown-item-meta">
-                              (ID: {trainer.user_id})
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="dropdown-item dropdown-item-empty">
-                          No trainers found
-                        </div>
-                      )}
+                {isTrainerMode ? (
+                  <div className="modern-form-grid-full" style={{ gridColumn: '1 / -1' }}>
+                    <label className="modern-form-label">Scheduling As</label>
+                    <div className="program-selected-card" style={{ marginTop: 0 }}>
+                      <p className="modern-form-section-description program-selected-text" style={{ margin: 0 }}>
+                        <span className="program-selected-icon" aria-hidden="true">✓</span>
+                        {user?.name || 'Trainer'} (ID: {user?.id || 'current'})
+                      </p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div className="dropdown-field" ref={trainerDropdownRef}>
+                    <label className="modern-form-label">
+                      Select Trainer <span className="required-indicator">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Search trainer by name or ID..."
+                      value={
+                        formData.trainer_id
+                          ? getSelectedTrainerName()
+                          : searchTerm.trainer
+                      }
+                      onChange={(e) => {
+                        if (formData.trainer_id) {
+                          setFormData({ ...formData, trainer_id: "" });
+                        }
+                        setSearchTerm({ ...searchTerm, trainer: e.target.value });
+                        setShowDropdown({ ...showDropdown, trainer: true });
+                      }}
+                      onFocus={() =>
+                        setShowDropdown({ ...showDropdown, trainer: true })
+                      }
+                      className="modern-form-input"
+                      required={!formData.trainer_id}
+                    />
+                    {showDropdown.trainer && (
+                      <div className="dropdown-menu">
+                        {filteredTrainers.length > 0 ? (
+                          filteredTrainers.map((trainer) => (
+                            <div
+                              key={trainer.id}
+                              onClick={() => handleTrainerSelect(trainer.user_id)}
+                              className={`dropdown-item ${formData.trainer_id === trainer.user_id
+                                ? "dropdown-item-selected"
+                                : ""
+                                }`}
+                            >
+                              {trainer.name} {" "}
+                              <span className="dropdown-item-meta">
+                                (ID: {trainer.user_id})
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="dropdown-item dropdown-item-empty">
+                            No trainers found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Select Learner with Searchable Dropdown */}
                 <div className="dropdown-field" ref={learnerDropdownRef}>
@@ -590,64 +784,42 @@ const ScheduleSession = () => {
 
 
 
-            {/* Date & Time and Duration */}
+            {/* Session Dates */}
             <div className="modern-form-section">
-              <div className="modern-form-grid-two-col">
-                {/* Date & Time */}
-                <div>
-                  <label className="modern-form-label">
-                    Date & Time <span className="required-indicator">*</span>
-                  </label>
-
-                  {/* Flex container to hold input and button */}
-                  <div className="input-group">
-                    <input
-                      type="datetime-local"
-                      value={tempDate}
-                      onChange={(e) => setTempDate(e.target.value)}
-                      className="modern-form-input"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSetDate}
-                      className="modern-form-btn modern-form-btn-primary"
-                    >
-                      Set
-                    </button>
+              <div className="modern-form-grid-full">
+                <label className="modern-form-label">
+                  Session Dates <span className="required-indicator">*</span>
+                </label>
+                <DatePicker
+                  inline
+                  onChange={handleScheduledDateSelect}
+                  minDate={new Date()}
+                  dateFormat="yyyy-MM-dd"
+                  className="modern-form-input"
+                  highlightDates={formData.scheduled_dates.map((scheduledDate) => new Date(`${scheduledDate}T00:00:00`))}
+                />
+                {formData.scheduled_dates.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+                    <p className="modern-form-helper-text">Selected dates for this session:</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      {formData.scheduled_dates.map((scheduledDate) => (
+                        <button
+                          key={scheduledDate}
+                          type="button"
+                          onClick={() => handleRemoveScheduledDate(scheduledDate)}
+                          className="modern-form-btn modern-form-btn-secondary"
+                          style={{ padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}
+                        >
+                          {new Date(`${scheduledDate}T00:00:00`).toLocaleDateString()} ×
+                        </button>
+                      ))}
+                    </div>
                   </div>
-
-                  {/* Optional: Show the user what date is currently *confirmed* */}
-                  {formData.scheduled_date && (
-                    <p className="modern-form-helper-text">
-                      Confirmed time:{" "}
-                      {new Date(formData.scheduled_date).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-
-                {/* Duration */}
-                <div>
-                  <label className="modern-form-label">
-                    Duration (minutes) <span className="required-indicator">*</span>
-                  </label>
-                  <select
-                    value={formData.duration}
-                    onChange={(e) =>
-                      setFormData({ ...formData, duration: e.target.value })
-                    }
-                    className="modern-form-select"
-                    required
-                  >
-                    <option value="">-- Select Duration --</option>
-                    <option value="30">30 minutes</option>
-                    <option value="60">60 minutes</option>
-                    <option value="90">90 minutes</option>
-                    <option value="120">120 minutes</option>
-                    <option value="150">150 minutes</option>
-                    <option value="180">180 minutes</option>
-                  </select>
-                </div>
+                ) : (
+                  <p className="modern-form-helper-text" style={{ marginTop: '0.75rem' }}>
+                    Add one or more dates. Each selected day will create a separate session.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -719,8 +891,7 @@ const ScheduleSession = () => {
                               >
                                 {prog.name}
                                 <span className="dropdown-item-meta">
-                                  {(prog.skill) ? ` | Skill: ${prog.skill}` : ''}
-                                  &nbsp;—  Learning Goals : {(prog.goal_ids || []).length}, Learning-Content : {(prog.content_ids || []).length}
+                                  {getProgramMetaText(prog)}
                                 </span>
                               </div>
                             ))
@@ -813,16 +984,11 @@ const ScheduleSession = () => {
                                   const unselGoals = sortedFilteredGoals.filter((g) => !formData.goal_ids.includes(g.id));
                                   const showDivider = selectedProgramId && selGoals.length > 0 && unselGoals.length > 0;
                                   const firstUnselId = unselGoals[0]?.id;
+                                  const startItem = (goalCurrentPage - 1) * GOALS_PAGE_SIZE + 1;
+                                  const endItem = Math.min(goalCurrentPage * GOALS_PAGE_SIZE, sortedFilteredGoals.length);
                                   return (
                                     <>
-                                      {showDivider && selGoals.length > 0 && (
-                                        <tr>
-                                          <td colSpan="3" style={{ padding: '0.4rem 0.75rem', background: '#ecfdf5', fontSize: '0.75rem', color: '#065f46', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                            ✅ From Selected Program
-                                          </td>
-                                        </tr>
-                                      )}
-                                      {sortedFilteredGoals.map((goal) => {
+                                      {paginatedGoals.map((goal) => {
                                         const isSelected = formData.goal_ids.includes(goal.id);
                                         const isDividerRow = showDivider && goal.id === firstUnselId;
                                         return (
@@ -856,6 +1022,50 @@ const ScheduleSession = () => {
                                           </React.Fragment>
                                         );
                                       })}
+                                      {goalTotalPages > 1 && (
+                                        <tr>
+                                          <td colSpan="3" style={{ padding: '0.85rem 0.75rem' }}>
+                                            <div className="table-pagination-section" style={{ padding: 0, margin: 0, gap: '0.75rem' }}>
+                                              <div className="table-pagination" style={{ justifyContent: 'space-between' }}>
+                                                <div className="pagination-info">
+                                                  Showing {startItem}-{endItem} of {sortedFilteredGoals.length}
+                                                </div>
+                                                <div className="table-pagination-pages">
+                                                  <button
+                                                    type="button"
+                                                    className="table-pagination-btn"
+                                                    onClick={() => setGoalCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                                    disabled={goalCurrentPage === 1}
+                                                  >
+                                                    Previous
+                                                  </button>
+                                                  {[...Array(goalTotalPages)].map((_, index) => {
+                                                    const pageNum = index + 1;
+                                                    return (
+                                                      <button
+                                                        key={pageNum}
+                                                        type="button"
+                                                        className={`table-pagination-page ${goalCurrentPage === pageNum ? 'active' : ''}`}
+                                                        onClick={() => setGoalCurrentPage(pageNum)}
+                                                      >
+                                                        {pageNum}
+                                                      </button>
+                                                    );
+                                                  })}
+                                                  <button
+                                                    type="button"
+                                                    className="table-pagination-btn"
+                                                    onClick={() => setGoalCurrentPage((prev) => Math.min(prev + 1, goalTotalPages))}
+                                                    disabled={goalCurrentPage === goalTotalPages}
+                                                  >
+                                                    Next
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      )}
                                     </>
                                   );
                                 })()
@@ -1018,7 +1228,7 @@ const ScheduleSession = () => {
             <div className="modern-form-actions">
               <button
                 type="button"
-                onClick={() => navigate("/head/manage-sessions")}
+                onClick={handleExit}
                 className="modern-form-btn modern-form-btn-secondary"
                 disabled={loading}
               >

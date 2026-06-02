@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
+import { getFileUrl } from "../../utils/urlHelper";
 import headService from "../../api/services/headService";
 import Loader from "../../components/common/Loader";
 import ErrorState from "../../components/common/ErrorState";
@@ -264,18 +265,12 @@ const EditLearner = () => {
       e.stopPropagation();
     }
 
-    // If it's already a full URL (http/https), open directly
-    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-      window.open(filePath, "_blank");
-      return;
-    }
+    if (!filePath) return;
 
-    // Otherwise, construct URL with backend base
-    const apiBaseUrl =
-      import.meta.env.VITE_API_BASE_URL || "http://192.168.1.102:8000/api";
-    const backendUrl = apiBaseUrl.replace("/api", "");
-    const fullUrl = `${backendUrl}${filePath}`;
-    window.open(fullUrl, "_blank");
+    // Use getFileUrl to properly handle S3 URLs, local paths, and presigned URLs
+    const fileUrl = getFileUrl(filePath);
+    console.log('[📄 VIEW FILE] Learner document:', { original: filePath, final: fileUrl });
+    window.open(fileUrl, "_blank");
   };
 
   const validate = () => {
@@ -300,11 +295,9 @@ const EditLearner = () => {
       newErrors.dob = "Date of birth cannot be in the future";
     }
 
-    // Start Date is required
+    // Assessment date is required (future dates allowed)
     if (!formData.date_of_assessment) {
       newErrors.date_of_assessment = "Date of assessment is required";
-    } else if (new Date(formData.date_of_assessment) > new Date()) {
-      newErrors.date_of_assessment = "Assessment date cannot be in the future";
     }
 
     // DLB Concerns Checklist is required (at least one item)

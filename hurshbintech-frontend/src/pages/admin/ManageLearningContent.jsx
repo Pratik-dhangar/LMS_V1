@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import learningContentService from "../../api/services/learningContentService";
+import { getFileUrl } from "../../utils/urlHelper";
 import SearchBar from "../../components/common/SearchBar";
 import '../../styles/components/common/Modal.css';
 import '../../styles/admin/AdminManageLearningContent.css';
@@ -466,9 +467,20 @@ const ManageLearningContent = () => {
                         </a>
                       ) : (
                         <a
-                          href={learningContentService.getFileUrl(content.file_url)}
+                          href={getFileUrl(content.file_url)}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={(e) => {
+                            const finalUrl = getFileUrl(content.file_url);
+                            console.log('[📂 VIEW BUTTON] Content:', {
+                              id: content.id,
+                              title: content.title,
+                              original_file_url: content.file_url,
+                              final_url: finalUrl,
+                              content_type: content.content_type,
+                              timestamp: new Date().toISOString()
+                            });
+                          }}
                           className="app-modal-btn app-modal-btn--secondary btn-sm"
                         >
                           View

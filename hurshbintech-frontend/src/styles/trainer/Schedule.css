@@ -1,6 +1,45 @@
 /* Trainer Schedule Page Styles */
 @import '../components/common/Modal.css';
 
+.schedule-session--embedded {
+  background: transparent;
+  padding: 0;
+  min-height: auto;
+}
+
+.schedule-session--embedded .page-main,
+.schedule-session--embedded .page-content {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+
+.schedule-session--embedded .page-header {
+  display: none;
+}
+
+.schedule-session--embedded .modern-form-card {
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
+}
+
+.schedule-session--embedded .modern-form-section {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.trainer-schedule-embedded .trainer-schedule-section {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+.trainer-schedule-embedded .trainer-sessions-list {
+  margin-top: 0.75rem;
+}
+
 /* Schedule Section */
 .trainer-schedule-section {
   background: #ffffff;
@@ -255,53 +294,6 @@
     flex-direction: row;
     align-items: center;
     gap: 1rem;
-  }
-}
-
-.trainer-session-time-box {
-  min-width: 80px;
-  text-align: center;
-  padding: 0.5rem;
-  background: #f3f4f6;
-  border-radius: 0.25rem;
-}
-
-.trainer-session-time {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #2c3e50;
-}
-
-/* Mobile - 375px+ */
-@media (min-width: 375px) {
-  .trainer-session-time {
-    font-size: 1.1rem;
-  }
-}
-
-/* Tablet - 640px+ */
-@media (min-width: 640px) {
-  .trainer-session-time {
-    font-size: 1.25rem;
-  }
-}
-
-.trainer-session-ampm {
-  font-size: 0.65rem;
-  color: #6b7280;
-}
-
-/* Mobile - 375px+ */
-@media (min-width: 375px) {
-  .trainer-session-ampm {
-    font-size: 0.7rem;
-  }
-}
-
-/* Tablet - 640px+ */
-@media (min-width: 640px) {
-  .trainer-session-ampm {
-    font-size: 0.75rem;
   }
 }
 

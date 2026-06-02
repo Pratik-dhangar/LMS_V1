@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-WhatsApp-like chat system successfully implemented in the HurshBinTech application with full backend and frontend integration.
+WhatsApp-like chat system successfully implemented in the HurshBin application with full backend and frontend integration.
 
 ## ✅ Completed Backend
 

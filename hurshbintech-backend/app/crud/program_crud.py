@@ -23,7 +23,7 @@ async def create_program(
     head_id: int,
     data: ProgramCreate,
 ) -> Program:
-    """Create a new program. goal_ids are frozen at this point."""
+    """Create a new program. goal_ids and skills are frozen at this point."""
     resolved_skill = data.skill if data.skill is not None else data.description
     program = Program(
         name=data.name,
@@ -32,6 +32,7 @@ async def create_program(
         learner_id=data.learner_id,
         goal_ids=data.goal_ids or [],
         content_ids=data.content_ids or [],
+        skills=[skill.model_dump() if hasattr(skill, 'model_dump') else skill for skill in (data.skills or [])],
         is_active=True,
     )
     db.add(program)
@@ -91,16 +92,24 @@ async def update_program_content(
     data: ProgramUpdateContent,
 ) -> Program:
     """
-    Update a program's name, skill, and/or content_ids.
-    goal_ids are intentionally NOT touched here — they are locked at creation.
+    Update a program's editable fields including structure and content.
     """
     program = await get_program_by_id(db, program_id, head_id)
 
     if data.name is not None:
         program.name = data.name
+    if data.learner_id is not None:
+        program.learner_id = data.learner_id
     resolved_skill = data.skill if data.skill is not None else data.description
     if resolved_skill is not None:
         program.skill = resolved_skill
+    if data.goal_ids is not None:
+        program.goal_ids = data.goal_ids
+    if data.skills is not None:
+        program.skills = [
+            skill.model_dump() if hasattr(skill, "model_dump") else skill
+            for skill in data.skills
+        ]
     if data.content_ids is not None:
         program.content_ids = data.content_ids
 

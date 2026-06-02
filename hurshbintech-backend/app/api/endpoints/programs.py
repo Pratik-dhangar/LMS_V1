@@ -1,12 +1,11 @@
 """
-Programs Endpoints (Head only)
+Programs Endpoints (Head and trainer read-only)
 
-Base prefix: /api/head/programs
+Base prefix: /api/head/programs and /api/trainer/programs
 
 Rules:
   - Only the head who created a program can read, update, or delete it.
-  - goal_ids are set at creation and cannot be updated (enforced by ProgramUpdateContent schema).
-  - content_ids are freely mutable.
+    - program structure (skills + sub-programs) and content can be updated.
   - Delete is a soft-delete (is_active = False) to keep historical session links intact.
 """
 
@@ -14,12 +13,13 @@ import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_head
+from app.core.deps import get_current_head, get_current_trainer
 from app.crud import program_crud
 from app.db.session import get_db
-from app.models.user_model import HeadProfile
+from app.models.user_model import HeadProfile, TrainerProfile
 from app.schemas.program_schema import (
     ProgramCreate,
     ProgramListItem,
@@ -29,7 +29,27 @@ from app.schemas.program_schema import (
 
 logger = logging.getLogger(__name__)
 
+
+async def _resolve_trainer_head_user_id(
+    db: AsyncSession,
+    current_trainer: TrainerProfile,
+) -> Optional[int]:
+    """Translate the trainer's head profile reference to the head user ID used by Program.head_id."""
+    head_profile_id = getattr(current_trainer, "created_by_head_id", None)
+    if not head_profile_id:
+        return None
+
+    result = await db.execute(select(HeadProfile).where(HeadProfile.id == head_profile_id))
+    head_profile = result.scalar_one_or_none()
+    if not head_profile:
+        return None
+
+    return head_profile.user_id
+
 router = APIRouter(prefix="/head/programs", tags=["Programs"])
+
+
+trainer_router = APIRouter(prefix="/trainer/programs", tags=["Trainer Programs"])
 
 
 @router.post(
@@ -90,9 +110,7 @@ async def update_program(
     current_head: HeadProfile = Depends(get_current_head),
 ):
     """
-    Update a program's name, description, and/or content_ids.
-    goal_ids cannot be changed — they are locked at creation.
-    To use different goals, create a new program.
+    Update a program's name, learner, skill/sub-program structure, and content.
     """
     logger.info(f"Head {current_head.user_id} updating program {program_id}")
     program = await program_crud.update_program_content(
@@ -114,3 +132,35 @@ async def delete_program(
     logger.info(f"Head {current_head.user_id} soft-deleting program {program_id}")
     await program_crud.soft_delete_program(db, program_id, head_id=current_head.user_id)
     return {"message": f"Program {program_id} deleted successfully"}
+
+
+@trainer_router.get("/", response_model=List[ProgramListItem])
+async def list_programs_for_trainer(
+    learner_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+    current_trainer: TrainerProfile = Depends(get_current_trainer),
+):
+    """List active programs for the trainer's Head, optionally filtered by learner."""
+    head_user_id = await _resolve_trainer_head_user_id(db, current_trainer)
+    if not head_user_id:
+        return []
+    programs = await program_crud.get_programs_by_head(
+        db, head_id=head_user_id, learner_id=learner_id
+    )
+    return programs
+
+
+@trainer_router.get("/{program_id}", response_model=ProgramResponse)
+async def get_program_for_trainer(
+    program_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_trainer: TrainerProfile = Depends(get_current_trainer),
+):
+    """Get full details for a single program belonging to the trainer's Head."""
+    head_user_id = await _resolve_trainer_head_user_id(db, current_trainer)
+    if not head_user_id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    program = await program_crud.get_program_by_id(
+        db, program_id, head_id=head_user_id
+    )
+    return program

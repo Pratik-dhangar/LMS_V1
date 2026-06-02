@@ -3,15 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import sessionService from "../../api/services/sessionService";
+import trainerService from "../../api/services/trainerService";
 import { ArrowLeft } from 'lucide-react';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/trainer/Schedule.css';
 
-const TodaysSchedule = () => {
+const TodaysSchedule = ({ embedded = false }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const [sessions, setSessions] = useState([]);
+  const [canSchedule, setCanSchedule] = useState(false);
+  const [learnersForSchedule, setLearnersForSchedule] = useState([]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({ learner_id: '', title: '', scheduled_date: '', duration: 60 });
   const [loading, setLoading] = useState(true);
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [selectedSession, setSelectedSession] = useState(null);
@@ -19,6 +24,7 @@ const TodaysSchedule = () => {
 
   useEffect(() => {
     fetchSessions();
+    fetchTrainerPermission();
   }, []);
 
   // Auto-refresh sessions every 30 seconds
@@ -40,6 +46,19 @@ const TodaysSchedule = () => {
       toast.error("Failed to load sessions");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTrainerPermission = async () => {
+    try {
+      const res = await trainerService.getIlpPermission();
+      setCanSchedule(!!res.can_trainers_schedule_ilp);
+      if (res.can_trainers_schedule_ilp) {
+        const learners = await trainerService.getLearnersForScheduling();
+        setLearnersForSchedule(Array.isArray(learners) ? learners : []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch trainer permission', e);
     }
   };
 
@@ -116,24 +135,28 @@ const TodaysSchedule = () => {
     if (session.status === 'cancelled') {
       return 'cancelled';
     }
-    if (session.status === 'active') {
-      return 'active';
-    }
-    if (session.status === 'ended') {
+    if (session.status === 'ended' || session.ended_at) {
       return 'ended';
     }
+    if (session.status === 'active' || session.started_at) {
+      return 'active';
+    }
 
-    // Check if session is expired — trainer/coach keep access until midnight of session day
-    if (session.scheduled_date) {
+    // Only mark a session expired if it was never started and the scheduled window has passed.
+    if (session.status === 'scheduled' && session.scheduled_date) {
       try {
         const now = new Date();
         const scheduled = new Date(session.scheduled_date);
 
-        // Expire at end of session day (midnight) so trainer can resume any time during the day
-        const midnight = new Date(scheduled);
-        midnight.setHours(23, 59, 59, 999);
+        const expiresAt = session.duration
+          ? new Date(scheduled.getTime() + Number(session.duration) * 60 * 1000)
+          : (() => {
+            const midnight = new Date(scheduled);
+            midnight.setHours(23, 59, 59, 999);
+            return midnight;
+          })();
 
-        if (now > midnight) {
+        if (now > expiresAt) {
           return 'expired';
         }
       } catch (e) {
@@ -146,7 +169,7 @@ const TodaysSchedule = () => {
   // Check if trainer can start session based on scheduled time
   const canStartSession = (session) => {
     // Can only start if status is scheduled (not ended, cancelled, or already active)
-    if (session.status !== 'scheduled') {
+    if (session.status !== 'scheduled' || session.started_at || session.ended_at) {
       return false;
     }
 
@@ -202,8 +225,30 @@ const TodaysSchedule = () => {
     });
   }, []);
 
+  const getSessionSortPriority = (status) => {
+    if (status === "active") return 0;
+    if (status === "scheduled") return 1;
+    if (status === "expired" || status === "ended" || status === "cancelled") return 2;
+    return 3;
+  };
+
+  const sortedSessions = useMemo(() => {
+    return [...sessions].sort((a, b) => {
+      const priorityA = getSessionSortPriority(getSessionStatus(a));
+      const priorityB = getSessionSortPriority(getSessionStatus(b));
+
+      if (priorityA !== priorityB) return priorityA - priorityB;
+
+      const dateA = a.scheduled_date ? new Date(a.scheduled_date).getTime() : Number.NEGATIVE_INFINITY;
+      const dateB = b.scheduled_date ? new Date(b.scheduled_date).getTime() : Number.NEGATIVE_INFINITY;
+      if (dateA !== dateB) return dateB - dateA;
+
+      return (b.id || b.session_id || 0) - (a.id || a.session_id || 0);
+    });
+  }, [sessions]);
+
   return (
-    <div className="page-container">
+    <div className={embedded ? "trainer-schedule-embedded" : "page-container"}>
 
       {/* Schedule Section */}
       <div className="trainer-schedule-section">
@@ -215,6 +260,16 @@ const TodaysSchedule = () => {
             <div className="trainer-schedule-count">
               {sessions.length} total items
             </div>
+            {canSchedule && !embedded && (
+              <div style={{ marginLeft: '12px' }}>
+                <button
+                  onClick={() => navigate('/trainer/schedule')}
+                  className="app-modal-btn app-modal-btn--success"
+                >
+                  + Schedule ILP
+                </button>
+              </div>
+            )}
             <div className="trainer-pagination-controls">
               <label
                 htmlFor="pagination"
@@ -249,32 +304,9 @@ const TodaysSchedule = () => {
             </div>
           ) : (
             <>
-              {sessions
-                .sort(
-                  (a, b) =>
-                    new Date(b.scheduled_date || 0) -
-                    new Date(a.scheduled_date || 0)
-                )
+              {sortedSessions
                 .slice(0, itemsPerPage)
                 .map((session) => {
-                  const scheduledDate = session.scheduled_date
-                    ? new Date(session.scheduled_date)
-                    : null;
-                  const timeLabel = scheduledDate
-                    ? scheduledDate.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                    : "—";
-                  const ampm = scheduledDate
-                    ? scheduledDate
-                      .toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: true,
-                      })
-                      .split(" ")[1]
-                    : "";
                   const borderColor =
                     (() => {
                       const actualStatus = getSessionStatus(session);
@@ -300,15 +332,6 @@ const TodaysSchedule = () => {
                     >
                       <div className="trainer-session-content">
                         <div className="trainer-session-left">
-                          <div className="trainer-session-time-box">
-                            <div className="trainer-session-time">
-                              {timeLabel}
-                            </div>
-                            <div className="trainer-session-ampm">
-                              {ampm}
-                            </div>
-                          </div>
-
                           <div className="trainer-session-details">
                             <div className="trainer-session-header">
                               <div className="trainer-session-title">
@@ -321,10 +344,7 @@ const TodaysSchedule = () => {
                             </div>
 
                             <div className="trainer-session-meta">
-                              Duration: {session.duration ?? "—"} minutes{" "}
-                              {session.program
-                                ? ` | ILP: ${session.program}`
-                                : ""}
+                              {session.program ? `ILP: ${session.program}` : ""}
                             </div>
 
                             {session.description && (
@@ -432,6 +452,74 @@ const TodaysSchedule = () => {
         </div>
       </div>
 
+      {/* Schedule Modal */}
+      {showScheduleModal && (
+        <div className="app-modal-overlay" onClick={() => setShowScheduleModal(false)}>
+          <div className="app-modal-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 600 }}>
+            <div className="app-modal-header app-modal-header--primary">
+              <h2 className="app-modal-title">Schedule ILP</h2>
+              <button onClick={() => setShowScheduleModal(false)} className="app-modal-close">✕</button>
+            </div>
+            <div className="app-modal-content">
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Learner</label>
+                <select
+                  value={scheduleForm.learner_id}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, learner_id: e.target.value })}
+                  className="app-modal-form-input"
+                >
+                  <option value="">Select learner</option>
+                  {learnersForSchedule.map((l) => (
+                    <option key={l.id} value={l.id}>{l.name} {l.is_active ? '' : '(inactive)'}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Title</label>
+                <input className="app-modal-form-input" value={scheduleForm.title} onChange={(e) => setScheduleForm({ ...scheduleForm, title: e.target.value })} />
+              </div>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Date & Time</label>
+                <input type="datetime-local" className="app-modal-form-input" value={scheduleForm.scheduled_date} onChange={(e) => setScheduleForm({ ...scheduleForm, scheduled_date: e.target.value })} />
+              </div>
+              <div className="app-modal-form-field">
+                <label className="app-modal-form-label">Duration (minutes)</label>
+                <input type="number" className="app-modal-form-input" value={scheduleForm.duration} onChange={(e) => setScheduleForm({ ...scheduleForm, duration: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div className="app-modal-footer">
+              <button className="app-modal-btn app-modal-btn--secondary" onClick={() => setShowScheduleModal(false)}>Cancel</button>
+              <button
+                className="app-modal-btn app-modal-btn--success"
+                onClick={async () => {
+                  try {
+                    if (!scheduleForm.learner_id || !scheduleForm.scheduled_date) {
+                      toast.error('Please select learner and date');
+                      return;
+                    }
+                    const payload = {
+                      learner_id: parseInt(scheduleForm.learner_id),
+                      title: scheduleForm.title || undefined,
+                      scheduled_date: scheduleForm.scheduled_date + ':00',
+                      duration: parseInt(scheduleForm.duration) || 60,
+                    };
+                    await sessionService.createSession(payload);
+                    toast.success('Session scheduled successfully');
+                    setShowScheduleModal(false);
+                    fetchSessions();
+                  } catch (err) {
+                    console.error('Failed to schedule session', err);
+                    toast.error(err?.response?.data?.detail || 'Failed to schedule session');
+                  }
+                }}
+              >
+                Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Session Details Modal */}
       {showSessionDetailsModal && selectedSession && (
         <div className="app-modal-overlay" onClick={closeSessionDetailsModal}>
@@ -495,12 +583,8 @@ const TodaysSchedule = () => {
                 </div>
               </div>
 
-              {/* Duration & Program */}
+              {/* Program */}
               <div className="app-modal-form-grid app-modal-form-grid--2">
-                <div className="app-modal-form-field">
-                  <label className="app-modal-form-label">Duration</label>
-                  <p className="app-modal-text">{selectedSession.duration ? `${selectedSession.duration} minutes` : "—"}</p>
-                </div>
                 <div className="app-modal-form-field">
                   <label className="app-modal-form-label">Program / ILP</label>
                   <p className="app-modal-text">

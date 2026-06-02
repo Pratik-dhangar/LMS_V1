@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Upload, Clock, CheckCircle, AlertCircle, Loader, Download, X } from 'lucide-react';
+import { Upload, Clock, CheckCircle, AlertCircle, Loader, Download, X, Copy } from 'lucide-react';
 import { toast } from 'react-toastify';
 import bookingService from '../../api/services/bookingService';
 import '../../styles/GuestBooking.css';
@@ -18,6 +18,8 @@ const GuestPaymentUpload = () => {
   const [expiryTime, setExpiryTime] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState('');
+  const [copiedField, setCopiedField] = useState(null);
+  const [showQRModal, setShowQRModal] = useState(false);
 
   // Validate token on mount
   useEffect(() => {
@@ -73,7 +75,7 @@ const GuestPaymentUpload = () => {
 
     // Update immediately
     const shouldContinue = updateCountdown();
-    
+
     if (!shouldContinue) return;
 
     // Then update every second
@@ -123,6 +125,13 @@ const GuestPaymentUpload = () => {
     setPreviewUrl(null);
   };
 
+  const copyToClipboard = (text, field) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+    toast.success(`${field} copied!`);
+  };
+
   const handleUpload = async (e) => {
     e.preventDefault();
 
@@ -137,14 +146,14 @@ const GuestPaymentUpload = () => {
       const response = await bookingService.uploadGuestPayment(uploadToken, selectedFile);
 
       toast.success('Payment uploaded successfully! Coach will review shortly.');
-      
+
       // Show success message
       setTimeout(() => {
-        navigate('/guest-payment/success', { 
-          state: { 
+        navigate('/guest-payment/success', {
+          state: {
             appointmentId: response.appointment_id,
-            message: response.message 
-          } 
+            message: response.message
+          }
         });
       }, 1500);
     } catch (err) {
@@ -185,15 +194,15 @@ const GuestPaymentUpload = () => {
                   <AlertCircle size={60} color="#ef4444" />
                   <h2>Payment Link Invalid or Expired</h2>
                   <p>This payment upload link is no longer valid.</p>
-                  
+
                   <div className="instruction-box" style={{ marginTop: '2rem' }}>
                     <p>
-                      <strong>Next steps:</strong> Contact your coach to request a new payment upload link, 
+                      <strong>Next steps:</strong> Contact your coach to request a new payment upload link,
                       or reply to the email you received with your booking confirmation.
                     </p>
                   </div>
 
-                  <button 
+                  <button
                     className="btn app-modal-btn app-modal-btn--primary"
                     onClick={() => navigate('/')}
                   >
@@ -255,6 +264,90 @@ const GuestPaymentUpload = () => {
                 </div>
               </div>
 
+              {/* Payment Methods Section */}
+              <div>
+                <h3 style={{ marginBottom: '1.5rem', color: '#1f2937', fontSize: '1.125rem', fontWeight: '600' }}>Payment Methods</h3>
+                <div className="payment-methods-grid">
+                  {/* UPI QR Code */}
+                  <div className="payment-method-card">
+                    <h4>📱 UPI Payment</h4>
+                    <p style={{ marginBottom: '1rem' }}>Scan this QR code to pay instantly</p>
+                    <div
+                      className="qr-code-container"
+                      onClick={() => setShowQRModal(true)}
+                      style={{ cursor: 'pointer' }}
+                      title="Click to view larger QR code"
+                    >
+                      <img
+                        src="/upi-qr.jpeg"
+                        alt="UPI QR Code"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          console.warn('QR code image not found');
+                        }}
+                      />
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', textAlign: 'center' }}>Click to view larger | Scan with any UPI app</p>
+                  </div>
+
+                  {/* Bank Details */}
+                  <div className="payment-method-card">
+                    <h4>🏦 Bank Transfer</h4>
+                    <p style={{ marginBottom: '1rem' }}>Use these details for direct transfer</p>
+
+                    <div className="bank-details-section">
+                      {/* Account Name */}
+                      <div className="bank-detail-item">
+                        <span className="bank-detail-label">Account Name</span>
+                        <span className="bank-detail-value">HurshBin</span>
+                        <button
+                          type="button"
+                          className="copy-button"
+                          onClick={() => copyToClipboard('HurshBin', 'Account Name')}
+                          title="Copy to clipboard"
+                        >
+                          <Copy size={16} />
+                        </button>
+                      </div>
+
+                      {/* Account Number */}
+                      <div className="bank-detail-item">
+                        <span className="bank-detail-label">Account No.</span>
+                        <span className="bank-detail-value">50200034124439</span>
+                        <button
+                          type="button"
+                          className="copy-button"
+                          onClick={() => copyToClipboard('50200034124439', 'Account Number')}
+                          title="Copy to clipboard"
+                        >
+                          <Copy size={16} />
+                        </button>
+                      </div>
+
+                      {/* IFSC Code */}
+                      <div className="bank-detail-item">
+                        <span className="bank-detail-label">IFSC Code</span>
+                        <span className="bank-detail-value">HDFC0000538</span>
+                        <button
+                          type="button"
+                          className="copy-button"
+                          onClick={() => copyToClipboard('HDFC0000538', 'IFSC Code')}
+                          title="Copy to clipboard"
+                        >
+                          <Copy size={16} />
+                        </button>
+                      </div>
+
+                      {/* Bank Name */}
+                      <div className="bank-detail-item">
+                        <span className="bank-detail-label">Bank</span>
+                        <span className="bank-detail-value">HDFC Bank</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Upload Form */}
               <form onSubmit={handleUpload} className="guest-booking-form">
                 <div className="form-section">
@@ -265,7 +358,7 @@ const GuestPaymentUpload = () => {
 
                   <div className="instruction-box">
                     <p>
-                      Upload a screenshot or PDF of your payment receipt. 
+                      Upload a screenshot or PDF of your payment receipt.
                       <br />
                       Supported formats: JPG, PNG, PDF (Max 5MB)
                     </p>
@@ -276,7 +369,7 @@ const GuestPaymentUpload = () => {
                     <div className="file-preview-container">
                       <div className="file-preview">
                         <img src={previewUrl} alt="Preview" />
-                        <button 
+                        <button
                           type="button"
                           className="btn-remove-file"
                           onClick={clearFileSelection}
@@ -298,7 +391,7 @@ const GuestPaymentUpload = () => {
                           </p>
                         </div>
                       </div>
-                      <button 
+                      <button
                         type="button"
                         className="btn-remove-file"
                         onClick={clearFileSelection}
@@ -326,8 +419,8 @@ const GuestPaymentUpload = () => {
                   </div>
                 </div>
 
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="btn btn-primary btn-full"
                   disabled={!selectedFile || uploading}
                 >
@@ -355,6 +448,32 @@ const GuestPaymentUpload = () => {
             </div>
           </div>
         </div>
+
+        {/* QR Code Modal */}
+        {showQRModal && (
+          <div className="qr-modal-overlay" onClick={() => setShowQRModal(false)}>
+            <div className="qr-modal-container" onClick={(e) => e.stopPropagation()}>
+              <div className="qr-modal-header">
+                <h2>UPI QR Code</h2>
+                <button
+                  className="qr-modal-close"
+                  onClick={() => setShowQRModal(false)}
+                  title="Close"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="qr-modal-content">
+                <img
+                  src="/upi-qr.jpeg"
+                  alt="UPI QR Code - Full Size"
+                  className="qr-modal-image"
+                />
+                <p className="qr-modal-instructions">📱 Scan this QR code with your UPI app to make payment</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

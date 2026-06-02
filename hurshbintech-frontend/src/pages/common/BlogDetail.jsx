@@ -29,7 +29,7 @@ const BlogDetail = () => {
             setError(null);
 
             // Update page title and meta description for SEO
-            document.title = `${data.title} | HurshBinTech Blog`;
+            document.title = `${data.title} | HurshBin Blog`;
             if (data.excerpt) {
                 const metaDescription = document.querySelector('meta[name="description"]');
                 if (metaDescription) {

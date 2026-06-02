@@ -4,7 +4,6 @@ import { useAuth } from './context/AuthContext';
 import { AuthProvider } from './context/AuthContext';
 import { MediaControlProvider } from './context/MediaControlContext';
 import GoogleOAuthProvider from './components/GoogleOAuthProvider';
-import { registerSW } from 'virtual:pwa-register';
 
 // Pages
 import Home from './pages/Home';
@@ -26,6 +25,8 @@ import ManageCoaches from './pages/admin/ManageCoaches';
 import ManageVlogs from './pages/admin/ManageVlogs';
 import EditVlog from './pages/admin/EditVlog';
 import ManageBlogs from './pages/admin/ManageBlogs';
+import ManageGallery from './pages/admin/ManageGallery';
+import EditGallery from './pages/admin/EditGallery';
 import CreateEditBlog from './pages/admin/CreateEditBlog';
 import AdminAboutUs from './pages/admin/AdminAboutUs';
 import AdminAssignedTrainings from './pages/admin/AdminAssignedTrainings';
@@ -102,6 +103,7 @@ import BlogList from './pages/common/BlogList';
 import BlogDetail from './pages/common/BlogDetail';
 import VlogList from './pages/common/VlogList';
 import VlogDetail from './pages/common/VlogDetail';
+import GalleryList from './pages/common/GalleryList';
 import AssignedTrainingsList from './pages/common/AssignedTrainingsList';
 import TrainingDetailView from './pages/common/TrainingDetailView';
 import ProfileAndOrderHistory from './pages/common/ProfileAndOrderHistory';
@@ -118,6 +120,7 @@ import StoreCatalog from './pages/store/StoreCatalog';
 import ProductDetail from './pages/store/ProductDetail';
 import Cart from './pages/store/Cart';
 import Checkout from './pages/store/Checkout';
+import OrderTracking from './pages/store/OrderTracking';
 
 
 // Communication Pages
@@ -358,6 +361,22 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/admin/gallery"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ManageGallery />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/gallery/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <EditGallery />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/blogs"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
@@ -573,7 +592,7 @@ function AppRoutes() {
             path="/head/schedule-session"
             element={
               <ProtectedRoute allowedRoles={['head']}>
-                <ScheduleSession />
+                <ScheduleSession mode="head" />
               </ProtectedRoute>
             }
           />
@@ -695,10 +714,18 @@ function AppRoutes() {
             }
           />
           <Route
-            path="/trainer/schedule"
+            path="/trainer/sessions"
             element={
               <ProtectedRoute allowedRoles={['trainer']}>
                 <TodaysSchedule />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trainer/schedule"
+            element={
+              <ProtectedRoute allowedRoles={['trainer']}>
+                <ScheduleSession mode="trainer" />
               </ProtectedRoute>
             }
           />
@@ -909,6 +936,9 @@ function AppRoutes() {
           <Route path="/vlogs" element={<VlogList />} />
           <Route path="/vlogs/:id" element={<VlogDetail />} />
 
+          {/* Public Gallery Routes */}
+          <Route path="/gallery" element={<GalleryList />} />
+
           {/* Assigned Trainings Routes */}
           <Route
             path="/assigned-trainings"
@@ -932,15 +962,13 @@ function AppRoutes() {
           <Route path="/learning-materials" element={<StoreCatalog />} />
           <Route path="/store/product/:productId" element={<ProductDetail />} />
           <Route path="/store/cart" element={
-            <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin", "coach"]}>
-              <Cart />
-            </ProtectedRoute>
+            <Cart />
           } />
           <Route path="/store/checkout" element={
-            <ProtectedRoute allowedRoles={["learner", "trainer", "head", "admin", "coach"]}>
-              <Checkout />
-            </ProtectedRoute>
+            <Checkout />
           } />
+          {/* Public order tracking route - accessible to all users */}
+          <Route path="/order/track/:trackingId" element={<OrderTracking />} />
 
           {/* Communication Routes */}
           <Route
@@ -977,14 +1005,17 @@ function AppRoutes() {
     </MediaControlProvider>
   );
 }
-
 function App() {
   // Register PWA Service Worker
   useEffect(() => {
     if (import.meta.env.VITE_ENABLE_PWA === 'true') {
-      registerSW({
-        onNeedRefresh() { },
-        onOfflineReady() { },
+      import('virtual:pwa-register').then(({ registerSW }) => {
+        registerSW({
+          onNeedRefresh() { },
+          onOfflineReady() { },
+        });
+      }).catch(err => {
+        console.warn('PWA registration failed:', err);
       });
     }
   }, []);

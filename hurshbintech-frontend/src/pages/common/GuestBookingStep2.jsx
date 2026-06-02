@@ -31,6 +31,16 @@ const GuestBookingStep2 = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [coachAvailability, setCoachAvailability] = useState({}); // Track availability by coach ID
 
+  const getSessionDurationLabel = (sessionType) => {
+    const normalizedSessionType = (sessionType || '').toLowerCase();
+
+    if (normalizedSessionType.includes('functional assessment') || normalizedSessionType.includes('assessment') || normalizedSessionType.includes('90')) {
+      return '90 min';
+    }
+
+    return '60 min';
+  };
+
   const [formData, setFormData] = useState({
     guest_name: '',
     guest_phone: '',
@@ -42,8 +52,8 @@ const GuestBookingStep2 = () => {
   });
 
   const sessionTypes = [
-    { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min' },
-    { value: 'extended', label: 'Extended Session', duration: '90 min' },
+    { value: 'Online consultation', label: 'Online consultation', duration: '60 min', fee: 1800 },
+    { value: 'Online/Offline consultation/functional assessment', label: 'Online/Offline consultation/functional assessment', duration: '90 min', fee: 2700 },
   ];
 
   // Auto-select session type when coach has a dedicated package
@@ -596,7 +606,7 @@ const GuestBookingStep2 = () => {
                         <input
                           type="text"
                           id="session_type"
-                          value={`${selectedCoach.dedicated_package.package_name} - 1 Hour (60 min)`}
+                          value={`${selectedCoach.dedicated_package.package_name} - 1 Hour (${getSessionDurationLabel(selectedCoach.dedicated_package.package_name)})`}
                           disabled
                           style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
                         />
@@ -605,21 +615,28 @@ const GuestBookingStep2 = () => {
                         </small>
                       </>
                     ) : (
-                      <select
-                        id="session_type"
-                        name="session_type"
-                        value={formData.session_type}
-                        onChange={handleInputChange}
-                        disabled={loading}
-                        required
-                      >
-                        <option value="">Select session type...</option>
-                        {sessionTypes.map(type => (
-                          <option key={type.value} value={type.value}>
-                            {type.label} - {type.duration}
-                          </option>
-                        ))}
-                      </select>
+                      <>
+                        <select
+                          id="session_type"
+                          name="session_type"
+                          value={formData.session_type}
+                          onChange={handleInputChange}
+                          disabled={loading}
+                          required
+                        >
+                          <option value="">Select session type...</option>
+                          {sessionTypes.map(type => (
+                            <option key={type.value} value={type.value}>
+                              {type.label} - {type.duration}
+                            </option>
+                          ))}
+                        </select>
+                        {formData.session_type && (
+                          <small style={{ color: '#10b981', marginTop: '4px', display: 'block', fontSize: '0.95rem', fontWeight: '600' }}>
+                            Fees for this session: ₹{sessionTypes.find(t => t.value === formData.session_type)?.fee || 0}
+                          </small>
+                        )}
+                      </>
                     )}
                   </div>
 

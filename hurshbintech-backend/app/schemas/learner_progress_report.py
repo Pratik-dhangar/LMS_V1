@@ -27,7 +27,7 @@ class LearnerProgressReportCreate(BaseModel):
     development_history: Optional[str] = None
     learning_history: Optional[str] = None
 
-    # Functional Development Overview through overall development (HEAD)
+    # FUNCTIONAL DEVELOPMENT OVERVIEW THROUGH OVERALL DEVELOPMENT (HEAD)
     attention_cooperation: Optional[str] = None
     sensory_integration_motor: Optional[str] = None
     speech_language_communication: Optional[str] = None

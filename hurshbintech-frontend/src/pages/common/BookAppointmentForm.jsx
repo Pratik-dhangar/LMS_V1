@@ -30,6 +30,21 @@ const BookAppointmentForm = () => {
   });
   const [previewImage, setPreviewImage] = useState(null);
 
+  const getSessionDurationLabel = (sessionType) => {
+    const normalizedSessionType = (sessionType || '').toLowerCase();
+
+    if (normalizedSessionType.includes('functional assessment') || normalizedSessionType.includes('assessment') || normalizedSessionType.includes('90')) {
+      return '90 min';
+    }
+
+    return '60 min';
+  };
+
+  // const sessionTypes = [
+  //   { value: 'initial_consultation', label: 'Initial Consultation', duration: '60 min', fee: 1500 },
+  //   { value: 'Assessment ', label: 'Assessment', duration: '90 min', fee: 2700 },
+  // ];
+
   const formatDateToIso = (dateObj) => {
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -612,7 +627,7 @@ const BookAppointmentForm = () => {
                     <label className="session-type-card selected" style={{ cursor: 'default' }}>
                       <div className="session-type-content">
                         <p className="session-type-label">{coach.dedicated_package.package_name}</p>
-                        <p className="session-type-duration">1 Hour (60 min)</p>
+                        <p className="session-type-duration">1 Hour ({getSessionDurationLabel(coach.dedicated_package.package_name)})</p>
                         <p className="session-type-fee">₹{coach.dedicated_package.price}</p>
                       </div>
                       <Check className="check-icon" />

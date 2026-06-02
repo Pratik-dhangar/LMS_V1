@@ -8,6 +8,7 @@ import sessionService from '../../api/services/sessionService';
 import VideoConferenceService from '../../api/services/videoConferenceService';
 import WhiteboardService from '../../api/services/whiteboardService';
 import Whiteboard from '../../components/common/Whiteboard';
+import Calculator from '../../components/common/Calculator';
 import StopwatchDisplay from '../../components/common/StopwatchDisplay';
 import Emoji from '../../components/common/Emoji';
 import YouTubePopup from '../../components/common/YouTubePopup';
@@ -20,7 +21,6 @@ import { playTickSound, playCelebrationSound } from '../../utils/stopwatchSounds
 import { markSessionActive, clearSessionActivity, updateSessionActivity } from '../../utils/sessionActivityTracker';
 import { denormalizeItem } from '../../utils/drawingSync';
 import { setupAttendeeWhiteboardCallbacks } from '../../components/session/InstructorSessionLayout';
-import IOSNavBar from '../../components/common/IOSNavBar';
 import '../../styles/components/common/sessionHeader.css';
 
 import {
@@ -118,7 +118,9 @@ const LearnerSession = () => {
     trainerComments,
     setTrainerComments,
     isCommentsOpen,
-    setIsCommentsOpen
+    setIsCommentsOpen,
+    calculatorPermission,
+    setCalculatorPermission
   } = sessionState;
 
   // Canvas ref for denormalization
@@ -622,6 +624,7 @@ const LearnerSession = () => {
       setIsEyeBlinking,
       setFeedbackMessage,
       setWaitingMessage,
+      setCalculatorPermission,
       setFloatingAnimations,
       floatingAnimations,
       setCanvasItems,
@@ -645,59 +648,12 @@ const LearnerSession = () => {
     return cleanup;
   }, [whiteboardService, sessionInfo, floatingAnimations, buckets]);
 
-  // Countdown timer with auto-end
+  // Sessions no longer auto-end on a local timer.
   useEffect(() => {
-    if (!sessionInfo?.started_at) return;
+    if (!sessionInfo) return;
+    setTimeLeft('No limit');
+  }, [sessionInfo, setTimeLeft]);
 
-    const startTimeStr = sessionInfo.started_at.includes('Z')
-      ? sessionInfo.started_at
-      : sessionInfo.started_at + 'Z';
-    const endTime = new Date(startTimeStr).getTime() + sessionInfo.duration * 60 * 1000;
-
-    const interval = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = endTime - now;
-
-      if (distance < 0) {
-        clearInterval(interval);
-        setTimeLeft('00:00');
-        toast.info('Session time has ended.');
-
-        // Auto-end session and redirect
-        try {
-          if (webRTC?.localStream) {
-            webRTC.localStream.getTracks().forEach(track => track.stop());
-          }
-          webRTC?.close();
-          whiteboardService?.close();
-          clearSessionActivity(sessionId, 'learner');
-        } catch (error) {
-          console.error('[LearnerSession] Error during cleanup:', error);
-        }
-
-        // Redirect to dashboard after cleanup
-        setTimeout(() => {
-          navigate('/learner/dashboard');
-        }, 500);
-        return;
-      }
-
-      const totalSeconds = Math.floor(distance / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
-      const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
-      if (hours > 0) {
-        setTimeLeft(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      } else {
-        setTimeLeft(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionInfo, navigate, webRTC, whiteboardService, sessionId]);
-
-  // Auto check for session end
   useEffect(() => {
     if (!sessionInfo || sessionInfo.status !== 'active') return;
 
@@ -1399,10 +1355,7 @@ const LearnerSession = () => {
               Waiting for Trainer
             </h2>
             <p className="text-gray-600 mb-4">
-              Your session is scheduled and you're ready to join!
-            </p>
-            <p className="text-gray-600 mb-6">
-              Please wait while <strong>{sessionInfo?.trainer_name ?? 'your trainer'}</strong> joins the session.
+              The session will start when the trainer joins.
             </p>
             <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
               <div className="w-2 h-2 bg-[#DB9D32] rounded-full animate-pulse"></div>
@@ -1417,21 +1370,10 @@ const LearnerSession = () => {
                   <>📅 {new Date(sessionInfo.scheduled_date).toLocaleString()}</>
                 )}
               </p>
-              {sessionInfo?.duration && (
-                <p className="text-xs text-gray-600 mt-1">
-                  ⏱️ Duration: {sessionInfo.duration} minutes
-                </p>
-              )}
             </div>
           </div>
         </div>
 
-        {/* iOS / PWA floating nav (back + refresh) */}
-        <IOSNavBar
-          onBack={() => navigate('/learner/dashboard')}
-          onRefresh={() => window.location.reload()}
-          position="bottom-right"
-        />
       </div>
     );
   }
@@ -1502,6 +1444,8 @@ const LearnerSession = () => {
           padding: 0 !important;
           box-sizing: border-box !important;
           position: relative !important;
+          overscroll-behavior-y: none !important;
+          overscroll-behavior: none !important;
           /* overflow controlled by media queries */
         }
 
@@ -1511,6 +1455,8 @@ const LearnerSession = () => {
           height: 100% !important;
           width: 100% !important;
           overflow-x: hidden !important;
+          overscroll-behavior-y: none !important;
+          overscroll-behavior: none !important;
         }
 
         /* Session Header - Fixed at top */
@@ -1722,6 +1668,8 @@ const LearnerSession = () => {
             /* Allow scrolling on mobile to hide browser chrome */
             overflow-y: auto !important;
             overflow-x: hidden !important;
+            overscroll-behavior-y: none !important;
+            overscroll-behavior: none !important;
             /* Enable momentum scrolling on iOS */
             -webkit-overflow-scrolling: touch !important;
             /* Handle safe areas (notches, rounded corners) */
@@ -1738,6 +1686,8 @@ const LearnerSession = () => {
             overflow-x: hidden !important;
             /* Allow vertical scrolling to hide browser chrome */
             overflow-y: auto !important;
+            overscroll-behavior-y: none !important;
+            overscroll-behavior: none !important;
           }
           
           body {
@@ -1748,6 +1698,8 @@ const LearnerSession = () => {
             min-height: -webkit-fill-available !important;
             overflow-x: hidden !important;
             overflow-y: auto !important;
+            overscroll-behavior-y: none !important;
+            overscroll-behavior: none !important;
             /* Remove default margins that can cause layout issues */
             margin: 0 !important;
             padding: 0 !important;
@@ -1892,6 +1844,9 @@ const LearnerSession = () => {
           sessionType="learner"
         />
 
+        {/* iOS / PWA floating nav (back + refresh) - placed below voice input (attendee upper section) */}
+        {/* IOSNavBar is now anchored inside AttendeeUpperSection */}
+
         {/* Whiteboard - Fills remaining space */}
         <AttendeeWhiteboardSection>
           <LearnerWhiteboardWithVideo
@@ -1927,6 +1882,44 @@ const LearnerSession = () => {
             inlineMedia={sessionState.inlineMedia}
             setInlineMedia={sessionState.setInlineMedia}
           />
+
+          {calculatorPermission && (
+            <div style={{ position: 'absolute', inset: 0, zIndex: 80, pointerEvents: 'none' }}>
+              <Calculator
+                hasPermission={calculatorPermission}
+                onCalculatorChange={(payload) => {
+                  if (!whiteboardService) return;
+
+                  if (payload.action === 'clear') {
+                    whiteboardService.send('calculator_clear', {
+                      timestamp: Date.now()
+                    });
+                    return;
+                  }
+
+                  if (payload.action === 'equals') {
+                    whiteboardService.send('calculator_result', {
+                      result: payload.result,
+                      calculation: payload.calculation,
+                      display: payload.display,
+                      history: payload.history || [],
+                      timestamp: Date.now()
+                    });
+                    return;
+                  }
+
+                  whiteboardService.send('calculator_operation', {
+                    action: payload.action,
+                    display: payload.display,
+                    previousValue: payload.previousValue,
+                    operation: payload.operation,
+                    history: payload.history || [],
+                    timestamp: Date.now()
+                  });
+                }}
+              />
+            </div>
+          )}
 
           {/* Exercise Overlay - Displays question/answer on top of whiteboard */}
           <ExerciseOverlay
@@ -1967,12 +1960,6 @@ const LearnerSession = () => {
         {/* Background Music Audio Element */}
         <audio ref={audioRef} crossOrigin="anonymous" />
 
-        {/* iOS / PWA floating nav (back + refresh) */}
-        <IOSNavBar
-          onBack={() => navigate('/learner/dashboard')}
-          onRefresh={() => window.location.reload()}
-          position="bottom-right"
-        />
       </div>
       {showFeedbackModal && (
         <SessionFeedbackModal

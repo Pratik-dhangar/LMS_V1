@@ -41,6 +41,29 @@ const programService = {
     }
   },
 
+  trainer: {
+    getPrograms: async (learnerId = null) => {
+      try {
+        const params = learnerId ? { learner_id: learnerId } : {};
+        const response = await api.get('/trainer/programs/', { params });
+        return response.data;
+      } catch (error) {
+        console.error('[programService] Error fetching trainer programs:', error);
+        throw error;
+      }
+    },
+
+    getProgramById: async (programId) => {
+      try {
+        const response = await api.get(`/trainer/programs/${programId}`);
+        return response.data;
+      } catch (error) {
+        console.error('[programService] Error fetching trainer program:', error);
+        throw error;
+      }
+    },
+  },
+
   /**
    * Get full details of a single program by ID.
    *
@@ -57,11 +80,11 @@ const programService = {
   },
 
   /**
-  * Update a program's name, skill, and/or content_ids.
-   * goal_ids are intentionally not accepted here — they are locked.
+  * Update a program's editable fields.
+   * Supports name, learner_id, skill, goal_ids, skills, and content_ids.
    *
    * @param {number} programId
-  * @param {{ name?: string, skill?: string, description?: string, content_ids?: number[] }} data
+  * @param {{ name?: string, learner_id?: number, skill?: string, description?: string, goal_ids?: number[], skills?: Array, content_ids?: number[] }} data
    */
   updateProgram: async (programId, data) => {
     try {

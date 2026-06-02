@@ -7,6 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import axios from 'axios';
 import Whiteboard from '../../components/common/Whiteboard';
+import Calculator from '../../components/common/Calculator';
 import Exercise from '../../components/session/Exercise';
 import { useMediaControl } from '../../context/MediaControlContext';
 import sessionService from '../../api/services/sessionService';
@@ -82,6 +83,7 @@ const GuestSession = () => {
     textBoxes, setTextBoxes,
     activeTextBoxId, setActiveTextBoxId,
     toolAccess, setToolAccess,
+    calculatorPermission,
     stopwatchElapsedTime, setStopwatchElapsedTime,
     stopwatchIsRunning, setStopwatchIsRunning,
     backgroundMusicPlaying,
@@ -560,42 +562,11 @@ const GuestSession = () => {
     }
   }, [waitingMessage, navigate]);
 
-  // Countdown timer
+  // Sessions no longer auto-end on a local timer.
   useEffect(() => {
-    if (!sessionInfo || !sessionInfo.started_at || !sessionInfo.duration) return;
-
-    const startTime = new Date(sessionInfo.started_at).getTime();
-    const durationMs = sessionInfo.duration * 60 * 1000;
-    const endTime = startTime + durationMs;
-
-    const intervalId = setInterval(() => {
-      const now = Date.now();
-      const remaining = endTime - now;
-
-      if (remaining <= 0) {
-        setTimeLeft('00:00');
-        clearInterval(intervalId);
-        toast.info('Session time has ended.');
-
-        // Auto-end: cleanup and redirect
-        setTimeout(() => {
-          try {
-            cleanupAttendeeSession(webRTC, whiteboardService, toolsService, isInitializingRef);
-          } catch (error) {
-            console.error('[GuestSession] Error during auto-end cleanup:', error);
-          }
-          navigate('/');
-        }, 1500);
-        return;
-      } else {
-        const minutes = Math.floor(remaining / 60000);
-        const seconds = Math.floor((remaining % 60000) / 1000);
-        setTimeLeft(`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
-      }
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, [sessionInfo, webRTC, whiteboardService, toolsService, isInitializingRef, navigate]);
+    if (!sessionInfo) return;
+    setTimeLeft('No limit');
+  }, [sessionInfo, setTimeLeft]);
 
   // Auto-hide header after 5 seconds on mobile/tablet
   useEffect(() => {
@@ -724,8 +695,8 @@ const GuestSession = () => {
     );
   }
 
-  // Show waiting screen if instructor hasn't joined
-  if (!loading && !instructorJoined && (sessionInfo?.status === 'scheduled' || showWaitingModal)) {
+  // Show waiting screen if instructor hasn't joined yet
+  if (!loading && !instructorJoined && !awaitingAdmission && (sessionInfo?.status === 'scheduled' || showWaitingModal)) {
     return (
       <AttendeeWaitingScreen
         sessionInfo={sessionInfo}
@@ -782,6 +753,9 @@ const GuestSession = () => {
         sessionType="guest"
       />
 
+      {/* iOS / PWA floating nav (back + refresh) - placed below voice input (attendee upper section) */}
+      {/* IOSNavBar is now anchored inside AttendeeUpperSection */}
+
       {/* Main Container - Whiteboard */}
       <div className="learner-main-container">
         <AttendeeWhiteboardSection>
@@ -832,6 +806,44 @@ const GuestSession = () => {
               inlineMedia={inlineMedia}
               setInlineMedia={setInlineMedia}
             />
+
+            {calculatorPermission && (
+              <div style={{ position: 'absolute', inset: 0, zIndex: 80, pointerEvents: 'none' }}>
+                <Calculator
+                  hasPermission={calculatorPermission}
+                  onCalculatorChange={(payload) => {
+                    if (!whiteboardService) return;
+
+                    if (payload.action === 'clear') {
+                      whiteboardService.send('calculator_clear', {
+                        timestamp: Date.now()
+                      });
+                      return;
+                    }
+
+                    if (payload.action === 'equals') {
+                      whiteboardService.send('calculator_result', {
+                        result: payload.result,
+                        calculation: payload.calculation,
+                        display: payload.display,
+                        history: payload.history || [],
+                        timestamp: Date.now()
+                      });
+                      return;
+                    }
+
+                    whiteboardService.send('calculator_operation', {
+                      action: payload.action,
+                      display: payload.display,
+                      previousValue: payload.previousValue,
+                      operation: payload.operation,
+                      history: payload.history || [],
+                      timestamp: Date.now()
+                    });
+                  }}
+                />
+              </div>
+            )}
           </div>
         </AttendeeWhiteboardSection>
       </div>

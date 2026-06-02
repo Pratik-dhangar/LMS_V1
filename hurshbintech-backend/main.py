@@ -42,13 +42,16 @@ from app.api.endpoints.learning_skills import router as learning_skills_router
 # from app.api.endpoints.learning_program_assignments import learner_router
 from app.api.endpoints.program_assignments import router as program_assignments_router
 from app.api.endpoints.programs import router as programs_router
+from app.api.endpoints.programs import trainer_router as trainer_programs_router
 from app.api.endpoints.profile import router as profile_router
 from app.api.endpoints.session_reports import router as session_reports_router
 from app.api.endpoints.learner_progress_reports import router as learner_progress_reports_router
 from app.api.endpoints.sessions import router as sessions_router
 from app.api.endpoints.session_notes import router as session_notes_router
 from app.api.endpoints.session_ws import router as session_ws_router
+from app.api.endpoints.trainer import router as trainer_router
 from app.api.endpoints.vlogs import router as vlogs_router
+from app.api.endpoints.gallery import router as gallery_router
 from app.api.endpoints.websocket import router as websocket_router
 from app.api.endpoints.products import router as products_router
 from app.api.endpoints.store import router as store_router
@@ -124,7 +127,7 @@ async def lifespan(app: FastAPI):
 
 # Initialize FastAPI app with lifespan
 app = FastAPI(
-    title="HurshBinTech API",
+    title="HurshBin API",
     version="1.0.0",
     description="User management system with role-based authentication",
     lifespan=lifespan
@@ -221,12 +224,14 @@ app.include_router(learning_goals_router, prefix="/api")
 app.include_router(learning_skills_router, prefix="/api")
 app.include_router(learning_content_router, prefix="/api/content")
 app.include_router(vlogs_router, prefix="/api/vlogs", tags=["vlogs"])
+app.include_router(gallery_router, prefix="/api/gallery", tags=["gallery"])
 app.include_router(blogs_router, prefix="/api", tags=["blogs"])
 app.include_router(about_us_router, prefix="/api", tags=["about-us"])
 app.include_router(contact_router, prefix="/api", tags=["contact"])
 app.include_router(free_assessment_router, prefix="/api", tags=["free-assessment"])
 app.include_router(session_reports_router, prefix="/api/session-reports", tags=["session-reports"])
 app.include_router(learner_progress_reports_router, prefix="/api/learner-progress-reports", tags=["learner-progress-reports"])
+app.include_router(trainer_router, prefix="/api")
 
 # NOTE: Old learning_program_assignments routes removed - replaced by program_assignments
 # app.include_router(head_lp_router, prefix="/api")
@@ -237,6 +242,7 @@ app.include_router(program_assignments_router, prefix="/api")
 
 # ✅ Programs router (session-scoped goal+content containers)
 app.include_router(programs_router, prefix="/api")
+app.include_router(trainer_programs_router, prefix="/api")
 
 # ✅ E-Commerce routers
 app.include_router(products_router, prefix="/api")  # Admin product management
