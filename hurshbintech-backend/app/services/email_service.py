@@ -4068,3 +4068,149 @@ class EmailService:
             html_body=html_body,
             email_type="free_assessment_confirmation",
         )
+
+    # ========== FREE APPOINTMENT EMAILS ==========
+
+    @staticmethod
+    async def send_free_appointment_notification(
+        recipient_email: str,
+        recipient_name: str,
+        child_name: str,
+        age: int,
+        concerns: Optional[str] = None,
+        diagnosis: Optional[str] = None,
+        address: Optional[str] = None,
+        contact_number: str = "",
+        reference_by: Optional[str] = None,
+        appointment_id: int = None,
+    ) -> bool:
+        """Send notification email when a new free appointment form is submitted"""
+        
+        if not settings.ENABLE_EMAIL or not recipient_email:
+            logger.warning(f"Email sending disabled or no recipient email")
+            return False
+
+        subject = f"New Free Appointment Request - {child_name}"
+        
+        html_body = f"""
+        <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body {{
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                    }}
+                    .container {{
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        background-color: #e8f5e9;
+                    }}
+                    .header {{
+                        background-color: #2e7d32;
+                        padding: 20px;
+                        border-radius: 8px 8px 0 0;
+                        color: white;
+                        text-align: center;
+                    }}
+                    .content {{
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 0 0 8px 8px;
+                        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    }}
+                    .info-box {{
+                        background-color: #f5f5f5;
+                        padding: 15px;
+                        border-left: 4px solid #2e7d32;
+                        margin: 15px 0;
+                    }}
+                    .footer {{
+                        text-align: center;
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #9ca3af;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1 style="margin: 0; font-size: 26px;">📅 New Free Appointment Request</h1>
+                        <p style="margin: 10px 0 0 0; opacity: 0.9;">A new appointment request has been submitted</p>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{recipient_name}</strong>,</p>
+                        <p>A new free appointment request has been submitted. Please review the details below:</p>
+                        
+                        <div class="info-box">
+                            <h3 style="margin-top: 0; color: #2e7d32;">Appointment Details</h3>
+                            <table style="width: 100%; border-collapse: collapse; margin: 0; border: 1px solid #ddd;">
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Child Name:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{child_name}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Age:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{age} years</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Concerns:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{concerns or 'Not provided'}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Diagnosis:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{diagnosis or 'Not provided'}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Address:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{address or 'Not provided'}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Contact Number:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{contact_number}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Reference By:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;">{reference_by or 'Not provided'}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 12px; border: 1px solid #ddd; font-weight: 600; color: #2c3e50; width: 30%;">Appointment ID:</td>
+                                        <td style="padding: 12px; border: 1px solid #ddd; color: #555;"><span style="font-family: monospace; background: #efefef; padding: 2px 6px; border-radius: 3px;">#{appointment_id}</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <p><strong>Next Steps:</strong></p>
+                        <ol>
+                            <li>Review the appointment details</li>
+                            <li>Contact the parent/guardian at <strong>{contact_number}</strong></li>
+                            <li>Schedule and confirm the appointment</li>
+                        </ol>
+                        
+                        <p style="color: #666; font-size: 14px;">Please respond to this appointment request at your earliest convenience.</p>
+                        
+                        <div class="footer">
+                            <p>This is an automated message from Hurshbintech. Please do not reply to this email.</p>
+                            <p>© 2026 Hurshbintech. All rights reserved.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+        </html>
+        """
+        
+        return await EmailService._send_email(
+            recipient_email=recipient_email,
+            recipient_name=recipient_name,
+            subject=subject,
+            html_body=html_body,
+            email_type="free_appointment_notification",
+        )
+

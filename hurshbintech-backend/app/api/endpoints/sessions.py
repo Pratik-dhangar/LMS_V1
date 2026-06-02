@@ -449,13 +449,8 @@ async def end_training_session(
     except Exception as e:
         logger.error(f"Error cleaning up whiteboard state for session {session_id}: {str(e)}")
 
-    # 🔥 IMMEDIATELY process subscription session counting (don't wait for scheduler)
-    try:
-        from app.crud import subscription_crud
-        sessions_processed = await subscription_crud.process_ended_sessions_and_update_subscriptions(db)
-        logger.info(f"✅ Immediately processed {sessions_processed} ended sessions after session {session_id} ended")
-    except Exception as e:
-        logger.error(f"Error immediately processing sessions: {str(e)}")
+    # 🔥 Auto-processing of session counts has been disabled per request.
+    # Trainers must now manually mark sessions as done.
 
     # Broadcast session end to all participants via WebSocket
     if session_id in active_connections:
@@ -475,6 +470,39 @@ async def end_training_session(
                 logger.error(f"Failed to send session end message: {e}")
 
     return {"message": "Session ended successfully"}
+
+
+@router.post("/{session_id}/mark-done")
+async def mark_session_done(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_trainer: TrainerProfile = Depends(get_current_trainer),
+):
+    """Manually mark a session as done to decrement session count"""
+    logger.info(f"Trainer {current_trainer.user_id} manually marking session {session_id} as done")
+
+    session = await session_crud.get_session_by_id(db, session_id)
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if session.trainer_id != current_trainer.user_id:
+        # Note: If Heads are also allowed to mark as done, we need to check their role too.
+        # Assuming only trainers do it based on "Trainer have to click on button".
+        raise HTTPException(status_code=403, detail="Not authorized to mark this session as done")
+
+    if session.session_counted:
+        raise HTTPException(status_code=400, detail="Session is already counted")
+        
+    from app.crud import subscription_crud
+    
+    success = await subscription_crud.process_single_ended_session(db, session_id)
+    
+    if success:
+        return {"message": "Session counted successfully", "success": True}
+    else:
+        raise HTTPException(status_code=400, detail="Failed to process session count (may have no active subscription or already counted)")
+
 
 
 @router.get("/{session_id}/feedback", response_model=list[SessionFeedbackResponse])

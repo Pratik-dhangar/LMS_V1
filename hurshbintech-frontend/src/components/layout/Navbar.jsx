@@ -4,7 +4,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useLocation, useNavigate } from "react-router-dom";
 import '../../styles/components/layout/Navbar.css';
 
-const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal }) => {
+const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal, setShowFreeAppointmentModal }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -161,6 +161,14 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal }) => {
                 Free Assessment
               </button>
             )}
+
+            {/* Free Appointment - Always visible for all users */}
+            <button
+              className="navbar-btn"
+              onClick={() => setShowFreeAppointmentModal(true)}
+            >
+              Free Appointment
+            </button>
           </div>
         </div>
 
@@ -293,6 +301,17 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal }) => {
                 Buy Learning Program
               </button>
             )}
+
+            {/* Free Appointment - Always visible for all users (mobile) */}
+            <button
+              className="navbar-btn"
+              onClick={() => {
+                setShowFreeAppointmentModal(true);
+                setIsMenuOpen(false);
+              }}
+            >
+              Free Appointment
+            </button>
 
             {/* Admin Blog Management - Only for admins */}
             {user && user.role === 'admin' && (

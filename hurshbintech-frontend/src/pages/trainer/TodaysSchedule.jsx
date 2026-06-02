@@ -117,6 +117,17 @@ const TodaysSchedule = ({ embedded = false }) => {
     setSelectedSession(null);
   };
 
+  const handleMarkSessionDone = async (sessionId) => {
+    try {
+      await sessionService.markSessionDone(sessionId);
+      toast.success("Session count reduced successfully!");
+      fetchSessions();
+    } catch (error) {
+      console.error("Error marking session as done:", error);
+      toast.error(error?.response?.data?.detail || "Failed to mark session as done");
+    }
+  };
+
   const getStatusBadge = (status) => {
     const base = "trainer-status-badge";
     const map = {
@@ -424,6 +435,15 @@ const TodaysSchedule = ({ embedded = false }) => {
                               >
                                 ❌ Failed
                               </span>
+                            )}
+                            {!session.session_counted && (
+                              <button
+                                onClick={() => handleMarkSessionDone(session.session_id || session.id)}
+                                className="app-modal-btn app-modal-btn--success"
+                                style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                              >
+                                Is Session Done?
+                              </button>
                             )}
                             <button
                               onClick={() => {
