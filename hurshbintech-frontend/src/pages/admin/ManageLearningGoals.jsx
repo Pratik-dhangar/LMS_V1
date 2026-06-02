@@ -31,6 +31,7 @@ const ManageLearningGoals = () => {
   const [formData, setFormData] = useState({
     goal: "",
     goal_description: "",
+    delivery_instruction: "",
   });
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
 
@@ -86,7 +87,7 @@ const ManageLearningGoals = () => {
       await learningGoalsService.admin.create(formData);
       toast.success("Learning goal created!");
       setShowAddModal(false);
-      setFormData({ goal: "", goal_description: "" });
+      setFormData({ goal: "", goal_description: "", delivery_instruction: "" });
       await fetchGoals();
     } catch {
       toast.error("Failed to create learning goal");
@@ -98,6 +99,7 @@ const ManageLearningGoals = () => {
     setFormData({
       goal: goal.goal,
       goal_description: goal.goal_description || "",
+      delivery_instruction: goal.delivery_instruction || "",
     });
     setShowEditModal(true);
   };
@@ -108,7 +110,7 @@ const ManageLearningGoals = () => {
       await learningGoalsService.admin.update(selectedGoal.id, formData);
       toast.success("Goal updated!");
       setShowEditModal(false);
-      setFormData({ goal: "", goal_description: "" });
+      setFormData({ goal: "", goal_description: "", delivery_instruction: "" });
       setSelectedGoal(null);
       await fetchGoals();
     } catch {
@@ -147,7 +149,9 @@ const ManageLearningGoals = () => {
       setLearningSkillName("");
       await fetchSkills();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to create learning skill");
+      toast.error(
+        error.response?.data?.detail || "Failed to create learning skill",
+      );
     }
   };
 
@@ -175,7 +179,9 @@ const ManageLearningGoals = () => {
       setEditLearningSkillName("");
       await fetchSkills();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to update learning skill");
+      toast.error(
+        error.response?.data?.detail || "Failed to update learning skill",
+      );
     }
   };
 
@@ -187,7 +193,9 @@ const ManageLearningGoals = () => {
       toast.success("Learning skill deleted!");
       await fetchSkills();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to delete learning skill");
+      toast.error(
+        error.response?.data?.detail || "Failed to delete learning skill",
+      );
     }
   };
 
@@ -197,18 +205,21 @@ const ManageLearningGoals = () => {
       (goal.goal_description &&
         goal.goal_description
           .toLowerCase()
-          .includes(activeSearchQuery.toLowerCase()))
+          .includes(activeSearchQuery.toLowerCase())),
   );
 
   const filteredSkills = skills.filter((skill) =>
-    skill.skill_name?.toLowerCase().includes(activeSearchQuery.toLowerCase())
+    skill.skill_name?.toLowerCase().includes(activeSearchQuery.toLowerCase()),
   );
 
   const activeRecords = activeView === "goals" ? filteredGoals : filteredSkills;
-  const totalPages = Math.max(1, Math.ceil(activeRecords.length / itemsPerPage));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(activeRecords.length / itemsPerPage),
+  );
   const paginatedRecords = activeRecords.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   useEffect(() => {
@@ -228,7 +239,10 @@ const ManageLearningGoals = () => {
     return (
       <div className="table-pagination-section">
         <div className="table-pagination-size-row">
-          <label htmlFor="learning-goals-page-size" className="table-pagination-size-label">
+          <label
+            htmlFor="learning-goals-page-size"
+            className="table-pagination-size-label"
+          >
             Rows per page:
           </label>
           <select
@@ -281,7 +295,10 @@ const ManageLearningGoals = () => {
                     );
                   }
 
-                  if (pageNum === currentPage - 2 || pageNum === currentPage + 2) {
+                  if (
+                    pageNum === currentPage - 2 ||
+                    pageNum === currentPage + 2
+                  ) {
                     return (
                       <span key={pageNum} className="table-pagination-ellipsis">
                         ...
@@ -295,7 +312,9 @@ const ManageLearningGoals = () => {
 
               <button
                 type="button"
-                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
                 disabled={currentPage === totalPages}
                 className="table-pagination-btn"
               >
@@ -332,7 +351,9 @@ const ManageLearningGoals = () => {
               Back to Dashboard
             </button>
             <div>
-              <h1 className="page-title">Manage Learning Goals and Learning Skill</h1>
+              <h1 className="page-title">
+                Manage Learning Goals and Learning Skill
+              </h1>
               <p className="page-description">
                 Create and manage learning goals and Learning Skill for sessions
               </p>
@@ -348,22 +369,26 @@ const ManageLearningGoals = () => {
               marginBottom: "0.85rem",
             }}
           >
-            <span style={{ fontWeight: 700, color: "#1f2937" }}>Filter by :</span>
+            <span style={{ fontWeight: 700, color: "#1f2937" }}>
+              Filter by :
+            </span>
             <button
               onClick={() => setActiveView("goals")}
-              className={`app-modal-btn ${activeView === "goals"
-                ? "app-modal-btn--primary"
-                : "app-modal-btn--secondary"
-                }`}
+              className={`app-modal-btn ${
+                activeView === "goals"
+                  ? "app-modal-btn--primary"
+                  : "app-modal-btn--secondary"
+              }`}
             >
               Learning Goals
             </button>
             <button
               onClick={() => setActiveView("skills")}
-              className={`app-modal-btn ${activeView === "skills"
-                ? "app-modal-btn--primary"
-                : "app-modal-btn--secondary"
-                }`}
+              className={`app-modal-btn ${
+                activeView === "skills"
+                  ? "app-modal-btn--primary"
+                  : "app-modal-btn--secondary"
+              }`}
             >
               Learning Skill
             </button>
@@ -438,6 +463,9 @@ const ManageLearningGoals = () => {
                         </th>
                         <th className="table-primary-th">Title (Goal)</th>
                         <th className="table-primary-th">Goal Description</th>
+                        <th className="table-primary-th">
+                          Delivery Instructions
+                        </th>
                         <th className="table-primary-th table-primary-th-center">
                           Edit
                         </th>
@@ -450,7 +478,9 @@ const ManageLearningGoals = () => {
                         <th className="table-primary-th table-primary-th-center">
                           Sr. No.
                         </th>
-                        <th className="table-primary-th">Learning Skill Name</th>
+                        <th className="table-primary-th">
+                          Learning Skill Name
+                        </th>
                         <th className="table-primary-th">Created At</th>
                         <th className="table-primary-th table-primary-th-center">
                           Edit
@@ -464,133 +494,144 @@ const ManageLearningGoals = () => {
                   <tbody className="table-primary-body">
                     {activeView === "goals"
                       ? paginatedRecords.map((goal, index) => (
-                        <tr key={goal.id} className="table-primary-row">
-                          <td className="table-primary-td table-primary-td-center">
-                            {(currentPage - 1) * itemsPerPage + index + 1}
-                          </td>
-                          <td className="table-primary-td">
-                            <div className="table-primary-cell-name">
-                              <div className="table-primary-cell-name-text">
-                                {goal.goal}
+                          <tr key={goal.id} className="table-primary-row">
+                            <td className="table-primary-td table-primary-td-center">
+                              {(currentPage - 1) * itemsPerPage + index + 1}
+                            </td>
+                            <td className="table-primary-td">
+                              <div className="table-primary-cell-name">
+                                <div className="table-primary-cell-name-text">
+                                  {goal.goal}
+                                </div>
+                                <div className="table-primary-cell-subtitle">
+                                  Created:{" "}
+                                  {new Date(
+                                    goal.created_at,
+                                  ).toLocaleDateString()}
+                                </div>
                               </div>
-                              <div className="table-primary-cell-subtitle">
-                                Created:{" "}
-                                {new Date(goal.created_at).toLocaleDateString()}
+                            </td>
+                            <td className="table-primary-td">
+                              <div className="data-table-description">
+                                {goal.goal_description || (
+                                  <span className="data-table-empty">
+                                    No description
+                                  </span>
+                                )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="table-primary-td">
-                            <div className="data-table-description">
-                              {goal.goal_description || (
-                                <span className="data-table-empty">
-                                  No description
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="table-primary-td table-primary-td-center">
-                            <button
-                              onClick={() => handleEdit(goal)}
-                              className="app-modal-btn app-modal-btn--primary btn-sm "
-                            >
-                              <svg
-                                className="table-primary-icon-sm"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                            </td>
+                            <td className="table-primary-td">
+                              <div className="data-table-description">
+                                {goal.delivery_instruction || (
+                                  <span className="data-table-empty">-</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="table-primary-td table-primary-td-center">
+                              <button
+                                onClick={() => handleEdit(goal)}
+                                className="app-modal-btn app-modal-btn--primary btn-sm "
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
-                              Edit
-                            </button>
-                          </td>
-                          <td className="table-primary-td table-primary-td-center">
-                            <button
-                              onClick={() => handleDelete(goal.id)}
-                              className="app-modal-btn app-modal-btn--danger btn-sm "
-                            >
-                              <svg
-                                className="table-primary-icon-sm"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                                <svg
+                                  className="table-primary-icon-sm"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                                Edit
+                              </button>
+                            </td>
+                            <td className="table-primary-td table-primary-td-center">
+                              <button
+                                onClick={() => handleDelete(goal.id)}
+                                className="app-modal-btn app-modal-btn--danger btn-sm "
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))
+                                <svg
+                                  className="table-primary-icon-sm"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))
                       : paginatedRecords.map((skill, index) => (
-                        <tr key={skill.id} className="table-primary-row">
-                          <td className="table-primary-td table-primary-td-center">
-                            {(currentPage - 1) * itemsPerPage + index + 1}
-                          </td>
-                          <td className="table-primary-td">
-                            <div className="table-primary-cell-name-text">
-                              {skill.skill_name}
-                            </div>
-                          </td>
-                          <td className="table-primary-td">
-                            {skill.created_at
-                              ? new Date(skill.created_at).toLocaleDateString()
-                              : "-"}
-                          </td>
-                          <td className="table-primary-td table-primary-td-center">
-                            <button
-                              onClick={() => handleSkillEdit(skill)}
-                              className="app-modal-btn app-modal-btn--primary btn-sm "
-                            >
-                              <svg
-                                className="table-primary-icon-sm"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                          <tr key={skill.id} className="table-primary-row">
+                            <td className="table-primary-td table-primary-td-center">
+                              {(currentPage - 1) * itemsPerPage + index + 1}
+                            </td>
+                            <td className="table-primary-td">
+                              <div className="table-primary-cell-name-text">
+                                {skill.skill_name}
+                              </div>
+                            </td>
+                            <td className="table-primary-td">
+                              {skill.created_at
+                                ? new Date(
+                                    skill.created_at,
+                                  ).toLocaleDateString()
+                                : "-"}
+                            </td>
+                            <td className="table-primary-td table-primary-td-center">
+                              <button
+                                onClick={() => handleSkillEdit(skill)}
+                                className="app-modal-btn app-modal-btn--primary btn-sm "
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                />
-                              </svg>
-                              Edit
-                            </button>
-                          </td>
-                          <td className="table-primary-td table-primary-td-center">
-                            <button
-                              onClick={() => handleSkillDelete(skill.id)}
-                              className="app-modal-btn app-modal-btn--danger btn-sm "
-                            >
-                              <svg
-                                className="table-primary-icon-sm"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                                <svg
+                                  className="table-primary-icon-sm"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                  />
+                                </svg>
+                                Edit
+                              </button>
+                            </td>
+                            <td className="table-primary-td table-primary-td-center">
+                              <button
+                                onClick={() => handleSkillDelete(skill.id)}
+                                className="app-modal-btn app-modal-btn--danger btn-sm "
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                                <svg
+                                  className="table-primary-icon-sm"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                   </tbody>
                 </table>
               </div>
@@ -610,7 +651,11 @@ const ManageLearningGoals = () => {
                 type="button"
                 onClick={() => {
                   setShowAddModal(false);
-                  setFormData({ goal: "", goal_description: "" });
+                  setFormData({
+                    goal: "",
+                    goal_description: "",
+                    delivery_instruction: "",
+                  });
                 }}
                 className="app-modal-close"
               >
@@ -650,6 +695,40 @@ const ManageLearningGoals = () => {
                     }
                   />
                 </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">
+                    Delivery Instructions
+                  </label>
+                  <textarea
+                    className="app-modal-form-textarea"
+                    placeholder="Enter delivery instructions"
+                    rows="4"
+                    value={formData.delivery_instruction}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        delivery_instruction: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">
+                    Delivery Instructions
+                  </label>
+                  <textarea
+                    className="app-modal-form-textarea"
+                    placeholder="Enter delivery instructions"
+                    rows="4"
+                    value={formData.delivery_instruction}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        delivery_instruction: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
 
               <div className="app-modal-footer">
@@ -657,13 +736,20 @@ const ManageLearningGoals = () => {
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
-                    setFormData({ goal: "", goal_description: "" });
+                    setFormData({
+                      goal: "",
+                      goal_description: "",
+                      delivery_instruction: "",
+                    });
                   }}
                   className="app-modal-btn app-modal-btn--secondary"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="app-modal-btn app-modal-btn--primary">
+                <button
+                  type="submit"
+                  className="app-modal-btn app-modal-btn--primary"
+                >
                   Add Goal
                 </button>
               </div>
@@ -717,7 +803,10 @@ const ManageLearningGoals = () => {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="app-modal-btn app-modal-btn--primary">
+                <button
+                  type="submit"
+                  className="app-modal-btn app-modal-btn--primary"
+                >
                   Add Skill
                 </button>
               </div>
@@ -773,7 +862,10 @@ const ManageLearningGoals = () => {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="app-modal-btn app-modal-btn--primary">
+                <button
+                  type="submit"
+                  className="app-modal-btn app-modal-btn--primary"
+                >
                   Update Skill
                 </button>
               </div>
@@ -792,7 +884,11 @@ const ManageLearningGoals = () => {
                 type="button"
                 onClick={() => {
                   setShowEditModal(false);
-                  setFormData({ goal: "", goal_description: "" });
+                  setFormData({
+                    goal: "",
+                    goal_description: "",
+                    delivery_instruction: "",
+                  });
                 }}
                 className="app-modal-close"
               >
@@ -832,6 +928,21 @@ const ManageLearningGoals = () => {
                     }
                   />
                 </div>
+                <div className="app-modal-form-field">
+                  <label className="app-modal-form-label">Delivery Instruction</label>
+                  <textarea
+                    className="app-modal-form-textarea"
+                    placeholder="Enter delivery instruction"
+                    rows="4"
+                    value={formData.delivery_instruction}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        delivery_instruction: e.target.value,
+                      })
+                    }
+                  />
+                </div>
               </div>
 
               <div className="app-modal-footer">
@@ -839,13 +950,20 @@ const ManageLearningGoals = () => {
                   type="button"
                   onClick={() => {
                     setShowEditModal(false);
-                    setFormData({ goal: "", goal_description: "" });
+                    setFormData({
+                      goal: "",
+                      goal_description: "",
+                      delivery_instruction: "",
+                    });
                   }}
                   className="app-modal-btn app-modal-btn--secondary"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="app-modal-btn app-modal-btn--primary">
+                <button
+                  type="submit"
+                  className="app-modal-btn app-modal-btn--primary"
+                >
                   Update Goal
                 </button>
               </div>

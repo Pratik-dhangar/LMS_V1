@@ -78,6 +78,15 @@ const LearningProgramSidebar = ({
     }
   };
 
+  const [expandedGoals, setExpandedGoals] = useState({});
+
+const toggleGoalCollapse = (goalId) => {
+  setExpandedGoals((prev) => ({
+    ...prev,
+    [goalId]: !prev[goalId],
+  }));
+};
+
   return (
     <div className="sidebar-container">
       <div className="sidebar-header sidebar-header-gold">
@@ -85,7 +94,7 @@ const LearningProgramSidebar = ({
       </div>
 
       <div className="sidebar-content">
-        {/* Coach: Search input (only shown when setLearningGoalsSearch is provided) */}
+       {/* Coach: Search input (only shown when setLearningGoalsSearch is provided) */}
         {setLearningGoalsSearch && (
           <div style={{ marginBottom: '0.75rem' }}>
             <input
@@ -171,15 +180,56 @@ const LearningProgramSidebar = ({
                         {skillGoals.length > 0 ? (
                           skillGoals.map((goal, goalIndex) => {
                             const goalText = goal.goal || goal.name || goal.title || 'Untitled';
+                            const instructionsText =
+                              goal.delivery_instruction || goal.delivery_instructions || 'No instructions provided.';
+                            const goalKey = goal.id ?? goalIndex;
+                            const isExpanded = expandedGoals[goalKey];
+
                             return (
-                              <div key={goal.id ?? goalIndex} className="sidebar-list-item">
-                                <input
-                                  type="checkbox"
-                                  className="sidebar-checkbox"
-                                  checked={selectedProgramId === goal.id}
-                                  onChange={() => handleProgramCheck(goal.id)}
-                                />
-                                <div className="sidebar-item-text">Sub-program - {goalText}</div>
+                              <div key={goalKey} style={{ display: 'flex', flexDirection: 'column', marginBottom: '6px' }}>
+                                <div 
+                                  className="sidebar-list-item" 
+                                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                                    <input
+                                      type="checkbox"
+                                      className="sidebar-checkbox"
+                                      checked={selectedProgramId === goal.id}
+                                      onChange={() => handleProgramCheck(goal.id)}
+                                    />
+                                    <div className="sidebar-item-text">Sub-program - {goalText}</div>
+                                  </div>
+                                  
+                                  {/* Plus/Minus Toggle Icon */}
+                                  <div 
+                                    onClick={() => toggleGoalCollapse(goalKey)}
+                                    style={{ cursor: 'pointer', padding: '0 8px', fontSize: '14px', color: '#6b7280', userSelect: 'none' }}
+                                    title={isExpanded ? "Hide instructions" : "Show instructions"}
+                                  >
+                                    {isExpanded ? '➖' : '➕'}
+                                  </div>
+                                </div>
+                                
+                                {/* Collapsible Delivery Instruction Section */}
+                                {isExpanded && (
+                                  <div style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    marginTop: '4px',
+                                    backgroundColor: '#f9fafb',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '4px',
+                                    fontSize: '12px',
+                                    color: '#4b5563',
+                                    boxSizing: 'border-box'
+                                  }}>
+                                    <strong style={{ color: '#374151' }}>Delivery Instruction:</strong>
+                                    <div style={{ marginTop: '4px', whiteSpace: 'pre-wrap' }}>
+                                      {instructionsText || <span style={{ fontStyle: 'italic', color: '#9ca3af' }}>No instructions provided.</span>}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             );
                           })
@@ -211,15 +261,56 @@ const LearningProgramSidebar = ({
                     )}
                     {filteredLearningGoals.map((goal, index) => {
                       const goalText = goal.goal || goal.name || goal.title || 'Untitled';
+                      const instructionsText =
+                        goal.delivery_instruction || goal.delivery_instructions || 'No instructions provided.';
+                      const goalKey = goal.id ?? index;
+                      const isExpanded = expandedGoals[goalKey];
+
                       return (
-                        <div key={goal.id ?? index} className="sidebar-list-item">
-                          <input
-                            type="checkbox"
-                            className="sidebar-checkbox"
-                            checked={selectedProgramId === goal.id}
-                            onChange={() => handleProgramCheck(goal.id)}
-                          />
-                          <div className="sidebar-item-text">Sub-program - {goalText}</div>
+                        <div key={goalKey} style={{ display: 'flex', flexDirection: 'column', marginBottom: '6px' }}>
+                          <div 
+                            className="sidebar-list-item" 
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                              <input
+                                type="checkbox"
+                                className="sidebar-checkbox"
+                                checked={selectedProgramId === goal.id}
+                                onChange={() => handleProgramCheck(goal.id)}
+                              />
+                              <div className="sidebar-item-text">Sub-program - {goalText}</div>
+                            </div>
+
+                            {/* Plus/Minus Toggle Icon */}
+                            <div 
+                              onClick={() => toggleGoalCollapse(goalKey)}
+                              style={{ cursor: 'pointer', padding: '0 8px', fontSize: '14px', color: '#6b7280', userSelect: 'none' }}
+                              title={isExpanded ? "Hide instructions" : "Show instructions"}
+                            >
+                              {isExpanded ? '➖' : '➕'}
+                            </div>
+                          </div>
+
+                          {/* Collapsible Delivery Instruction Section */}
+                          {isExpanded && (
+                            <div style={{
+                              width: '100%',
+                              padding: '8px 12px',
+                              marginTop: '4px',
+                              backgroundColor: '#f9fafb',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              color: '#4b5563',
+                              boxSizing: 'border-box'
+                            }}>
+                              <strong style={{ color: '#374151' }}>Delivery Instruction:</strong>
+                              <div style={{ marginTop: '4px', whiteSpace: 'pre-wrap' }}>
+                                {instructionsText}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

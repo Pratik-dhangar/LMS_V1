@@ -63,6 +63,7 @@ class LearningGoalInSession(BaseModel):
     id: int
     goal: str
     goal_description: Optional[str]
+    delivery_instruction: Optional[str] = None
     # Include prompt and reinforcement values from session reports
     prompt_meter: Optional[str] = None
     reinforcement_meter: Optional[str] = None

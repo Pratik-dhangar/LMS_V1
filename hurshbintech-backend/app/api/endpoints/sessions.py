@@ -193,6 +193,7 @@ async def build_session_response(db: AsyncSession, session: TrainingSession) -> 
                 "id": goal.id,
                 "goal": goal.goal,
                 "goal_description": goal.goal_description,
+                "delivery_instruction": goal.delivery_instruction,
                 "prompt_meter": report_map.get(goal.id, {}).get("prompt_meter"),
                 "reinforcement_meter": report_map.get(goal.id, {}).get("reinforcement_meter")
             }
