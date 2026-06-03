@@ -94,6 +94,14 @@ class Settings(BaseSettings):
     SENDER_EMAIL: str = "noreply@hurshbintech.com"
     ENABLE_EMAIL: bool = True  # Toggle email sending on/off
     
+    # Twilio WhatsApp Configuration
+    ENABLE_TWILIO_WHATSAPP: bool = False
+    TWILIO_ACCOUNT_SID: Optional[str] = None
+    TWILIO_AUTH_TOKEN: Optional[str] = None
+    TWILIO_WHATSAPP_FROM_NUMBER: Optional[str] = "whatsapp:+18257824594"
+    TWILIO_WHATSAPP_TEMPLATE_SID: Optional[str] = None
+
+    
     # Email Assets (Images, QR Codes)
     # These should point to your CDN or public S3 bucket URLs
     UPI_QR_CODE_URL: str = "https://hurshbin.com/upi-qr.jpeg"  # Default UPI QR code image URL
@@ -108,6 +116,8 @@ class Settings(BaseSettings):
 
     # Free Appointment Notification
     FREE_APPOINTMENT_NOTIFICATION_EMAIL: Optional[str] = None
+    FREE_APPOINTMENT_WHATSAPP_RECIPIENT: str = "+917039757304"
+    FREE_APPOINTMENT_WHATSAPP_TEMPLATE_SID: str = "HX6f430c5f00cf6a2e7bbbb33359175061"
 
     # Redis Cache Configuration
     REDIS_ENABLED: bool = False  # Enable/disable Redis caching
