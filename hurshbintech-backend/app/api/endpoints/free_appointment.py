@@ -15,6 +15,7 @@ from app.schemas.free_appointment import (
     FreeAppointmentResponse,
 )
 from app.services.email_service import EmailService
+from app.services.twilio_whatsapp import TwilioWhatsAppService
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,33 @@ async def submit_free_appointment(
         except Exception as email_error:
             logger.error(
                 f"✗ Failed to send free appointment notification email: {str(email_error)}"
+            )
+
+        # Send notification WhatsApp to the fixed recipient
+        try:
+            whatsapp_recipient = settings.FREE_APPOINTMENT_WHATSAPP_RECIPIENT
+            template_sid = settings.FREE_APPOINTMENT_WHATSAPP_TEMPLATE_SID
+
+            content_variables = {
+                "1": str(payload.child_name),
+                "2": str(payload.age),
+                "3": str(payload.concerns or "N/A"),
+                "4": str(payload.diagnosis or "N/A"),
+                "5": str(payload.address or "N/A"),
+                "6": str(payload.contact_number),
+                "7": str(payload.reference_by or "N/A")
+            }
+
+            logger.info(f"Attempting to send free appointment WhatsApp notification to {whatsapp_recipient}...")
+            wa_result = await TwilioWhatsAppService.send_template_message(
+                to_number=whatsapp_recipient,
+                content_sid=template_sid,
+                content_variables=content_variables
+            )
+            logger.info(f"✓ Free appointment WhatsApp notification result: {wa_result}")
+        except Exception as wa_error:
+            logger.error(
+                f"✗ Failed to send free appointment WhatsApp notification: {str(wa_error)}"
             )
 
         return appointment
