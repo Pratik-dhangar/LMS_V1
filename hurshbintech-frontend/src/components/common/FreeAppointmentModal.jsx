@@ -129,7 +129,7 @@ const FreeAppointmentModal = ({ isOpen, onClose }) => {
           <button className="free-appointment-close" onClick={handleClose} aria-label="Close">
             ✕
           </button>
-          <h2>📅 Free Appointment</h2>
+          <h2>Free Appointment</h2>
           <p>Fill in the details below and we'll get back to you</p>
         </div>
 
