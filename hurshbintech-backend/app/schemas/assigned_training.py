@@ -21,6 +21,7 @@ class AssignedTrainingBase(BaseModel):
     training_files: Optional[List[TrainingFileInfo]] = Field(default_factory=list)  # List of uploaded files
     training_ref_ids: Optional[List[int]] = Field(default_factory=list)
     target_roles: List[str] = Field(...)  # e.g., ["all"], ["admin", "head"], etc.
+    target_user_ids: Optional[List[int]] = Field(default_factory=list)  # Specific user IDs
     active: bool = Field(default=True)
     custom_metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
@@ -38,6 +39,7 @@ class AssignedTrainingUpdate(BaseModel):
     custom_content: Optional[str] = None
     training_ref_ids: Optional[List[int]] = None
     target_roles: Optional[List[str]] = None
+    target_user_ids: Optional[List[int]] = None
     active: Optional[bool] = None
     custom_metadata: Optional[Dict[str, Any]] = None
 

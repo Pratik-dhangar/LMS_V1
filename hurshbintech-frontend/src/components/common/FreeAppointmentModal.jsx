@@ -197,7 +197,7 @@ const FreeAppointmentModal = ({ isOpen, onClose }) => {
 
             {/* Diagnosis */}
             <div className="free-appointment-field">
-              <label>Diagnosis</label>
+              <label>Diagnosis (if any)</label>
               <input
                 type="text"
                 name="diagnosis"

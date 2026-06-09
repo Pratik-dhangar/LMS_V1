@@ -517,6 +517,7 @@ async def create_training_with_files(
     description: Optional[str] = Form(None),
     custom_content: Optional[str] = Form(None),
     target_roles: str = Form(..., description="JSON array of roles, e.g. ['all'] or ['admin','coach']"),
+    target_user_ids: Optional[str] = Form(None, description="JSON array of specific user IDs, e.g. [1, 2, 3]"),
     active: bool = Form(True),
     training_ref_ids: Optional[str] = Form(None, description="JSON array of training reference IDs"),
     custom_metadata: Optional[str] = Form(None, description="JSON object of custom metadata"),
@@ -533,6 +534,7 @@ async def create_training_with_files(
         normalized_roles = [role.lower() for role in parsed_roles]
         
         parsed_ref_ids = json.loads(training_ref_ids) if training_ref_ids else []
+        parsed_target_user_ids = json.loads(target_user_ids) if target_user_ids else []
         parsed_metadata = json.loads(custom_metadata) if custom_metadata else {}
         
         # Step 1: Create training first (without files)
@@ -543,6 +545,7 @@ async def create_training_with_files(
             custom_content=custom_content,
             training_ref_ids=parsed_ref_ids,
             target_roles=normalized_roles,
+            target_user_ids=parsed_target_user_ids,
             assigned_by_admin=current_admin.id,
             featured_image_url=None,  # Will update after upload
             training_files=[],  # Will update after upload
@@ -639,6 +642,7 @@ async def create_assigned_training(
             custom_content=payload.custom_content,
             training_ref_ids=payload.training_ref_ids,
             target_roles=normalized_roles,
+            target_user_ids=payload.target_user_ids,
             assigned_by_admin=current_admin.id,
             featured_image_url=payload.featured_image_url,
             training_files=training_files_list,
@@ -829,6 +833,7 @@ async def get_my_assigned_trainings(
     trainings, total = await assigned_training_crud.get_trainings_for_user(
         db,
         user_role=user_role,
+        user_id=current_user.id,
         skip=skip,
         limit=limit,
         active_only=True,
@@ -888,7 +893,14 @@ async def get_assigned_training_for_user(
     user_role = current_user.role.value if hasattr(current_user.role, 'value') else str(current_user.role)
     normalized_role = user_role.lower()
     
-    has_access = "all" in training.target_roles or normalized_role in training.target_roles
+    # If target_user_ids is populated, user must be in it.
+    # Otherwise, user role must be in target_roles or 'all' in target_roles.
+    target_user_ids = training.target_user_ids or []
+    if target_user_ids:
+        has_access = current_user.id in target_user_ids
+    else:
+        has_access = "all" in training.target_roles or normalized_role in training.target_roles
+        
     if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

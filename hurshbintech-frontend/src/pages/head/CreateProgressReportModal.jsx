@@ -209,7 +209,7 @@ const CreateProgressReportModal = ({ learnerId = null, learnerName = '', onClose
             onClose();
         } catch (error) {
             console.error('Error creating report:', error);
-            const msg = error.response?.data?.detail || 'Failed to create report';
+            const msg = error.response?.data?.detail || 'Failed to Comprehensive Report';
             toast.error(msg);
         } finally {
             setSaving(false);

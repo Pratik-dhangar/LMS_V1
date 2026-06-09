@@ -368,7 +368,7 @@ const TodaysSchedule = ({ embedded = false }) => {
                                 Scheduled:{" "}
                                 {new Date(
                                   session.scheduled_date
-                                ).toLocaleString()}
+                                ).toLocaleDateString('en-GB')}
                               </div>
                             )}
                           </div>
@@ -520,7 +520,7 @@ const TodaysSchedule = ({ embedded = false }) => {
                     const payload = {
                       learner_id: parseInt(scheduleForm.learner_id),
                       title: scheduleForm.title || undefined,
-                      scheduled_date: scheduleForm.scheduled_date + ':00',
+                      scheduled_date: scheduleForm.scheduled_date ,
                       duration: parseInt(scheduleForm.duration) || 60,
                     };
                     await sessionService.createSession(payload);
@@ -586,17 +586,6 @@ const TodaysSchedule = ({ embedded = false }) => {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric'
-                      })
-                      : "—"}
-                  </p>
-                </div>
-                <div className="app-modal-form-field">
-                  <label className="app-modal-form-label">Time</label>
-                  <p className="app-modal-text">
-                    {selectedSession.scheduled_date
-                      ? new Date(selectedSession.scheduled_date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit"
                       })
                       : "—"}
                   </p>
