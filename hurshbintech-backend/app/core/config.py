@@ -118,6 +118,7 @@ class Settings(BaseSettings):
     FREE_APPOINTMENT_NOTIFICATION_EMAIL: Optional[str] = None
     FREE_APPOINTMENT_WHATSAPP_RECIPIENT: str = "+917039757304"
     FREE_APPOINTMENT_WHATSAPP_TEMPLATE_SID: str = "HX6f430c5f00cf6a2e7bbbb33359175061"
+    USER_FREE_APPOINTMENT_WHATSAPP_TEMPLATE_SID: str = "HXcfb8278b2c476d55cf4ee92ebf32c56a"
 
     # Redis Cache Configuration
     REDIS_ENABLED: bool = False  # Enable/disable Redis caching
