@@ -7,6 +7,7 @@ import { ArrowLeft, Upload, Loader2, X, File } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
 import assignedTrainingService from "../../api/services/assignedTrainingService";
+import adminService from "../../api/services/adminService";
 import "../../styles/admin/CreateAssignedTraining.css";
 
 
@@ -31,6 +32,7 @@ const CreateAssignedTraining = () => {
         training_files: [],  // Store uploaded files
         training_ref_ids: [],
         target_roles: ["all"],
+        target_user_ids: [],
         active: true,
         custom_metadata: {},
     });
@@ -43,6 +45,9 @@ const CreateAssignedTraining = () => {
     const [errors, setErrors] = useState({});
     const trainingFilesInputRef = React.useRef(null);
     const featuredImageInputRef = React.useRef(null);
+
+    const [allUsers, setAllUsers] = useState([]);
+    const [userSearchQuery, setUserSearchQuery] = useState("");
 
     const roles = [
         { id: "all", label: "All Users" },
@@ -60,6 +65,33 @@ const CreateAssignedTraining = () => {
         }
     }, [isEditMode, id]);
 
+    // Fetch all users for specific assignments
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const [heads, coaches, trainers, learners] = await Promise.all([
+                    adminService.getAllHeads().catch(() => []),
+                    adminService.getAllConsultants().catch(() => []),
+                    adminService.getAllTrainers().catch(() => []),
+                    adminService.getAllLearners().catch(() => [])
+                ]);
+
+                const mapUsers = (users, role) => users.map(u => ({ id: u.user_id || u.id, name: u.name, email: u.email, role }));
+                
+                const combined = [
+                    ...mapUsers(heads, "head"),
+                    ...mapUsers(coaches, "coach"),
+                    ...mapUsers(trainers, "trainer"),
+                    ...mapUsers(learners, "learner")
+                ];
+                setAllUsers(combined);
+            } catch (error) {
+                console.error("Failed to fetch users", error);
+            }
+        };
+        fetchUsers();
+    }, []);
+
     const loadTraining = async () => {
         setLoading(true);
         try {
@@ -70,6 +102,7 @@ const CreateAssignedTraining = () => {
                 training_files: [],  // Files are handled separately now
                 training_ref_ids: training.training_ref_ids || [],
                 target_roles: training.target_roles || ["all"],
+                target_user_ids: training.target_user_ids || [],
                 active: training.active !== false,
                 custom_metadata: training.custom_metadata || {},
             });
@@ -233,6 +266,7 @@ const CreateAssignedTraining = () => {
                     custom_content: formData.custom_content,
                     training_ref_ids: formData.training_ref_ids,
                     target_roles: formData.target_roles,
+                    target_user_ids: formData.target_user_ids,
                     active: formData.active,
                     featured_image_url: null,
                     training_files: [],
@@ -281,6 +315,9 @@ const CreateAssignedTraining = () => {
                 formDataPayload.append('title', formData.title);
                 formDataPayload.append('description', formData.description);
                 formDataPayload.append('target_roles', JSON.stringify(formData.target_roles));
+                if (formData.target_user_ids && formData.target_user_ids.length > 0) {
+                    formDataPayload.append('target_user_ids', JSON.stringify(formData.target_user_ids));
+                }
                 formDataPayload.append('active', formData.active);
 
                 if (formData.custom_content) {
@@ -455,11 +492,11 @@ const CreateAssignedTraining = () => {
                             <h2 className="section-title">Thumbnail Image</h2>
                             <div className="featured-image-container">
                                 {featuredImagePreview ? (
-                                    <div className="image-preview">
+                                    <div className="f-image-preview">
                                         <img
                                             src={featuredImagePreview}
                                             alt="Featured"
-                                            className="preview-image"
+                                            className="f-preview-image"
                                         />
                                         <button
                                             type="button"
@@ -618,6 +655,58 @@ const CreateAssignedTraining = () => {
                                     </label>
                                 ))}
                             </div>
+                            
+                            {!formData.target_roles.includes("all") && formData.target_roles.length > 0 && (
+                                <div className="specific-users-section mt-4" style={{ marginTop: '1rem' }}>
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 500, marginBottom: '0.5rem' }}>Assign to Specific Users (Optional)</h3>
+                                    <p className="section-description" style={{ marginBottom: '1rem' }}>
+                                        If you leave this blank, the training will be assigned to <b>all users</b> in the selected roles.
+                                        If you select specific users below, it will <b>only</b> be assigned to those users.
+                                    </p>
+                                    
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search users by name..." 
+                                        className="form-input"
+                                        style={{ marginBottom: '1rem' }}
+                                        value={userSearchQuery}
+                                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                                    />
+                                    
+                                    <div className="users-list-scrollable" style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '0.375rem', padding: '1rem', backgroundColor: '#f9fafb' }}>
+                                        {allUsers
+                                            .filter(u => formData.target_roles.includes(u.role))
+                                            .filter(u => u.name?.toLowerCase().includes(userSearchQuery.toLowerCase()))
+                                            .slice(0, 5)
+                                            .map(user => (
+                                                <label key={user.id} className="role-checkbox" style={{ display: 'flex', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.target_user_ids?.includes(user.id) || false}
+                                                        onChange={(e) => {
+                                                            const checked = e.target.checked;
+                                                            setFormData(prev => {
+                                                                const newIds = checked 
+                                                                    ? [...(prev.target_user_ids || []), user.id]
+                                                                    : (prev.target_user_ids || []).filter(id => id !== user.id);
+                                                                return { ...prev, target_user_ids: newIds };
+                                                            });
+                                                        }}
+                                                    />
+                                                    <span style={{ marginLeft: '0.5rem' }}>{user.name} <span style={{color: '#6b7280', fontSize: '0.85em', textTransform: 'capitalize'}}>({user.role})</span></span>
+                                                </label>
+                                        ))}
+                                        {allUsers.filter(u => formData.target_roles.includes(u.role)).length === 0 && (
+                                            <p className="text-sm text-gray-500">No users found for the selected roles.</p>
+                                        )}
+                                        {allUsers.filter(u => formData.target_roles.includes(u.role)).length > 0 && 
+                                         allUsers.filter(u => formData.target_roles.includes(u.role) && u.name?.toLowerCase().includes(userSearchQuery.toLowerCase())).length === 0 && (
+                                            <p className="text-sm text-gray-500">No users match your search.</p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {errors.target_roles && (
                                 <span className="form-error">{errors.target_roles}</span>
                             )}

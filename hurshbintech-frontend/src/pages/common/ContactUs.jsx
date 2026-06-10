@@ -128,7 +128,7 @@ const ContactUs = () => {
         <div className="contact-page-wrapper">
             {/* Floating WhatsApp Button */}
             <a
-                href="https://wa.me/911234567890"
+                href="https://wa.me/918928765520"
                 className="whatsapp-float"
                 target="_blank"
                 rel="noopener noreferrer"

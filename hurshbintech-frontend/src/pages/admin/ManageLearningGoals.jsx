@@ -258,71 +258,6 @@ const ManageLearningGoals = () => {
             ))}
           </select>
         </div>
-
-        <div className="table-pagination">
-          <div className="pagination-info">
-            Showing {startItem}-{endItem} of {activeRecords.length}
-          </div>
-          {totalPages > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="table-pagination-btn"
-              >
-                Previous
-              </button>
-
-              <div className="table-pagination-pages">
-                {[...Array(totalPages)].map((_, index) => {
-                  const pageNum = index + 1;
-
-                  if (
-                    pageNum === 1 ||
-                    pageNum === totalPages ||
-                    (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                  ) {
-                    return (
-                      <button
-                        type="button"
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`table-pagination-page ${currentPage === pageNum ? "active" : ""}`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  }
-
-                  if (
-                    pageNum === currentPage - 2 ||
-                    pageNum === currentPage + 2
-                  ) {
-                    return (
-                      <span key={pageNum} className="table-pagination-ellipsis">
-                        ...
-                      </span>
-                    );
-                  }
-
-                  return null;
-                })}
-              </div>
-
-              <button
-                type="button"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                }
-                disabled={currentPage === totalPages}
-                className="table-pagination-btn"
-              >
-                Next
-              </button>
-            </>
-          )}
-        </div>
       </div>
     );
   };
@@ -712,23 +647,7 @@ const ManageLearningGoals = () => {
                     }
                   />
                 </div>
-                <div className="app-modal-form-field">
-                  <label className="app-modal-form-label">
-                    Delivery Instructions
-                  </label>
-                  <textarea
-                    className="app-modal-form-textarea"
-                    placeholder="Enter delivery instructions"
-                    rows="4"
-                    value={formData.delivery_instruction}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        delivery_instruction: e.target.value,
-                      })
-                    }
-                  />
-                </div>
+                
               </div>
 
               <div className="app-modal-footer">

@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import Spinner from "../components/common/Spinner";
 import { CoachSkeleton, ServiceCardsSkeleton, ContentSectionSkeleton } from "../components/common/SkeletonLoader";
 import PWAInstallButton from '../components/common/PWAInstallButton';
+import CallPopup from '../components/common/CallPopup';
 import aboutUsService from '../api/services/aboutUsService';
 import bookingService from '../api/services/bookingService';
 import blogService from '../api/services/blogService';
@@ -806,7 +807,38 @@ const Home = () => {
             </defs>
           </svg>
         </a>
+        
+        {/* LinkedIn */}
+        <a
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="linkedin-float-btn"
+          aria-label="Follow us on LinkedIn"
+        >
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5.5" ry="5.5" fill="#0A66C2" />
+            <path d="M8 17v-7H6v7h2zm-1-8.2c.7 0 1.2-.5 1.2-1.2s-.5-1.2-1.2-1.2-1.2.5-1.2 1.2.5 1.2 1.2 1.2zm10 8.2v-4c0-2.2-1.2-3.2-2.8-3.2-1.3 0-1.9.7-2.2 1.2v-1H10c.1.7 0 7 0 7h2v-4c0-.2 0-.4.1-.6.2-.4.6-.9 1.3-.9 1 0 1.3.7 1.3 1.8v3.7h2z" fill="#fff" />
+          </svg>
+        </a>
+
+        {/* YouTube */}
+        <a
+          href="#"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="youtube-float-btn"
+          aria-label="Subscribe to our YouTube channel"
+        >
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <rect x="2" y="2" width="20" height="20" rx="5.5" ry="5.5" fill="#FF0000" />
+            <path d="M10 15l5-3-5-3v6z" fill="#fff" />
+          </svg>
+        </a>
       </div>
+
+      {/* Call Us Popup and floating button */}
+      <CallPopup />
 
       {/* Scroll to Top Button */}
       {showScrollTop && (

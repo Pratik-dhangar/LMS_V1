@@ -3,7 +3,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, BookOpen, MessageSquare, UserCog, BarChart3, Calendar, CreditCard } from 'lucide-react';
+import { Users, BookOpen, MessageSquare, UserCog, BarChart3, Calendar, CreditCard, BookMarked } from 'lucide-react';
 import '../../styles/admin/index.css';
 
 // Head Dashboard Component
@@ -17,6 +17,8 @@ const HeadDashboard = () => {
     { id: '3', title: 'Manage Learnings', description: 'View and manage ILP, HLP and HP', icon: BookOpen, onClick: () => navigate('/head/manage-sessions') },
     { id: '4', title: 'Manage Learner Subscriptions', description: 'Assign and manage learner subscriptions', icon: CreditCard, onClick: () => navigate('/head/subscriptions/learners') },
     { id: '5', title: 'Manage Learning Progress', description: 'View and analyze learner session reports and progress', icon: BarChart3, onClick: () => navigate('/head/reports') },
+    { id: '6', title: 'Assigned Training', description: 'View trainings assigned to you', icon: BookMarked, onClick: () => navigate('/assigned-trainings') },
+    { id: '7', title: 'Migrate Student', description: 'Transfer a student to another head', icon: UserCog, onClick: () => navigate('/head/migrate-student') },
   ];
 
   return (

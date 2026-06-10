@@ -61,7 +61,7 @@ import ReportCard from './pages/head/ReportCard';
 import LearnerReports from './pages/head/LearnerReports';
 import LearnerProgramsView from './pages/head/LearnerProgramsView';
 import ProgramGraphView from './pages/head/ProgramGraphView';
-
+import MigrateStudent from './pages/head/MigrateStudent';
 
 // Trainer Pages
 import TrainerDashboard from './pages/trainer/Dashboard';
@@ -681,6 +681,14 @@ function AppRoutes() {
             element={
               <ProtectedRoute allowedRoles={['head']}>
                 <ProfileAndOrderHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/head/migrate-student"
+            element={
+              <ProtectedRoute allowedRoles={['head']}>
+                <MigrateStudent />
               </ProtectedRoute>
             }
           />

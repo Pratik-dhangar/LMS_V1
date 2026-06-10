@@ -218,17 +218,19 @@
     cursor: pointer;
 }
 
-.image-preview {
+.f-image-preview {
     position: relative;
     display: flex;
     justify-content: center;
-    width: 100%;
+    width: fit-content;
 }
 
-.preview-image {
-    width: 35rem;
-    height: 25rem;
-    object-fit: cover;
+.f-preview-image {
+    max-width: 100%;
+    max-height: 250px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
     border-radius: 8px;
     border: 1px solid #e5e7eb;
     display: block;

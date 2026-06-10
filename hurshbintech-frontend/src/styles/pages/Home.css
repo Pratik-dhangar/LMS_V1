@@ -932,6 +932,54 @@
   transform: scale(0.95);
 }
 
+/* LinkedIn Float Button */
+.linkedin-float-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0.9;
+}
+
+.linkedin-float-btn svg {
+  width: 3rem;
+  height: 3rem;
+}
+
+.linkedin-float-btn:hover {
+  transform: scale(1.15);
+  opacity: 1;
+}
+
+.linkedin-float-btn:active {
+  transform: scale(0.95);
+}
+
+/* YouTube Float Button */
+.youtube-float-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  opacity: 0.9;
+}
+
+.youtube-float-btn svg {
+  width: 3rem;
+  height: 3rem;
+}
+
+.youtube-float-btn:hover {
+  transform: scale(1.15);
+  opacity: 1;
+}
+
+.youtube-float-btn:active {
+  transform: scale(0.95);
+}
+
 /* Mobile: no box, icons float above chat widget */
 @media (max-width: 640px) {
   .social-float-container {
@@ -947,7 +995,9 @@
   }
 
   .whatsapp-float-btn,
-  .instagram-float-btn {
+  .instagram-float-btn,
+  .linkedin-float-btn,
+  .youtube-float-btn {
     width: 3rem;
     height: 3rem;
     border-radius: 999px;
@@ -960,7 +1010,9 @@
     height: 2.1rem;
   }
 
-  .instagram-float-btn svg {
+  .instagram-float-btn svg,
+  .linkedin-float-btn svg,
+  .youtube-float-btn svg {
     width: 1.85rem;
     height: 1.85rem;
   }

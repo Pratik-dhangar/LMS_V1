@@ -1,0 +1,206 @@
+/* CallPopup.css */
+
+/* Overlay for the popup */
+.call-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: callPopupFadeIn 0.3s ease-out;
+}
+
+@keyframes callPopupFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Modal container */
+.call-popup-container {
+  position: relative;
+  background-color: #ffffff;
+  width: 90%;
+  max-width: 350px;
+  border-radius: 16px;
+  padding: 30px 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: callPopupSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes callPopupSlideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Close Button */
+.call-popup-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #888;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.call-popup-close-btn:hover {
+  color: #333;
+}
+
+/* Modal Content */
+.call-popup-icon-wrapper {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #28a745, #218838);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 15px;
+  color: white;
+  font-size: 1.8rem;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+}
+
+.call-popup-title {
+  margin: 0 0 10px;
+  font-size: 1.5rem;
+  color: #333;
+  font-weight: 700;
+}
+
+.call-popup-text {
+  margin: 0 0 20px;
+  color: #666;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+/* Action Button */
+.call-popup-action-btn {
+  background: linear-gradient(135deg, #28a745, #218838);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 10px rgba(40, 167, 69, 0.2);
+}
+
+.call-popup-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(40, 167, 69, 0.3);
+}
+
+/* Floating Button (Above WhatsApp) */
+.call-float-btn {
+  position: fixed;
+  bottom: 85px; /* Adjust this to sit above WhatsApp (which is typically at 20px or 30px) */
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #28a745, #218838);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 998;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+  animation: callFloatPulse 2s infinite;
+}
+
+@keyframes callFloatPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(40, 167, 69, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+  }
+}
+
+/* Assuming the existing whatsapp-float-btn is at bottom: 20px, we place this at bottom: 85px */
+
+.call-float-btn:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  color: #fff;
+}
+
+.call-float-tooltip {
+  position: absolute;
+  right: 65px;
+  background-color: #333;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  pointer-events: none;
+}
+
+/* Tooltip Arrow */
+.call-float-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent transparent #333;
+}
+
+.call-float-btn:hover .call-float-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Media Queries for Mobile Adjustments */
+@media (max-width: 768px) {
+  .call-float-btn {
+    bottom: 80px;
+    right: 15px;
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+  }
+  
+  .call-popup-container {
+    padding: 25px 15px;
+  }
+}

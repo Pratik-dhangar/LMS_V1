@@ -359,21 +359,6 @@ const CreateProgram = () => {
                                         required
                                     />
                                 </div>
-                                {/* <div>
-                                    <label className="modern-form-label">Skill</label>
-                                    <select
-                                        value={formData.skill}
-                                        onChange={(e) => setFormData((prev) => ({ ...prev, skill: e.target.value }))}
-                                        className="modern-form-input"
-                                    >
-                                        <option value="">Select learning skill</option>
-                                        {learningSkills.map((skill) => (
-                                            <option key={skill.id} value={skill.skill_name}>
-                                                {skill.skill_name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div> */}
                             </div>
                         </div>
 
@@ -527,46 +512,6 @@ const CreateProgram = () => {
                                                                     })}
                                                                 </div>
 
-                                                                {totalPages > 1 && (
-                                                                    <div className="skill-pagination-row">
-                                                                        <div className="pagination-info skill-pagination-info">
-                                                                            Showing {startItem}-{endItem} of {filteredSubPrograms.length}
-                                                                        </div>
-                                                                        <div className="skill-pagination-controls">
-                                                                            <button
-                                                                                type="button"
-                                                                                className="table-pagination-btn"
-                                                                                onClick={() => setSubProgramPage(skill.id, Math.max(currentPage - 1, 1))}
-                                                                                disabled={currentPage === 1}
-                                                                            >
-                                                                                Previous
-                                                                            </button>
-                                                                            <div className="table-pagination-pages">
-                                                                                {[...Array(totalPages)].map((_, index) => {
-                                                                                    const pageNum = index + 1;
-                                                                                    return (
-                                                                                        <button
-                                                                                            key={pageNum}
-                                                                                            type="button"
-                                                                                            className={`table-pagination-page ${currentPage === pageNum ? "active" : ""}`}
-                                                                                            onClick={() => setSubProgramPage(skill.id, pageNum)}
-                                                                                        >
-                                                                                            {pageNum}
-                                                                                        </button>
-                                                                                    );
-                                                                                })}
-                                                                            </div>
-                                                                            <button
-                                                                                type="button"
-                                                                                className="table-pagination-btn"
-                                                                                onClick={() => setSubProgramPage(skill.id, Math.min(currentPage + 1, totalPages))}
-                                                                                disabled={currentPage === totalPages}
-                                                                            >
-                                                                                Next
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
                                                             </div>
                                                         )}
                                                     </div>

@@ -785,6 +785,40 @@ async def get_learners_by_head(db: AsyncSession, head_id: int):
     return learners
 
 
+async def migrate_learner_to_head(db: AsyncSession, learner_profile_id: int, current_head_profile_id: int, new_head_profile_id: int):
+    """Migrate a learner to a new head"""
+    from app.models.subscription import LearnerSubscription
+    from sqlalchemy import update
+    
+    learner = await get_learner_by_id(db, learner_profile_id)
+    if not learner:
+        raise ValueError("Learner not found")
+        
+    if learner.created_by_head_id != current_head_profile_id:
+        raise ValueError("Not authorized to migrate this learner")
+        
+    new_head = await get_head_by_id(db, new_head_profile_id)
+    if not new_head:
+        raise ValueError("Destination head not found")
+        
+    # Update learner's head
+    learner.created_by_head_id = new_head_profile_id
+    
+    # Update active subscriptions for this learner to point to the new head
+    new_head_user_id = new_head.user_id
+    learner_user_id = learner.user_id
+    
+    await db.execute(
+        update(LearnerSubscription)
+        .where(LearnerSubscription.learner_id == learner_user_id)
+        .values(current_head_id=new_head_user_id)
+    )
+    
+    await db.commit()
+    await db.refresh(learner)
+    return learner
+
+
 async def create_learner(db: AsyncSession, learner_data: LearnerCreate, created_by_head_id: int):
     """Create a new learner with User and LearnerProfile records"""
     # Check if email already exists

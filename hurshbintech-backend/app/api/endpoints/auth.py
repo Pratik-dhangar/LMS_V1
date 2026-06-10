@@ -1,4 +1,4 @@
-﻿"""
+"""
 Authentication API Endpoints
 Handles user authentication for all roles (admin, head, trainer, consultant)
 Validates credentials and issues JWT tokens for authenticated users
@@ -115,29 +115,31 @@ async def user_login(request: Request, credentials: UserLogin, db: AsyncSession 
             device_type=credentials.device_type,
             browser_info=credentials.browser_info,
             ip_address=credentials.ip_address or str(request.client.host if request.client else "unknown"),
+            role=role_lower,
         )
         
         logger.info(f"[DEVICE_SESSION] Created device session ID={device_session.id} for user {user_id}")
         
-        # Notify other devices that they've been logged out
+        # Notify other devices that they've been logged out (except for admins)
         # This runs in background (fire and forget) to not block login response
-        try:
-            # Import asyncio here to avoid circular imports
-            import asyncio
-            
-            async def notify_devices():
-                try:
-                    await session_connection_manager.notify_session_invalidated(
-                        user_id=user_id,
-                        active_device_id=device_id
-                    )
-                except Exception as e:
-                    logger.error(f"[DEVICE_SESSION] Failed to notify other devices: {e}")
-            
-            # Schedule notification in background without awaiting
-            asyncio.create_task(notify_devices())
-        except Exception as e:
-            logger.error(f"[DEVICE_SESSION] Error scheduling device notification: {e}")
+        if role_lower != "admin":
+            try:
+                # Import asyncio here to avoid circular imports
+                import asyncio
+                
+                async def notify_devices():
+                    try:
+                        await session_connection_manager.notify_session_invalidated(
+                            user_id=user_id,
+                            active_device_id=device_id
+                        )
+                    except Exception as e:
+                        logger.error(f"[DEVICE_SESSION] Failed to notify other devices: {e}")
+                
+                # Schedule notification in background without awaiting
+                asyncio.create_task(notify_devices())
+            except Exception as e:
+                logger.error(f"[DEVICE_SESSION] Error scheduling device notification: {e}")
         
         # ============ END DEVICE SESSION MANAGEMENT ============
 

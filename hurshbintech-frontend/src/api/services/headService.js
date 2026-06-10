@@ -218,6 +218,26 @@ const headService = {
     return response.data;
   },
 
+  /**
+   * Get all active heads for migration
+   * @returns {Promise}
+   */
+  getActiveHeadsList: async () => {
+    const response = await axiosInstance.get('/head/heads-list');
+    return response.data;
+  },
+
+  /**
+   * Migrate a learner to a new head
+   * @param {number} learnerId
+   * @param {number} newHeadId
+   * @returns {Promise}
+   */
+  migrateLearner: async (learnerId, newHeadId) => {
+    const response = await axiosInstance.post(`/head/learners/${learnerId}/migrate`, { new_head_id: newHeadId });
+    return response.data;
+  },
+
   // Coach Management APIs (ADMIN ONLY)
   /**
    * Create a new Coach (ADMIN ONLY - use /admin/coaches instead)
