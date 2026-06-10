@@ -28,6 +28,7 @@ async def create_device_session(
     device_type: str = None,
     browser_info: str = None,
     ip_address: str = None,
+    role: str = None,
 ) -> DeviceSession:
     """
     Create a new device session for a user.
@@ -35,8 +36,9 @@ async def create_device_session(
     """
     logger.info(f"[DEVICE_SESSION] Creating new session for user_id={user_id}, device_id={device_id}")
     
-    # Deactivate any active session for this user
-    await deactivate_all_active_sessions(db, user_id)
+    # Deactivate any active session for this user, unless they are an admin
+    if role != "admin":
+        await deactivate_all_active_sessions(db, user_id)
     
     # Create new device session
     token_hash = hash_token(access_token)

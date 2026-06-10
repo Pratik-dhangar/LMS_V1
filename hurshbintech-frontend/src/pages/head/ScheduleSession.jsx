@@ -41,7 +41,8 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
   const contentSentinelRef = useRef(null);
   const CONTENT_PAGE_SIZE = 12;
   const [contentVisibleCount, setContentVisibleCount] = useState(CONTENT_PAGE_SIZE);
-  const GOALS_PAGE_SIZE = 5;
+  const PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50];
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [goalCurrentPage, setGoalCurrentPage] = useState(1);
 
   const [formData, setFormData] = useState({
@@ -528,10 +529,10 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
     ]
     : filteredGoals;
 
-  const goalTotalPages = Math.max(1, Math.ceil(sortedFilteredGoals.length / GOALS_PAGE_SIZE));
+  const goalTotalPages = Math.max(1, Math.ceil(sortedFilteredGoals.length / itemsPerPage));
   const paginatedGoals = sortedFilteredGoals.slice(
-    (goalCurrentPage - 1) * GOALS_PAGE_SIZE,
-    goalCurrentPage * GOALS_PAGE_SIZE
+    (goalCurrentPage - 1) * itemsPerPage,
+    goalCurrentPage * itemsPerPage
   );
 
   useEffect(() => {
@@ -558,6 +559,40 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
     }
 
     navigate(isTrainerMode ? "/trainer/dashboard" : "/head/manage-sessions");
+  };
+
+  const renderPagination = () => {
+    if (sortedFilteredGoals.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="table-pagination-section">
+        <div className="table-pagination-size-row">
+          <label
+            htmlFor="learning-goals-page-size"
+            className="table-pagination-size-label"
+          >
+            Rows per page:
+          </label>
+          <select
+            id="learning-goals-page-size"
+            className="table-pagination-size-select"
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setGoalCurrentPage(1);
+            }}
+          >
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    );
   };
 
   if (loadingData) {
@@ -608,7 +643,7 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
       </div>
     );
   }
-
+  
   return (
     <div className={rootClassName}>
       <div className="page-main">
@@ -994,8 +1029,8 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
                                   const unselGoals = sortedFilteredGoals.filter((g) => !formData.goal_ids.includes(g.id));
                                   const showDivider = selectedProgramId && selGoals.length > 0 && unselGoals.length > 0;
                                   const firstUnselId = unselGoals[0]?.id;
-                                  const startItem = (goalCurrentPage - 1) * GOALS_PAGE_SIZE + 1;
-                                  const endItem = Math.min(goalCurrentPage * GOALS_PAGE_SIZE, sortedFilteredGoals.length);
+                                  const startItem = (goalCurrentPage - 1) * itemsPerPage + 1;
+                                  const endItem = Math.min(goalCurrentPage * itemsPerPage, sortedFilteredGoals.length);
                                   return (
                                     <>
                                       {paginatedGoals.map((goal) => {
@@ -1015,7 +1050,7 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
                                               className={`table-primary-row ${isSelected ? 'row-selected' : ''}`}
                                             >
                                               <td className="table-primary-td table-primary-td-center">
-                                                        <input
+                                                <input
                                                   type="checkbox"
                                                   checked={isSelected}
                                                   onChange={() => { }}
@@ -1032,50 +1067,6 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
                                           </React.Fragment>
                                         );
                                       })}
-                                      {goalTotalPages > 1 && (
-                                        <tr>
-                                          <td colSpan="3" style={{ padding: '0.85rem 0.75rem' }}>
-                                            <div className="table-pagination-section" style={{ padding: 0, margin: 0, gap: '0.75rem' }}>
-                                              <div className="table-pagination" style={{ justifyContent: 'space-between' }}>
-                                                <div className="pagination-info">
-                                                  Showing {startItem}-{endItem} of {sortedFilteredGoals.length}
-                                                </div>
-                                                <div className="table-pagination-pages">
-                                                  <button
-                                                    type="button"
-                                                    className="table-pagination-btn"
-                                                    onClick={() => setGoalCurrentPage((prev) => Math.max(prev - 1, 1))}
-                                                    disabled={goalCurrentPage === 1}
-                                                  >
-                                                    Previous
-                                                  </button>
-                                                  {[...Array(goalTotalPages)].map((_, index) => {
-                                                    const pageNum = index + 1;
-                                                    return (
-                                                      <button
-                                                        key={pageNum}
-                                                        type="button"
-                                                        className={`table-pagination-page ${goalCurrentPage === pageNum ? 'active' : ''}`}
-                                                        onClick={() => setGoalCurrentPage(pageNum)}
-                                                      >
-                                                        {pageNum}
-                                                      </button>
-                                                    );
-                                                  })}
-                                                  <button
-                                                    type="button"
-                                                    className="table-pagination-btn"
-                                                    onClick={() => setGoalCurrentPage((prev) => Math.min(prev + 1, goalTotalPages))}
-                                                    disabled={goalCurrentPage === goalTotalPages}
-                                                  >
-                                                    Next
-                                                  </button>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </td>
-                                        </tr>
-                                      )}
                                     </>
                                   );
                                 })()
@@ -1088,6 +1079,7 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
                               )}
                             </tbody>
                           </table>
+                          {renderPagination()}
                         </div>
                       </div>
                     )}

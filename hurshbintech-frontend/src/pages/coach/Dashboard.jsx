@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, Clock, Settings, FileText } from 'lucide-react';
+import { Calendar, Clock, Settings, FileText, BookMarked } from 'lucide-react';
 import '../../styles/admin/index.css';
 import '../../styles/coach/dashboard.css';
 
@@ -14,6 +14,7 @@ const CoachDashboard = () => {
     { id: '2', title: 'Manage Sessions', description: 'Create and manage group coaching sessions', icon: Clock, onClick: () => navigate('/coach/sessions') },
     { id: '3', title: 'My Availability', description: 'Set availability and manage time slots', icon: Settings, onClick: () => navigate('/coach/availability') },
     { id: '4', title: 'Manage Learning Reports', description: 'View learner reports and generate progress reports', icon: FileText, onClick: () => navigate('/coach/learning-reports') },
+    { id: '5', title: 'Assigned Training', description: 'View trainings assigned to you', icon: BookMarked, onClick: () => navigate('/assigned-trainings') },
   ];
 
 

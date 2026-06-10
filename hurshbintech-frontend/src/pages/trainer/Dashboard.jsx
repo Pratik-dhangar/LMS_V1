@@ -2,7 +2,7 @@ import React from "react";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import trainerService from "../../api/services/trainerService";
-import { CalendarDays, CalendarPlus2 } from "lucide-react";
+import { CalendarDays, CalendarPlus2, BookMarked } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 import '../../styles/ManageUsersLayout.css';
 import '../../styles/trainer/Dashboard.css';
@@ -69,6 +69,18 @@ const TrainerDashboard = () => {
                       : 'This feature is disabled until your Head enables trainer ILP scheduling.'}
                   </p>
                 </div>
+              </div>
+
+              <div
+                className="admin-menu-card"
+                onClick={() => navigate('/assigned-trainings')}
+                style={{ '--i': 2 }}
+              >
+                <div className="admin-menu-card-icon">
+                  <BookMarked size={48} />
+                </div>
+                <h3 className="admin-menu-card-title">Assigned Training</h3>
+                <p className="admin-menu-card-description">View trainings assigned to you.</p>
               </div>
             </div>
           </div>

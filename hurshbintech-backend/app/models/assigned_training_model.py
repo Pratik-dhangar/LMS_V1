@@ -43,6 +43,10 @@ class AssignedTraining(Base):
     # "all" means visible to all authenticated users
     target_roles = Column(JSON, nullable=False, default=list)
     
+    # Target users: JSON array of user IDs
+    # If populated, the training is assigned ONLY to these specific users.
+    target_user_ids = Column(JSON, nullable=True, default=list)
+    
     # Admin who created this assignment
     assigned_by_admin = Column(
         Integer,

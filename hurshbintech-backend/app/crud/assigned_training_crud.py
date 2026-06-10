@@ -22,6 +22,7 @@ class AssignedTrainingCRUD:
         custom_content: Optional[str],
         training_ref_ids: Optional[List[int]],
         target_roles: List[str],
+        target_user_ids: Optional[List[int]],
         assigned_by_admin: int,
         active: bool = True,
         featured_image_url: Optional[str] = None,
@@ -36,6 +37,7 @@ class AssignedTrainingCRUD:
             custom_content=custom_content,
             training_ref_ids=training_ref_ids or [],
             target_roles=target_roles,  # Should be normalized to lowercase
+            target_user_ids=target_user_ids or [],
             assigned_by_admin=assigned_by_admin,
             featured_image_url=featured_image_url,
             training_files=training_files or [],
@@ -106,7 +108,7 @@ class AssignedTrainingCRUD:
         # Map of allowed fields
         allowed_fields = {
             "title", "description", "custom_content",
-            "training_ref_ids", "target_roles", "active", "custom_metadata",
+            "training_ref_ids", "target_roles", "target_user_ids", "active", "custom_metadata",
             "featured_image_url", "training_files", "training_folder"
         }
         
@@ -135,6 +137,7 @@ class AssignedTrainingCRUD:
         self,
         db: AsyncSession,
         user_role: str,
+        user_id: int,
         skip: int = 0,
         limit: int = 10,
         active_only: bool = True,
@@ -155,12 +158,31 @@ class AssignedTrainingCRUD:
         # Filter by role: target_roles contains user's role OR target_roles contains 'all'
         # PostgreSQL: use the @> operator to check if JSON array contains a value
         # target_roles is an array, so we check if it contains the role value
+        # For target_user_ids, if it's empty, it applies to all in the role.
+        # If it's populated, it must contain the user_id.
         query = query.filter(
             or_(
-                # Check if the JSON array contains the user's role
-                cast(AssignedTraining.target_roles, String).contains(f'"{normalized_role}"'),
-                # Check if the JSON array contains 'all'
-                cast(AssignedTraining.target_roles, String).contains('"all"'),
+                # User ID explicitly targeted
+                or_(
+                    cast(AssignedTraining.target_user_ids, String).like(f'%[{user_id}]%'),
+                    cast(AssignedTraining.target_user_ids, String).like(f'%[{user_id},%'),
+                    cast(AssignedTraining.target_user_ids, String).like(f'%, {user_id}]%'),
+                    cast(AssignedTraining.target_user_ids, String).like(f'%, {user_id},%'),
+                    cast(AssignedTraining.target_user_ids, String).like(f'%,{user_id}]%'),
+                    cast(AssignedTraining.target_user_ids, String).like(f'%,{user_id},%')
+                ),
+                
+                # Or, target_user_ids is empty AND user's role is in target_roles
+                and_(
+                    or_(
+                        AssignedTraining.target_user_ids == None,
+                        cast(AssignedTraining.target_user_ids, String) == '[]'
+                    ),
+                    or_(
+                        cast(AssignedTraining.target_roles, String).contains(f'"{normalized_role}"'),
+                        cast(AssignedTraining.target_roles, String).contains('"all"'),
+                    )
+                )
             )
         )
         
@@ -168,8 +190,24 @@ class AssignedTrainingCRUD:
         count_result = await db.execute(
             select(func.count(AssignedTraining.id)).filter(
                 or_(
-                    cast(AssignedTraining.target_roles, String).contains(f'"{normalized_role}"'),
-                    cast(AssignedTraining.target_roles, String).contains('"all"'),
+                    or_(
+                        cast(AssignedTraining.target_user_ids, String).like(f'%[{user_id}]%'),
+                        cast(AssignedTraining.target_user_ids, String).like(f'%[{user_id},%'),
+                        cast(AssignedTraining.target_user_ids, String).like(f'%, {user_id}]%'),
+                        cast(AssignedTraining.target_user_ids, String).like(f'%, {user_id},%'),
+                        cast(AssignedTraining.target_user_ids, String).like(f'%,{user_id}]%'),
+                        cast(AssignedTraining.target_user_ids, String).like(f'%,{user_id},%')
+                    ),
+                    and_(
+                        or_(
+                            AssignedTraining.target_user_ids == None,
+                            cast(AssignedTraining.target_user_ids, String) == '[]'
+                        ),
+                        or_(
+                            cast(AssignedTraining.target_roles, String).contains(f'"{normalized_role}"'),
+                            cast(AssignedTraining.target_roles, String).contains('"all"'),
+                        )
+                    )
                 )
             )
         )

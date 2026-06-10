@@ -220,7 +220,7 @@ const CoachManageLearningReports = () => {
                             </div>
                         </div>
 
-                        {/* Search Bar + Create Report Button */}
+                        {/* Search Bar + Comprehensive Report Button */}
                         <div className="search-section" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                             <input
                                 type="text"
@@ -245,7 +245,7 @@ const CoachManageLearningReports = () => {
                                     boxShadow: '0 2px 6px rgba(124,28,28,0.3)',
                                 }}
                             >
-                                + Create Report
+                                + Comprehensive Report
                             </button>
                         </div>
 
@@ -266,7 +266,7 @@ const CoachManageLearningReports = () => {
                                         <p style={{ color: '#6b7280' }}>
                                             {searchTerm
                                                 ? 'No learners found matching your search'
-                                                : 'No reports created yet. Use "+ Create Report" to generate one.'}
+                                                : 'No reports created yet. Use "+ Comprehensive Report" to generate one.'}
                                         </p>
                                     </div>
                                 ) : (

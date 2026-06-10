@@ -73,7 +73,7 @@ const AssignedTrainingsList = () => {
                             </svg>
                             Back to Dashboard
                         </button>
-                            <h1 className="page-title">Assigned Learning</h1>
+                            <h1 className="page-title">Assigned Training</h1>
                             <p className="page-description">
                                 View trainings assigned to you
                             </p>

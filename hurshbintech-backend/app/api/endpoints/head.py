@@ -602,6 +602,34 @@ async def delete_coach_account(
 # ----Learner management----
 
 
+@router.get("/heads-list")
+async def get_heads_list(
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    from app.schemas.user import HeadResponse
+    heads = await user_crud.get_all_heads(db)
+    return [HeadResponse.from_orm_with_user(h) for h in heads if h.id != current_head.id]
+
+
+@router.post("/learners/{learner_id}/migrate", response_model=LearnerResponse)
+async def migrate_learner(
+    learner_id: int,
+    new_head_id: int = Body(..., embed=True),
+    db: AsyncSession = Depends(get_db),
+    current_head: HeadProfile = Depends(get_current_head),
+):
+    try:
+        updated_learner = await user_crud.migrate_learner_to_head(
+            db=db,
+            learner_profile_id=learner_id,
+            current_head_profile_id=current_head.id,
+            new_head_profile_id=new_head_id
+        )
+        return LearnerResponse.from_orm_with_user(updated_learner)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
 #  create learner
 @router.post("/learners", response_model=LearnerResponse, status_code=status.HTTP_201_CREATED)
 async def create_new_learner(

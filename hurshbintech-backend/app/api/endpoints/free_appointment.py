@@ -89,6 +89,27 @@ async def submit_free_appointment(
                 f"✗ Failed to send free appointment WhatsApp notification: {str(wa_error)}"
             )
 
+        # Send notification WhatsApp to the client
+        try:
+            client_whatsapp = payload.contact_number
+            client_template_sid = settings.USER_FREE_APPOINTMENT_WHATSAPP_TEMPLATE_SID
+
+            client_content_variables = {
+                "1": str(payload.child_name)
+            }
+
+            logger.info(f"Attempting to send free appointment WhatsApp confirmation to client {client_whatsapp}...")
+            client_wa_result = await TwilioWhatsAppService.send_template_message(
+                to_number=client_whatsapp,
+                content_sid=client_template_sid,
+                content_variables=client_content_variables
+            )
+            logger.info(f"✓ Free appointment WhatsApp confirmation result: {client_wa_result}")
+        except Exception as client_wa_error:
+            logger.error(
+                f"✗ Failed to send free appointment WhatsApp confirmation to client: {str(client_wa_error)}"
+            )
+
         return appointment
 
     except Exception as exc:

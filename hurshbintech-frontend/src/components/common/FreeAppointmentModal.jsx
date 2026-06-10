@@ -76,6 +76,20 @@ const FreeAppointmentModal = ({ isOpen, onClose }) => {
     }
   };
 
+  /**
+   * Normalizes a phone number to E.164 international format.
+   * - Already has '+': returned as-is (strip spaces/dashes).
+   * - Exactly 10 digits (Indian mobile): prepend '+91'.
+   * - Otherwise: prepend '+' and let Twilio validate.
+   */
+  const normalizePhoneNumber = (number) => {
+    const cleaned = number.replace(/[\s\-]/g, '');
+    if (cleaned.startsWith('+')) return cleaned;
+    const digitsOnly = cleaned.replace(/\D/g, '');
+    if (digitsOnly.length === 10) return `+91${digitsOnly}`;
+    return `+${digitsOnly}`;
+  };
+
   const validate = () => {
     const newErrors = {};
 
@@ -91,8 +105,13 @@ const FreeAppointmentModal = ({ isOpen, onClose }) => {
 
     if (!formData.contact_number.trim()) {
       newErrors.contact_number = 'Contact number is required';
-    } else if (formData.contact_number.replace(/[^0-9]/g, '').length < 10) {
-      newErrors.contact_number = 'Enter a valid contact number (min 10 digits)';
+    } else {
+      const digitsOnly = formData.contact_number.replace(/[^0-9]/g, '');
+      if (digitsOnly.length < 10) {
+        newErrors.contact_number = 'Enter a valid contact number (min 10 digits)';
+      } else if (digitsOnly.length > 15) {
+        newErrors.contact_number = 'Contact number is too long (max 15 digits)';
+      }
     }
 
     setErrors(newErrors);
@@ -104,9 +123,16 @@ const FreeAppointmentModal = ({ isOpen, onClose }) => {
 
     if (!validate()) return;
 
+    // Normalize the contact number to E.164 format before sending
+    // so Twilio can deliver the WhatsApp message correctly.
+    const normalizedData = {
+      ...formData,
+      contact_number: normalizePhoneNumber(formData.contact_number),
+    };
+
     setLoading(true);
     try {
-      await contactService.submitFreeAppointment(formData);
+      await contactService.submitFreeAppointment(normalizedData);
       setSubmitted(true);
       toast.success('Appointment request submitted successfully!');
     } catch (error) {
@@ -197,7 +223,7 @@ const FreeAppointmentModal = ({ isOpen, onClose }) => {
 
             {/* Diagnosis */}
             <div className="free-appointment-field">
-              <label>Diagnosis</label>
+              <label>Diagnosis (if any)</label>
               <input
                 type="text"
                 name="diagnosis"
@@ -222,16 +248,19 @@ const FreeAppointmentModal = ({ isOpen, onClose }) => {
             {/* Contact Number */}
             <div className={`free-appointment-field ${errors.contact_number ? 'has-error' : ''}`}>
               <label>
-                Contact Number <span className="required-star">*</span>
+                WhatsApp / Contact Number <span className="required-star">*</span>
               </label>
               <input
                 type="tel"
                 name="contact_number"
                 value={formData.contact_number}
                 onChange={handleChange}
-                placeholder="Enter contact number"
+                placeholder="e.g. 9876543210 or +919876543210"
                 maxLength={20}
               />
+              <span className="field-note" style={{ fontSize: '11px', color: '#666', marginTop: '4px', display: 'block' }}>
+                Enter your 10-digit mobile number or include country code (e.g. +91). You'll receive a WhatsApp confirmation on this number.
+              </span>
               {errors.contact_number && (
                 <span className="field-error">⚠ {errors.contact_number}</span>
               )}

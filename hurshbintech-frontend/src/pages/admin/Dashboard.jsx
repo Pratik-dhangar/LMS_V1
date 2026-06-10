@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift, MessageSquare, Package, Mail, UserCircle, Store } from 'lucide-react';
+import { Users, Users2, BookOpen, Target, Award, GraduationCap, Video, FileText, Info, ShoppingCart, CreditCard, Lightbulb, Gift, MessageSquare, Package, Mail, UserCircle, Store, BookMarked } from 'lucide-react';
 import '../../styles/admin/index.css';
 
 const AdminDashboard = () => {
@@ -18,6 +18,7 @@ const AdminDashboard = () => {
     { id: '1.5', title: 'Manage Learning Goals and Learning Skill', description: 'Create and manage learning goals', icon: Target, color: 'orange', onClick: () => navigate('/admin/learning-goals') },
     { id: '1.6', title: 'Manage HurshBin Coaches', description: 'Manage HurshBin Coaches and Consultants', icon: Award, color: 'teal', onClick: () => navigate('/admin/manage-coaches') },
     { id: '2.1', title: 'Training Module', description: 'Create and manage role-targeted training assignments', icon: Lightbulb, color: 'amber', onClick: () => navigate('/admin/assigned-trainings') },
+    { id: '2.2', title: 'Assigned Training', description: 'View trainings assigned to you', icon: BookMarked, color: 'cyan', onClick: () => navigate('/assigned-trainings') },
     { id: '1.7', title: 'Manage Vlogs', description: 'Upload and manage training video content', icon: Video, color: 'red', onClick: () => navigate('/admin/vlogs') },
     { id: '1.7.5', title: 'Manage Gallery', description: 'Upload and manage gallery photos', icon: Video, color: 'yellow', onClick: () => navigate('/admin/gallery') },
     { id: '1.8', title: 'Manage Blogs', description: 'Create and manage blog posts', icon: FileText, color: 'indigo', onClick: () => navigate('/admin/blogs') },

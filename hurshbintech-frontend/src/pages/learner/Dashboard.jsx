@@ -65,8 +65,8 @@ const LearnerDashboard = () => {
     },
     {
       icon: BookOpen,
-      title: "Learning Content",
-      onClick: () => navigate("/learner/learning-content"),
+      title: "Assigned Training",
+      onClick: () => navigate("/assigned-trainings"),
     },
     {
       icon: Package,

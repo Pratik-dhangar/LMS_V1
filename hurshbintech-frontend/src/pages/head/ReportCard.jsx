@@ -171,7 +171,7 @@ const ReportCard = () => {
               </div>
             </div>
 
-            {/* Search Bar + Create Report Button */}
+            {/* Search Bar + Comprehensive Report Button */}
             <div className="search-section" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <input
                 type="text"
@@ -196,7 +196,7 @@ const ReportCard = () => {
                   boxShadow: '0 2px 6px rgba(124,28,28,0.3)',
                 }}
               >
-                + Create Report
+                + Comprehensive Report
               </button>
             </div>
 
@@ -215,7 +215,7 @@ const ReportCard = () => {
                   <div className="table-primary-empty" style={{ padding: '3rem', textAlign: 'center' }}>
                     <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>📭</div>
                     <p style={{ color: '#6b7280' }}>
-                      {searchTerm ? 'No learners found matching your search' : 'No learners registered yet'}
+                      {searchTerm ? 'No learners found matching your search' : 'Report not Generated Yet'}
                     </p>
                   </div>
                 ) : (

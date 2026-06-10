@@ -112,15 +112,7 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal, setShowFreeA
 
 
 
-            {/* Assigned Learning - for authenticated users */}
-            {user && (
-              <button
-                className={`navbar-btn ${location.pathname.includes("/assigned-trainings") ? "active" : ""}`}
-                onClick={() => handleNavigate("/assigned-trainings")}
-              >
-                Assigned Learning
-              </button>
-            )}
+
 
             {/* Communication - for all authenticated users */}
             {user && (
@@ -143,15 +135,15 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal, setShowFreeA
             )}
 
 
-            {/* Buy Learning Program - Only visible on landing page when NOT logged in */}
-            {!user && location.pathname === "/" && (
+            {/* Buy Learning Program - Visible on landing page for guests, or anywhere for learners */}
+            {(!user && location.pathname === "/") || (user && user.role === "learner") ? (
               <button
                 className="navbar-btn navbar-subscription-btn"
                 onClick={() => setShowSubscriptionModal(true)}
               >
                 Buy Learning Program
               </button>
-            )}
+            ) : null}
             {/* Free Assessment - Only on landing page for non-logged-in users */}
             {!user && location.pathname === "/" && (
               <button
@@ -162,13 +154,15 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal, setShowFreeA
               </button>
             )}
 
-            {/* Free Appointment - Always visible for all users */}
-            <button
-              className="navbar-btn"
-              onClick={() => setShowFreeAppointmentModal(true)}
-            >
-              Free Appointment
-            </button>
+            {/* Free Appointment - Only visible on Landing Page */}
+            {location.pathname === "/" && (
+              <button
+                className="navbar-btn"
+                onClick={() => setShowFreeAppointmentModal(true)}
+              >
+                Free Appointment
+              </button>
+            )}
           </div>
         </div>
 
@@ -259,15 +253,7 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal, setShowFreeA
               </button>
             )}
 
-            {/* Assigned Learning - for authenticated users */}
-            {user && (
-              <button
-                className={`navbar-btn ${location.pathname.includes("/assigned-trainings") ? "active" : ""}`}
-                onClick={() => handleNavigate("/assigned-trainings")}
-              >
-                Assigned Learning
-              </button>
-            )}
+
 
             {/* Communication - for all authenticated users */}
             {user && (
@@ -289,8 +275,8 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal, setShowFreeA
               </button>
             )}
 
-            {/* Buy Learning Program - Only visible on landing page when NOT logged in */}
-            {!user && location.pathname === "/" && (
+            {/* Buy Learning Program - Visible on landing page for guests, or anywhere for learners */}
+            {(!user && location.pathname === "/") || (user && user.role === "learner") ? (
               <button
                 className="navbar-btn navbar-subscription-btn"
                 onClick={() => {
@@ -300,18 +286,20 @@ const Navbar = ({ setShowSubscriptionModal, setShowAssessmentModal, setShowFreeA
               >
                 Buy Learning Program
               </button>
-            )}
+            ) : null}
 
-            {/* Free Appointment - Always visible for all users (mobile) */}
-            <button
-              className="navbar-btn"
-              onClick={() => {
-                setShowFreeAppointmentModal(true);
-                setIsMenuOpen(false);
-              }}
-            >
-              Free Appointment
-            </button>
+            {/* Free Appointment - Only visible on Landing Page (mobile) */}
+            {location.pathname === "/" && (
+              <button
+                className="navbar-btn"
+                onClick={() => {
+                  setShowFreeAppointmentModal(true);
+                  setIsMenuOpen(false);
+                }}
+              >
+                Free Appointment
+              </button>
+            )}
 
             {/* Admin Blog Management - Only for admins */}
             {user && user.role === 'admin' && (
