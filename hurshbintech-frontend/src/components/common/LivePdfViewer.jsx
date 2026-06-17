@@ -6,6 +6,7 @@ import {
     normalizePoint,
     denormalizePoint,
     normalizeStroke,
+    denormalizeStroke,
     replayPaths,
     createNormalizedPath,
     addSegmentToPath
@@ -44,6 +45,16 @@ const LivePdfViewer = ({
     // Keep track of annotations for this PDF. Keyed by page number.
     // Format: { [pageNumber]: [stroke1, stroke2, ...] }
     const [annotations, setAnnotations] = useState(initialAnnotations || {});
+
+    // Sync initialAnnotations when it changes (e.g., from whiteboard_restore)
+    useEffect(() => {
+        if (initialAnnotations && Object.keys(initialAnnotations).length > 0) {
+            setAnnotations(prev => {
+                // Merge initial annotations with any local ones that might have been drawn
+                return { ...initialAnnotations, ...prev };
+            });
+        }
+    }, [initialAnnotations]);
 
     // Drawing interaction state
     const isDrawing = useRef(false);
@@ -249,7 +260,7 @@ const LivePdfViewer = ({
 
         // Send to network
         if (whiteboardService) {
-            whiteboardService.sendPdfDraw({
+            const drawData = {
                 pdfId,
                 pageNumber: localCurrentPage,
                 prevX: lastPointRef.current.x,
@@ -259,7 +270,9 @@ const LivePdfViewer = ({
                 color,
                 strokeNorm: currentPathRef.current.strokeNorm,
                 tool
-            });
+            };
+            console.log('[LivePdfViewer] 📤 Sending pdf_draw:', drawData);
+            whiteboardService.sendPdfDraw(drawData);
         }
 
         lastPointRef.current = normPoint;
@@ -290,10 +303,18 @@ const LivePdfViewer = ({
         if (!whiteboardService) return;
 
         const handleRemoteDraw = (data) => {
-            if (data.pdfId === pdfId && data.pageNumber === localCurrentPage) {
+            console.log(`[LivePdfViewer] 📥 Received pdf_draw:`, data, `Current pdfId:`, pdfId, `Current page:`, localCurrentPage);
+            
+            const isMatch = String(data.pdfId) === String(pdfId) && Number(data.pageNumber) === Number(localCurrentPage);
+            console.log(`[LivePdfViewer] 🔍 Match result:`, isMatch);
+
+            if (isMatch) {
                 // If the stroke is for the currently viewed page, draw it live
                 const canvas = drawCanvasRef.current;
-                if (!canvas) return;
+                if (!canvas) {
+                    console.warn(`[LivePdfViewer] ⚠️ Canvas not ready!`);
+                    return;
+                }
 
                 const ctx = canvas.getContext('2d');
                 ctx.beginPath();
@@ -337,12 +358,12 @@ const LivePdfViewer = ({
         };
 
         const handleRemoteClear = (data) => {
-            if (data.pdfId === pdfId) {
+            if (String(data.pdfId) === String(pdfId)) {
                 setAnnotations(prev => {
                     const next = { ...prev };
                     if (data.pageNumber) {
                         next[data.pageNumber] = [];
-                        if (localCurrentPage === data.pageNumber) redrawAnnotations(localCurrentPage);
+                        if (Number(localCurrentPage) === Number(data.pageNumber)) redrawAnnotations(localCurrentPage);
                     } else {
                         return {};
                     }

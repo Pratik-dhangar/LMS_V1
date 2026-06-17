@@ -276,8 +276,11 @@ class WhiteboardService {
                     break;
 
                 case 'pdf_draw':
+                    console.log('[WhiteboardService] 📥 Received pdf_draw:', message.data);
                     if (this.onPdfDraw) {
                         this.onPdfDraw(message.data);
+                    } else {
+                        console.warn('[WhiteboardService] ⚠️ onPdfDraw is NOT registered!');
                     }
                     break;
 
