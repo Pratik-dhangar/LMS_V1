@@ -22,6 +22,8 @@ class WhiteboardService {
         this.onItemRemove = null; // New callback for item removal
         this.onErasePen = null; // New callback for erasing pen strokes
         this.onClearCanvas = null; // New callback for clearing entire canvas
+        this.onPdfDraw = null; // Callback for PDF drawing
+        this.onPdfClearAnnotations = null; // Callback for clearing PDF annotations
         this.onStopwatchSync = null; // New callback for stopwatch synchronization
         this.onFeedbackMessage = null; // New callback for feedback messages
         this.onWaitingMessage = null; // New callback for waiting messages
@@ -270,6 +272,18 @@ class WhiteboardService {
                         this.onClearCanvas(message.data);
                     } else {
                         // console.warn('[WhiteboardService] ⚠️ WARNING: onClearCanvas callback is NOT registered!');
+                    }
+                    break;
+
+                case 'pdf_draw':
+                    if (this.onPdfDraw) {
+                        this.onPdfDraw(message.data);
+                    }
+                    break;
+
+                case 'pdf_clear_annotations':
+                    if (this.onPdfClearAnnotations) {
+                        this.onPdfClearAnnotations(message.data);
                     }
                     break;
 
@@ -570,6 +584,24 @@ class WhiteboardService {
             }));
         } else {
             // console.warn('[WhiteboardService] Cannot send media_control - WebSocket not ready');
+        }
+    }
+
+    sendPdfDraw(data) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'pdf_draw',
+                data: data
+            }));
+        }
+    }
+
+    sendPdfClearAnnotations(data) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                type: 'pdf_clear_annotations',
+                data: data
+            }));
         }
     }
 

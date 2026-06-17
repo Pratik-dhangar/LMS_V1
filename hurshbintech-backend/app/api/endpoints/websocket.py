@@ -436,6 +436,24 @@ async def persist_whiteboard_event(message: Dict, session_id: str, role: str):
                 logger.debug(f"[WHITEBOARD] Saving drawing stroke {item_id} for session {session_id}")
                 await whiteboard_crud.save_drawing_stroke(db, session_id, item_id, normalized_stroke)
                 
+            elif msg_type == "pdf_draw":
+                timestamp = int(datetime.utcnow().timestamp() * 1000)
+                normalized_stroke = {
+                    "segments": [{
+                        "prev": {"x": data.get("prevX"), "y": data.get("prevY")},
+                        "curr": {"x": data.get("currX"), "y": data.get("currY")}
+                    }],
+                    "strokeNorm": data.get("strokeNorm", data.get("lineWidth", 0.005)),
+                    "color": data.get("color", "#000000"),
+                    "tool": data.get("tool", "pen"),
+                    "pdfId": data.get("pdfId"),
+                    "pageNumber": data.get("pageNumber"),
+                    "timestamp": timestamp
+                }
+                item_id = f"pdf_stroke_{timestamp}"
+                logger.debug(f"[WHITEBOARD] Saving PDF stroke {item_id} for session {session_id}")
+                await whiteboard_crud.save_pdf_annotation(db, session_id, item_id, normalized_stroke)
+                
             elif msg_type == "image":
                 # Save canvas item (image/video/PDF)
                 # The 'image' type is used for all media items (images, videos, PDFs)
@@ -518,6 +536,13 @@ async def persist_whiteboard_event(message: Dict, session_id: str, role: str):
                 # Clear entire canvas
                 await whiteboard_crud.clear_canvas(db, session_id)
                 logger.info(f"[WHITEBOARD] Cleared canvas for session {session_id}")
+                
+            elif msg_type == "pdf_clear_annotations":
+                pdf_id = data.get("pdfId")
+                page_number = data.get("pageNumber")
+                if pdf_id:
+                    await whiteboard_crud.clear_pdf_annotations(db, session_id, pdf_id, page_number)
+                    logger.info(f"[WHITEBOARD] Cleared PDF annotations for {pdf_id} (page {page_number}) in session {session_id}")
                 
     except Exception as e:
         logger.error(f"[WHITEBOARD] Error persisting whiteboard event: {e}")
@@ -617,10 +642,12 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
         try:
             async with AsyncSessionLocal() as db:
                 whiteboard_state = await whiteboard_crud.get_session_state(db, session_id)
-                if whiteboard_state and (whiteboard_state["drawings"] or whiteboard_state["items"]):
+                has_pdf_annotations = bool(whiteboard_state.get("pdfAnnotations", {}))
+                if whiteboard_state and (whiteboard_state["drawings"] or whiteboard_state["items"] or has_pdf_annotations):
                     logger.info(
                         f"[WHITEBOARD] Restoring state for {role} in session {session_id}: "
-                        f"{len(whiteboard_state['drawings'])} drawings, {len(whiteboard_state['items'])} items"
+                        f"{len(whiteboard_state['drawings'])} drawings, {len(whiteboard_state['items'])} items, "
+                        f"PDF Annotations: {'Yes' if has_pdf_annotations else 'No'}"
                     )
                     await websocket.send_json({
                         "type": "whiteboard_restore",

@@ -104,6 +104,57 @@ async def save_drawing_stroke(
         return None
 
 
+async def save_pdf_annotation(
+    db: AsyncSession,
+    session_id: str,
+    item_id: str,
+    stroke_data: Dict[str, Any]
+) -> Optional[WhiteboardState]:
+    """
+    Save a single PDF annotation stroke to the database.
+    """
+    try:
+        # Check if total stroke count would exceed limit
+        count_query = select(func.count(WhiteboardState.id)).where(
+            (WhiteboardState.session_id == session_id) &
+            (WhiteboardState.state_type == 'pdf_annotation') &
+            (WhiteboardState.is_active == True)
+        )
+        result = await db.execute(count_query)
+        stroke_count = result.scalar()
+        
+        if stroke_count >= MAX_DRAWING_STROKES:
+            logger.warning(
+                f"⚠️ Session {session_id} reached max PDF strokes. Skipping new stroke."
+            )
+            return None
+        
+        # Create new whiteboard state entry
+        whiteboard_state = WhiteboardState(
+            session_id=session_id,
+            state_type='pdf_annotation',
+            item_id=item_id,
+            data=stroke_data,
+            is_active=True
+        )
+        
+        db.add(whiteboard_state)
+        await db.commit()
+        await db.refresh(whiteboard_state)
+        
+        logger.info(f"✅ Saved PDF annotation stroke {item_id} for session {session_id}")
+        return whiteboard_state
+        
+    except IntegrityError as e:
+        await db.rollback()
+        logger.error(f"❌ Failed to save PDF annotation stroke {item_id}: {str(e)}")
+        return None
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"❌ Unexpected error saving PDF annotation stroke: {str(e)}")
+        return None
+
+
 async def save_canvas_item(
     db: AsyncSession,
     session_id: str,
@@ -296,6 +347,59 @@ async def clear_canvas(
         return False
 
 
+async def clear_pdf_annotations(
+    db: AsyncSession,
+    session_id: str,
+    pdf_id: str,
+    page_number: Optional[int] = None
+) -> int:
+    """
+    Clear PDF annotations for a specific PDF (and optionally a specific page)
+    """
+    try:
+        # Since data is JSONB, we need to fetch active pdf_annotation states and update them if they match.
+        # Alternatively, we can use SQLAlchemy JSON functions if supported by the DB,
+        # but to keep it simple across DBs (SQLite/Postgres), we fetch, filter and update.
+        query = select(WhiteboardState).where(
+            (WhiteboardState.session_id == session_id) &
+            (WhiteboardState.state_type == 'pdf_annotation') &
+            (WhiteboardState.is_active == True)
+        )
+        result = await db.execute(query)
+        states = result.scalars().all()
+        
+        to_delete_ids = []
+        for state in states:
+            data_pdf_id = str(state.data.get('pdfId', ''))
+            data_page = state.data.get('pageNumber')
+            if data_pdf_id == str(pdf_id):
+                if page_number is None or str(data_page) == str(page_number):
+                    to_delete_ids.append(state.item_id)
+        
+        if not to_delete_ids:
+            return 0
+            
+        stmt = update(WhiteboardState).where(
+            (WhiteboardState.session_id == session_id) &
+            (WhiteboardState.item_id.in_(to_delete_ids)) &
+            (WhiteboardState.state_type == 'pdf_annotation')
+        ).values(
+            is_active=False,
+            updated_at=datetime.utcnow()
+        )
+        
+        result = await db.execute(stmt)
+        await db.commit()
+        
+        logger.info(f"✅ Cleared {result.rowcount} PDF annotations for session {session_id}")
+        return result.rowcount
+        
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"❌ Failed to clear PDF annotations: {str(e)}")
+        return 0
+
+
 async def get_session_state(
     db: AsyncSession,
     session_id: str
@@ -324,6 +428,7 @@ async def get_session_state(
         # Separate drawings and items
         drawings = []
         items = []
+        pdf_annotations = {}
         
         total_size = 0
         for state in states:
@@ -334,6 +439,14 @@ async def get_session_state(
                 drawings.append(state.data)
             elif state.state_type == 'item':
                 items.append(state.data)
+            elif state.state_type == 'pdf_annotation':
+                pdf_id = str(state.data.get('pdfId', ''))
+                page_num = str(state.data.get('pageNumber', ''))
+                if pdf_id not in pdf_annotations:
+                    pdf_annotations[pdf_id] = {}
+                if page_num not in pdf_annotations[pdf_id]:
+                    pdf_annotations[pdf_id][page_num] = []
+                pdf_annotations[pdf_id][page_num].append(state.data)
         
         # Warn if state is too large
         size_mb = total_size / (1024 * 1024)
@@ -350,12 +463,13 @@ async def get_session_state(
         
         return {
             "drawings": drawings,
-            "items": items
+            "items": items,
+            "pdfAnnotations": pdf_annotations
         }
         
     except Exception as e:
         logger.error(f"❌ Failed to retrieve session state for {session_id}: {str(e)}")
-        return {"drawings": [], "items": []}
+        return {"drawings": [], "items": [], "pdfAnnotations": {}}
 
 
 async def cleanup_session_state(

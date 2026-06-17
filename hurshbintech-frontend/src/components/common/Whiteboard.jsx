@@ -21,7 +21,7 @@ import {
     recalculateItemBoundsOnResize
 } from '../../utils/drawingSync';
 import { getFileUrl as resolveMediaUrl } from '../../utils/urlHelper';
-// Fill-in-the-blanks removed
+import LivePdfViewer from './LivePdfViewer';
 
 let youtubeIframeApiPromise = null;
 
@@ -653,8 +653,9 @@ const Whiteboard = ({
     const [isYoutubeMuted, setIsYoutubeMuted] = useState(false);
     const activeYoutubeMedia = inlineYoutube || (inlineMedia && inlineMedia.type === 'youtube' ? inlineMedia : null);
     const isYoutubeMinimized = Boolean(activeYoutubeMedia?.minimized);
-    const [inlinePdf, setInlinePdf] = useState(null); // { id, src, title }
+    const [inlinePdf, setInlinePdf] = useState(null); // { id, src, title, currentPage }
     const [isInlinePdfMinimized, setIsInlinePdfMinimized] = useState(false);
+    const [pdfAnnotations, setPdfAnnotations] = useState({}); // pdfId -> pageNumber -> [strokes]
     const hasExpandedMedia = Boolean(
         (inlineVideo && !isInlineVideoMinimized) ||
         (inlinePdf && !isInlinePdfMinimized) ||
@@ -1551,6 +1552,9 @@ const Whiteboard = ({
                 if (action === 'pdf_split_minimize_toggle') {
                     setIsInlinePdfMinimized(Boolean(data.minimized));
                 }
+                if (action === 'page_change' && data.mediaType === 'pdf') {
+                    setInlinePdf(prev => prev ? { ...prev, currentPage: data.currentPage || 1 } : prev);
+                }
 
                 if (!isTrainer && inlineVideoRef.current) {
                     const videoEl = inlineVideoRef.current;
@@ -1617,6 +1621,12 @@ const Whiteboard = ({
                                 console.warn('[Whiteboard] ⚠️ Canvas not ready for restoration');
                             }
                         }, 100);
+                    }
+
+                    // Restore PDF annotations
+                    if (restoredState.pdfAnnotations) {
+                        console.log(`[Whiteboard] Restoring PDF annotations`);
+                        setPdfAnnotations(restoredState.pdfAnnotations);
                     }
 
                     // Restore canvas items (separate buckets from regular items)
@@ -4095,10 +4105,27 @@ const Whiteboard = ({
                 {/* Inline PDF Section - shows when PDF is dropped (50% width) */}
                 {inlinePdf && (
                     <div className={`whiteboard-split-video pdf-split-view ${isInlinePdfMinimized ? 'split-media-minimized-hidden' : ''}`}>
-                        <iframe
-                            src={pdfViewerSrc(inlinePdf.src)}
-                            title={inlinePdf.title || 'PDF Document'}
-                            className="pdf-split-iframe"
+                        <LivePdfViewer
+                            pdfId={inlinePdf.id}
+                            pdfUrl={inlinePdf.src}
+                            isTrainer={isTrainer}
+                            currentPage={inlinePdf.currentPage || 1}
+                            onPageChange={(page) => {
+                                // Update local state for inlinePdf page
+                                setInlinePdf(prev => prev ? { ...prev, currentPage: page } : null);
+                                // Broadcast page change via media control
+                                if (isTrainer && whiteboardService) {
+                                    whiteboardService.sendMediaControl({
+                                        action: 'page_change',
+                                        mediaId: inlinePdf.id,
+                                        mediaType: 'pdf',
+                                        currentPage: page
+                                    });
+                                }
+                            }}
+                            whiteboardService={whiteboardService}
+                            initialAnnotations={pdfAnnotations[inlinePdf.id] || {}}
+                            toolAccess={toolAccess}
                         />
 
                         {isTrainer && !isInlinePdfMinimized && (
