@@ -13,15 +13,15 @@ export default defineConfig(({ mode }) => {
     env.VITE_API_BASE_URL = 'https://hurshbin.com/api';
   }
 
-  // Safe fallback — no crash if env is missing
-  const enablePWA = (env.VITE_ENABLE_PWA ?? 'false') !== 'false';
+  const enablePWA = env.VITE_ENABLE_PWA === 'true';
 
   const plugins = [react()];
 
-  // Add PWA plugin only if VITE_ENABLE_PWA=true
-  if (enablePWA) {
+  // Keep the virtual registration module resolvable even when PWA is disabled.
+  // Vite analyzes dynamic imports before the runtime condition in App.jsx runs.
     plugins.push(
       VitePWA({
+        disable: !enablePWA,
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'icons/*.png'],
         manifest: {
@@ -141,14 +141,12 @@ export default defineConfig(({ mode }) => {
           ]
         },
         devOptions: {
-          enabled: true,
+          enabled: enablePWA,
           type: 'module',
           suppressWarnings: false
         }
       })
     );
-  } else {
-  }
 
   // Helper to safely read certs (prevents crash if file missing during local build)
   const getHttpsConfig = () => {

@@ -1,4 +1,5 @@
 # Environment files
+.local-setup/
 .env
 .env.local
 .env.production
@@ -6,6 +7,7 @@
 *.env
 
 # Python
+.venv/
 __pycache__/
 *.py[cod]
 *$py.class
