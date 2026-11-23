@@ -50,6 +50,8 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
     trainer_id: "",
     learner_id: "",
     scheduled_dates: [],
+    start_time: "",
+    duration: 60,
     content_ids: [],
     goal_ids: [],
     mode_of_expression: [],
@@ -247,7 +249,8 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
       !formData.title ||
       (!isTrainerMode && !formData.trainer_id) ||
       !formData.learner_id ||
-      !formData.scheduled_dates.length
+      !formData.scheduled_dates.length ||
+      !formData.start_time
     ) {
       toast.error("Please fill in all required fields");
       return;
@@ -259,8 +262,28 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
       return;
     }
 
+    const duration = Number(formData.duration);
+    if (!Number.isInteger(duration) || duration < 15 || duration > 240) {
+      toast.error("Session duration must be between 15 and 240 minutes.");
+      return;
+    }
+
+    // The API stores local wall-clock time, so do not convert this value to UTC.
+    const scheduledDateTimes = uniqueScheduledDates.map(
+      (date) => `${date}T${formData.start_time}:00`
+    );
+    const now = new Date();
+    if (scheduledDateTimes.some((dateTime) => {
+      const start = new Date(dateTime);
+      return Number.isNaN(start.getTime()) || start <= now;
+    })) {
+      toast.error("Please choose a future start time for every selected date.");
+      return;
+    }
+
     const baseSessionPayload = {
-      ...formData,
+      title: formData.title,
+      duration,
       trainer_id: isTrainerMode ? Number(user?.id) : parseInt(formData.trainer_id),
       learner_id: parseInt(formData.learner_id),
       content_ids: formData.content_ids.map(Number),
@@ -273,10 +296,10 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
       setLoading(true);
 
       const results = await Promise.allSettled(
-        uniqueScheduledDates.map((scheduledDate) =>
+        scheduledDateTimes.map((scheduledDateTime) =>
           sessionService.createSession({
             ...baseSessionPayload,
-            scheduled_date: `${scheduledDate}T00:00:00`,
+            scheduled_date: scheduledDateTime,
           })
         )
       );
@@ -866,6 +889,45 @@ const ScheduleSession = ({ mode = 'head', embedded = false, onClose }) => {
                   </p>
                 )}
               </div>
+            </div>
+
+            <div className="modern-form-section">
+              <div className="modern-form-grid-two-col">
+                <div>
+                  <label htmlFor="ilp-start-time" className="modern-form-label">
+                    Start Time <span className="required-indicator">*</span>
+                  </label>
+                  <input
+                    id="ilp-start-time"
+                    type="time"
+                    step="60"
+                    value={formData.start_time}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, start_time: e.target.value }))}
+                    className="modern-form-input"
+                    aria-describedby="ilp-time-help"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="ilp-duration" className="modern-form-label">
+                    Duration (minutes) <span className="required-indicator">*</span>
+                  </label>
+                  <input
+                    id="ilp-duration"
+                    type="number"
+                    min="15"
+                    max="240"
+                    step="1"
+                    value={formData.duration}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, duration: e.target.value }))}
+                    className="modern-form-input"
+                    required
+                  />
+                </div>
+              </div>
+              <p id="ilp-time-help" className="modern-form-helper-text">
+                Uses your local time. The same start time and duration apply to every selected date.
+              </p>
             </div>
 
             {/* Select Program — parent section containing goals + content */}
