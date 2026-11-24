@@ -1,0 +1,51 @@
+Implement the standalone live-session extraction in this repository.
+
+Read docs/guides/LIVE_SESSION_EXECUTION_PLAN.md first. It is the implementation
+specification. Then inspect LIVE_SESSION_FILE_ACTIONS.json and
+LIVE_SESSION_EXTRACTION_MANIFEST.json programmatically; read only relevant source
+functions as needed. LIVE_SESSION_EXTRACTION_MAP.md is supporting context.
+Use LIVE_SESSION_BACKEND_VERSIONS.json as the installed backend version reference.
+
+Destination: ./live-session-studio/ under the source repository, unless I name a
+different destination. Build a self-contained React/Vite + FastAPI + PostgreSQL
+project there. Preserve the original LMS application, credentials, database and
+running services. The new frontend/backend use ports 5174/8002 and independent data.
+
+Agreed flow:
+1. Passwordless login: Trainer/Learner role + named demo profile + Login.
+2. Trainer home: select learner, Start Session, Add Learning Material.
+3. Start creates an active paired room and invitation. Only the selected learner
+   sees it on their home screen via targeted polling, not global room discovery.
+4. Learner Join requests admission. Trainer sees the existing modal; Admit uses
+   the existing offer/answer/ICE flow. Preserve Reject, removal, rejoin and End.
+5. Preserve the current actual session canvas, tools, learner permissions, media,
+   synchronized content, exercises, calculator, stopwatch, reactions, music,
+   comments, messaging, notes and recording. Remove the entire Learning Program
+   panel and its program-specific controls, while retaining remote video that
+   currently shares its layout container.
+
+This is an extraction of existing working code, not a rewrite or a simplified
+whiteboard demo. Copy baseline files first, preserve geometry/protocols and adapt
+only the LMS boundaries. No fake success endpoints, dead buttons, missing assets,
+or deleting difficult features. No password/ILP/subscription/program prerequisites.
+Do not copy the original App.jsx, backend main.py/models initializer, full schema,
+or original auth/business dependencies into the new runtime.
+
+Execute P0 through P6 in order using the gates in the specification. Keep
+live-session-studio/docs/EXECUTION_STATUS.md current so a later turn can resume
+without rereading the whole repository. Log feature evidence in PARITY_RESULTS.md.
+Verify source manifest hashes before modifying copied code. Use exact relevant
+frontend versions from the manifest. No broad dependency upgrades during extraction.
+
+Use separate tab-scoped demo identity and authenticate both HTTP and WebSocket joins.
+Admission must not deadlock: selected pending learner sockets may exchange control
+messages, but board restore/data and media offers wait for trainer approval.
+No camera/mic is connected to the observed development PC; use synthetic browser
+devices for automated A/V checks, and report real-device proof separately.
+
+Do the implementation, not another plan. Resolve ordinary details using the fixed
+defaults in the specification. If external installation/permissions or hardware
+block a check, continue unaffected work and report the exact limitation. Never
+claim two-peer parity from compilation or screenshots alone. Do not declare the
+task complete after only login/room creation/pen drawing. Finish the retained
+feature set, native Windows startup and evidence matrix. Do not deploy or publish.

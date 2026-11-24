@@ -1,0 +1,823 @@
+{
+  "source_commit": "e4b3c11f9194ebbe2e11b5e793e54582507b3e76",
+  "scope": "Static source inventory, not a ready-to-copy standalone application. See LIVE_SESSION_EXTRACTION_MAP.md for adaptations and runtime dependencies.",
+  "limitations": [
+    "Does not execute tools or prove two-browser feature parity.",
+    "Computed/dynamic public paths require manual review.",
+    "The chat closure includes LMS auth dependencies that must be replaced rather than copied blindly.",
+    "Backend list identifies adaptation sources; it is not the full transitive Python import graph."
+  ],
+  "session_core": {
+    "files": [
+      {
+        "path": "hurshbintech-frontend/src/api/axios.js",
+        "bytes": 3635,
+        "sha256": "8221215a212fb31fcf331f259b497eb9cd7b74fd0b926af7ba3381b4510dc47b"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/coachService.js",
+        "bytes": 3131,
+        "sha256": "c4d343a8a25954533e1a30bd397d82dcec3a3da68a0a880737fcd695c5da62e9"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/janusServiceOptimized.js",
+        "bytes": 25175,
+        "sha256": "de407b137e349eac08a7c058e832f84ac9c724cd65a48c83fd826a4fbd4fbfa6"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/learningContentService.js",
+        "bytes": 6170,
+        "sha256": "fdebb42a4f75a7ff68d8b838445aa2c685e0eb23f8d5b0b4d829f3a762ef1e1a"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/learningGoalsService.js",
+        "bytes": 1702,
+        "sha256": "cd0444faffbb3e0413585be419a5b9b298f90a3e19d83da9d3f89d9be930d3f3"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/sessionNotesService.js",
+        "bytes": 4809,
+        "sha256": "8f51e54a8de1f00714afc04f90a417af89accf5480846946265180afcf2fc221"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/sessionReportService.js",
+        "bytes": 5170,
+        "sha256": "002dd293d90bf360db43840e72c29f20e62748beb2b3fd2660bc081a630b9f53"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/sessionService.js",
+        "bytes": 8337,
+        "sha256": "b164363ec042816328f2a3ce25609e11f3fa1350e964ea05160a05e3e3689491"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/videoConferenceService.js",
+        "bytes": 51803,
+        "sha256": "3dd46aed4461a54e4e248900c6e7cc5697253fbf0f2f92616d3a6558dec87b6f"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/whiteboardService.js",
+        "bytes": 28235,
+        "sha256": "a6288880c9a1a866ebf457f10bb60064b1765ef4a14022da7dc9c245bc93871a"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/WhiteboardToolsService.js",
+        "bytes": 12395,
+        "sha256": "f4809553eac151b10b9562a6f084954330c9634b20414c233d071a01c68b99e3"
+      },
+      {
+        "path": "hurshbintech-frontend/src/assets/banana.jpeg",
+        "bytes": 163162,
+        "sha256": "06c9f73e31a896a601c6e01bddd60e6409ea446fea2588f7dc1be17b2f1f7a0d"
+      },
+      {
+        "path": "hurshbintech-frontend/src/assets/Red_Apple.jpg",
+        "bytes": 576216,
+        "sha256": "bfbaf6828607d9b94fb54056877497ac32926aa75c09de4abd61bc05ba24e2a7"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/common/Calculator.css",
+        "bytes": 6488,
+        "sha256": "b42d27068d7575d732d6c6f28f2d669b04de9f87dc85fe210141b509da1ba63b"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/common/Calculator.jsx",
+        "bytes": 13502,
+        "sha256": "7cb4239486eac16ac7ae787a19b4aa67c142740db39ea7842368331fb57bb2c1"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/common/Emoji.jsx",
+        "bytes": 2421,
+        "sha256": "5cc5502237afb67f3d2f1ba9c7c149bacc99054b3c10cfb0df587356a8274fea"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/common/IOSNavBar.jsx",
+        "bytes": 5814,
+        "sha256": "9da7d5a938ef2db00d423ff9edf7ccc7c75e73ff8d121ec5565da65b6fc473e7"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/common/LivePdfViewer.jsx",
+        "bytes": 22286,
+        "sha256": "aedeff468c42504cef1bde64bd446ea6d1be6706c867aa4244f776cd1542f133"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/common/MediaPopup.jsx",
+        "bytes": 15157,
+        "sha256": "86daf00868c83fb107caa2aad296c04361194adf94b8ab7089cf3f8e7bdd7429"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/common/StopwatchDisplay.jsx",
+        "bytes": 19526,
+        "sha256": "0f8fe74e8cb898fea4f63ea651ceffedd7bfe7bbe3670dd48541589d77de8868"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/common/Whiteboard.jsx",
+        "bytes": 246002,
+        "sha256": "1c117ff1cded880ffd3476000d5807e243892ed9769bc8054591efe3a366fa11"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/common/YouTubePopup.jsx",
+        "bytes": 15954,
+        "sha256": "c76967e47a6ed861e8a3da177bb2ae5a66246e610fc971a8c3bfee10e5a9372f"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/session/AttendeeSessionLayout.jsx",
+        "bytes": 120105,
+        "sha256": "ab432daaa8e51bfd81685914165fc7826818ab183b799bbc69ec210faa1e9c18"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/session/Exercise.jsx",
+        "bytes": 23145,
+        "sha256": "6563478c1afdf9032ad49248c93fd16a0b3b677b6fcc28160979c75cdeaeb9f0"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/session/InstructorSessionLayout.jsx",
+        "bytes": 158854,
+        "sha256": "854a6c9301fdc4191919c438e0b58d712f9978704120009a40c67c30beec4e48"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/videoConference/LearnerVideoConference.jsx",
+        "bytes": 5062,
+        "sha256": "ba6a43912f356b698057c4d91e256a483b104bf113f4fa6d7b381c8b600aa281"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/videoConference/MoveableVideoFeed.jsx",
+        "bytes": 9581,
+        "sha256": "708dcec081bc68cefb72801a8d9f9161a5f95194734f22519bb054339019830d"
+      },
+      {
+        "path": "hurshbintech-frontend/src/context/MediaControlContext.jsx",
+        "bytes": 8099,
+        "sha256": "08ac0ddb951eb58828cd1eea8eaede294990db043c722f892aca91fdeb4b42a2"
+      },
+      {
+        "path": "hurshbintech-frontend/src/hooks/useAutoHideNavbar.js",
+        "bytes": 2905,
+        "sha256": "54c8d30d51aba152388ded383ee4cccdd505785bc494aa5efed3668d2e9cf71e"
+      },
+      {
+        "path": "hurshbintech-frontend/src/hooks/useComments.js",
+        "bytes": 3209,
+        "sha256": "a5e5bfad31ef28b1b5db781755d74f2f54356de817e7bcacb016ce04d97b3e5d"
+      },
+      {
+        "path": "hurshbintech-frontend/src/hooks/useInstructorEffects.js",
+        "bytes": 9850,
+        "sha256": "b864223a7c9b62c7109aff7d71ff94c9075e85ab0525a60156f2c479d3b69b39"
+      },
+      {
+        "path": "hurshbintech-frontend/src/hooks/useInstructorHandlers.js",
+        "bytes": 19784,
+        "sha256": "d2df8090cbc59440e0e455c4ac75922363e26378f4b2f0d5d1941ff863f1ec09"
+      },
+      {
+        "path": "hurshbintech-frontend/src/hooks/useInstructorSessionState.js",
+        "bytes": 9207,
+        "sha256": "34b673d9b43ab1ce8fcf3805f8aa730d4180a1e2846d2e86d55b08bbc332fa7d"
+      },
+      {
+        "path": "hurshbintech-frontend/src/hooks/useStopwatch.js",
+        "bytes": 4465,
+        "sha256": "e8384c9ea0d92a7ceaec6a190d2574b8e1ce32f1787f476355f2b86940eff07c"
+      },
+      {
+        "path": "hurshbintech-frontend/src/hooks/useVoiceInput.js",
+        "bytes": 8884,
+        "sha256": "08b8fd0e3916ca86d703b229593709cd091f33553a98b671627389ccc83f45f5"
+      },
+      {
+        "path": "hurshbintech-frontend/src/pages/learner/LearnerSession.jsx",
+        "bytes": 72601,
+        "sha256": "ba21f9250a4afa7a95132fcddf0da265d45cab6ca94a1658690b29acde491e66"
+      },
+      {
+        "path": "hurshbintech-frontend/src/pages/trainer/LearningContentSidebar.jsx",
+        "bytes": 15490,
+        "sha256": "80b67b0b37a0a485905a528115e22a5741401cdafdb3cd2cf3e6d120587e1cb4"
+      },
+      {
+        "path": "hurshbintech-frontend/src/pages/trainer/LearningProgramSidebar.jsx",
+        "bytes": 22664,
+        "sha256": "31450dc51406377b0c055c19e066cd8c15d15f5d59e9db893b9144e700f1696a"
+      },
+      {
+        "path": "hurshbintech-frontend/src/pages/trainer/TrainerSession.jsx",
+        "bytes": 28020,
+        "sha256": "fd8b209fcb3075182aff074dd4499a82dfddac305e4c64c94828a46fe75d735e"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/components/common/MediaPopup.css",
+        "bytes": 8899,
+        "sha256": "20d77a915cd37b1cdb7e81f47d779372c88af3a267272e16b991944dcf5569ac"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/components/common/sessionHeader.css",
+        "bytes": 7766,
+        "sha256": "f8590f50c123f5470bbacb8956068c981702d54d8d2ad558b7c27ce8e00774fb"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/components/common/Whiteboard.css",
+        "bytes": 60554,
+        "sha256": "7eba5f623b315c0142d4d2582e2e485d7a75facd27dfa95808aa8eda3562fcf8"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/components/common/YouTubePopup.css",
+        "bytes": 2981,
+        "sha256": "ff08b1d1f4ac9c7967715f39d751b345189f03edc68fed08c65e5e8b715b8c88"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/LearningProgram.css",
+        "bytes": 7398,
+        "sha256": "77a69437c7f3a1e4c677a98a73185daa5ec1cd1aeda638d49c329c3d831c484d"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/session/exercise.css",
+        "bytes": 14538,
+        "sha256": "896631153f8ffe93c91091ea9fc9a80ae37903d28dff24024d1503e1317b1a3d"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/session.css",
+        "bytes": 52879,
+        "sha256": "00ef6bd2a47ceee9b4b2056681063fee24bfa6b2db4afa65b50b3c053707216c"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/videoConference.css",
+        "bytes": 15046,
+        "sha256": "4f0647cfacc6e430904c577ea883aaac5ba795547e929a4415c36ad88f56ad93"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/attendeeSession.js",
+        "bytes": 32444,
+        "sha256": "95205bb53219cfc1a8d2b33cfbc7a317675fb3ead174099262de87de8e7fb267"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/drawingSync.js",
+        "bytes": 11030,
+        "sha256": "a515415dd661f1f68d978c61e642f3c426432f373f56df230d1623e02bb70b4a"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/feedbackSounds.js",
+        "bytes": 8689,
+        "sha256": "2b5aaf97e9bff37400844fdd9cb7cd1594efb91201269ec6cf106bb87c62930b"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/instructorSession.js",
+        "bytes": 31205,
+        "sha256": "93b820d37e6a65cfeaa69b7c6b6ecbfdabe900dfa23674b39b014c28c7cbf027"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/logger.js",
+        "bytes": 1228,
+        "sha256": "7bbc4ce6e33df1a89f00460f8a18da448aaa6991c86f37a4a4edf79ef134b6e3"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/sessionActivityTracker.js",
+        "bytes": 9835,
+        "sha256": "0f0bd41a94888d6cab7480d0363ff1bf648250322534be60e095c92ebf87efab"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/stopwatchSounds.js",
+        "bytes": 3785,
+        "sha256": "17a3a91396c07d3a69986abaab278f4cb65bf58b163817fbc3a4fbe71e651430"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/urlHelper.js",
+        "bytes": 3348,
+        "sha256": "37e9f7e4fe4c9d2c8235519d564a5785fc99ea64b63d66da1d411d088001c6b8"
+      }
+    ],
+    "external_imports": [
+      "axios",
+      "lucide-react",
+      "pdfjs-dist",
+      "pdfjs-dist/build/pdf.worker.min.mjs?url",
+      "prop-types",
+      "react",
+      "react-icons/fa",
+      "react-router-dom",
+      "react-toastify",
+      "twemoji"
+    ],
+    "unresolved_relative_imports": []
+  },
+  "global_messaging": {
+    "files": [
+      {
+        "path": "hurshbintech-frontend/src/api/axios.js",
+        "bytes": 3635,
+        "sha256": "8221215a212fb31fcf331f259b497eb9cd7b74fd0b926af7ba3381b4510dc47b"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/authService.js",
+        "bytes": 1649,
+        "sha256": "e9fa426e05b462657a7e03b9ae7aca54bd2d9ab5c87dd44d193947ac963c5da3"
+      },
+      {
+        "path": "hurshbintech-frontend/src/api/services/chat/chatApi.js",
+        "bytes": 3408,
+        "sha256": "32216a593ab64e355a7d5adf15798f5e17634676b24b72c1c42a0f1f4d924961"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/chat/ChatIconWidget.jsx",
+        "bytes": 3588,
+        "sha256": "6efec6a7b89d9bd2d7a1a34e816f246c58ff9217bbc82bc56c397c8b44cad923"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/chat/EmojiPicker.jsx",
+        "bytes": 4261,
+        "sha256": "2105314d75b96f0fbb234d7fcca17481ccc9a05da1e2a97dedc464ae98075b50"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/chat/ImageModal.jsx",
+        "bytes": 2340,
+        "sha256": "4e0b4b3a96b702468faf89076deee80af63b8e87de3332bc32f617b89c46375a"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/chat/MessagingWidget.jsx",
+        "bytes": 43073,
+        "sha256": "0f75e0e26029e460a462f569ea25a411cd58c63f2c084edcc0648595a9d7a4ac"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/SessionInvalidatedModal.css",
+        "bytes": 4162,
+        "sha256": "e7a17242f6dbed02ae0949b74933c806540044601646f54124296c2ad4ca0e7e"
+      },
+      {
+        "path": "hurshbintech-frontend/src/components/SessionInvalidatedModal.jsx",
+        "bytes": 1661,
+        "sha256": "3e6461de62af37dd9d57f78835cca5e3850cbea1afe4a4ac42322e22ae2fef5a"
+      },
+      {
+        "path": "hurshbintech-frontend/src/context/AuthContext.jsx",
+        "bytes": 6158,
+        "sha256": "9e3f742e97ddc7c44d71d1b685db19d37870c3b9c621741777894517cb2375d3"
+      },
+      {
+        "path": "hurshbintech-frontend/src/context/chat/ChatContext.jsx",
+        "bytes": 19180,
+        "sha256": "ca6392afca705185ed00a61a4ddc65b82894815c8864d5a07ed298b668e98189"
+      },
+      {
+        "path": "hurshbintech-frontend/src/hooks/chat/useAppBadge.js",
+        "bytes": 2288,
+        "sha256": "ea5a9a32d7dd3a766a32ede4871b65f89ef5fb73d51649454d8f5aa2c100af23"
+      },
+      {
+        "path": "hurshbintech-frontend/src/hooks/useDeviceSession.js",
+        "bytes": 8997,
+        "sha256": "d3d5ef101b27f642e6f47101567e8419ba1c2da26f3d6e151ce0b8e04bf324b2"
+      },
+      {
+        "path": "hurshbintech-frontend/src/pages/chat/UnifiedChatPage.jsx",
+        "bytes": 35901,
+        "sha256": "9fff4b7f7cbbbc09ac9c463540c385dc25d508eba04d6ae1f4060a7842b6635c"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/chats/EmojiPicker.css",
+        "bytes": 1935,
+        "sha256": "ffe12dda987781aa3c68737a2c833b84320f9a6284f1b5edbc800d7b2b6f2bf7"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/chats/ImageModal.css",
+        "bytes": 1786,
+        "sha256": "64ce005889200b3cc30eac243d8132cc6f11b3c8ff8ff199d790d2f70601e83a"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/chats/MessagingWidget.css",
+        "bytes": 24709,
+        "sha256": "03619204765f625158b0a56da625e96dc5a71710fe7d7c4491da2f3f597140ac"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/chats/UnifiedChatPage.css",
+        "bytes": 20313,
+        "sha256": "c1cd30b5fd659b16394094ba404fdc09f9b1c04223b6e6668ac386ad2ead10cd"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/components/chat/chatWidget.css",
+        "bytes": 6220,
+        "sha256": "27ab30ca18405240854c3e32b288d40edbf4b2002f3beaf2883780241a730204"
+      },
+      {
+        "path": "hurshbintech-frontend/src/styles/ManageUsersLayout.css",
+        "bytes": 21967,
+        "sha256": "7d3ed4602c995bce6921b11e1635a56a41767b38aa501484ea187f1bcf3da23c"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/logger.js",
+        "bytes": 1228,
+        "sha256": "7bbc4ce6e33df1a89f00460f8a18da448aaa6991c86f37a4a4edf79ef134b6e3"
+      },
+      {
+        "path": "hurshbintech-frontend/src/utils/urlHelper.js",
+        "bytes": 3348,
+        "sha256": "37e9f7e4fe4c9d2c8235519d564a5785fc99ea64b63d66da1d411d088001c6b8"
+      }
+    ],
+    "external_imports": [
+      "axios",
+      "lucide-react",
+      "react",
+      "react-router-dom",
+      "react-toastify"
+    ],
+    "unresolved_relative_imports": []
+  },
+  "runtime_music_and_reactions": [
+    {
+      "path": "hurshbintech-frontend/public/music/background-music-1.mp3",
+      "bytes": 20276184,
+      "sha256": "06252cac4e13a21b092f3cd8e24d7532dd3101b7320f22e589e7c5945af9503e"
+    },
+    {
+      "path": "hurshbintech-frontend/public/music/background-music-2.mp3",
+      "bytes": 43203115,
+      "sha256": "fbf0db32f510faa9ca46e3821800a3ea8f077bffde221535baf5cfb370dd4689"
+    },
+    {
+      "path": "hurshbintech-frontend/public/music/background-music-3.mp3",
+      "bytes": 30577485,
+      "sha256": "d1a350c397cfeee80b7f4470b7b0d290dce5a96d91987c374dc61b3908cf2a11"
+    },
+    {
+      "path": "hurshbintech-frontend/public/music/Doing Well.mp3",
+      "bytes": 8972,
+      "sha256": "eb1cff09ac3d2f99f9320fccd43e68ee303841416bcc51501e88e0b8be6bfbd8"
+    },
+    {
+      "path": "hurshbintech-frontend/public/music/Good Job.mp3",
+      "bytes": 8540,
+      "sha256": "96e9742cb8c132f7108f8561653062dbbb0306b18e6b9701c33584579c9a9c22"
+    },
+    {
+      "path": "hurshbintech-frontend/public/music/Loved it.mp3",
+      "bytes": 5804,
+      "sha256": "163b5a4a73d11073a46aafb60f52eb7be2af56e672cdbd47e358382685d98f28"
+    },
+    {
+      "path": "hurshbintech-frontend/public/music/Relax.mp3",
+      "bytes": 5660,
+      "sha256": "7ddd14be84d7d828e2683892e1b2fc3f7d8647989edad76556cede6ceb9eba92"
+    },
+    {
+      "path": "hurshbintech-frontend/public/music/Thank You.mp3",
+      "bytes": 5516,
+      "sha256": "4b5c540beff2bca65c42705cbe3afa4bfba6ebaf5b3236b3b94c9cb5ca377d52"
+    },
+    {
+      "path": "hurshbintech-frontend/public/music/Wait.mp3",
+      "bytes": 3932,
+      "sha256": "112885107fc16af5130bd00d442021323f83bd2279feccfc4be229db82b9477a"
+    },
+    {
+      "path": "hurshbintech-frontend/public/music/Wow.mp3",
+      "bytes": 4220,
+      "sha256": "6c53b240ad4bb9145a1faae6b23a0c1463d4ab8e8f3df5829808eb75dc835fc2"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/01_pastel_blue.svg",
+      "bytes": 671,
+      "sha256": "40ed42e607be576de01a81b982f0ce3516b834824bc6e7f97188c64c7cb606e3"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/02_pastel_mint.svg",
+      "bytes": 671,
+      "sha256": "904b5000c205eedbc7a17dae6f3e509f5a4f3291ee46d91a67fe5f6c637d35e6"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/03_pastel_pink.svg",
+      "bytes": 671,
+      "sha256": "f74fe888c0196cdd747b90b0c035c222b16e45e71dd37ed40dd0a957adc0f53e"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/04_pastel_lavender.svg",
+      "bytes": 671,
+      "sha256": "abf72af64172dd8b30bc9aa3f887c067e697d1076bf86ca24e80e0171fdd4a05"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/05_pastel_peach.svg",
+      "bytes": 671,
+      "sha256": "fd8f08d7a80c4fbf3766f1fd97fae32b445bfb1864f3f5d3e7bdee3de2632d54"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/06_pastel_coral.svg",
+      "bytes": 671,
+      "sha256": "1ecd8a73bd3168b04eb5e2762eef8ee4c1a8bbbfe7761b97f893fdd495624744"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/07_pastel_teal.svg",
+      "bytes": 671,
+      "sha256": "28ff4d7490cbe0a8a57369df987ef6d01487206839d18fb236b782b2517f1bb4"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/08_pastel_yellow.svg",
+      "bytes": 671,
+      "sha256": "c6c5ca21d4dd4ca4945d9afe6499a979c34ce4779954e4e1a9e2f3549526e8ed"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/09_pastel_sky.svg",
+      "bytes": 671,
+      "sha256": "4c355fb39361f1f641d1e7bd3af55a33ac2cc7efb56a65f665953e0f14065e58"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/10_pastel_lilac.svg",
+      "bytes": 671,
+      "sha256": "a7fbc5b75f109bc92ea6e6c19234c80fffbe5fd7ef39d3e13cc619eee150c8ae"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/realistic-bubble.svg",
+      "bytes": 651,
+      "sha256": "ca7882d8bc8b9faa32223981b47c977a19de2d24bdcb09225864745d9b14ddeb"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/realistic-oil-pastel-star.svg",
+      "bytes": 647,
+      "sha256": "bc090709e8cd1fa3fd62e51b853ad5047b8fb9625d53569aeb45e8787ad59633"
+    },
+    {
+      "path": "hurshbintech-frontend/public/reactions/realistic-pastel-smile.svg",
+      "bytes": 2200,
+      "sha256": "b0fdfad9d80701a84e8925db88db6de818232af8f40cdfbd212dc34325937cc1"
+    }
+  ],
+  "shell_and_global_style_reference": [
+    {
+      "path": "hurshbintech-frontend/package-lock.json",
+      "bytes": 420714,
+      "sha256": "70ce6790da314aa185aa797c7f51baecfdf1741e7e4960fd14de2bfc4e8a0bd0"
+    },
+    {
+      "path": "hurshbintech-frontend/package.json",
+      "bytes": 2394,
+      "sha256": "ccefb335513eb44dc3fc2f229fed8d01e878c00c1616ad8060f40a700ad65cf5"
+    },
+    {
+      "path": "hurshbintech-frontend/postcss.config.js",
+      "bytes": 80,
+      "sha256": "190c877db466995bf1482f4a16abd06e04a89ede3119341e2a86ff96e1737b27"
+    },
+    {
+      "path": "hurshbintech-frontend/src/App.css",
+      "bytes": 5310,
+      "sha256": "3097977af29e4e2be45086b8009acd35efee86da14dd89d1f16cb81bf3880a44"
+    },
+    {
+      "path": "hurshbintech-frontend/src/App.jsx",
+      "bytes": 34278,
+      "sha256": "256666988552991d9ea066eb32eca35d11cd33ddfbc432a16a4d7b4c887ac10b"
+    },
+    {
+      "path": "hurshbintech-frontend/src/index.css",
+      "bytes": 7619,
+      "sha256": "7c8102c0028296bc2c0a35497a131fb85e10538f5af6e9349527772a3a9e41ab"
+    },
+    {
+      "path": "hurshbintech-frontend/src/main.jsx",
+      "bytes": 1472,
+      "sha256": "5386e98828585d59d52f636c140f5ceee3d13d39b9efd2aef494833ce99ee7b6"
+    },
+    {
+      "path": "hurshbintech-frontend/tailwind.config.js",
+      "bytes": 1636,
+      "sha256": "48ecb5bd455b158560441575ace7bd578286da6cbc6f073238567eeb691e6b69"
+    }
+  ],
+  "backend_adaptation_sources": [
+    {
+      "path": "hurshbintech-backend/app/api/endpoints/Chat/chat.py",
+      "bytes": 23214,
+      "sha256": "10179cb63d485a04ce0c258ea1938924f7adf51c8f37b1df7e0f2fabec968ced"
+    },
+    {
+      "path": "hurshbintech-backend/app/api/endpoints/learning_content.py",
+      "bytes": 26356,
+      "sha256": "5fbaafb243e8914360cf44591a95a7ef973b21e25fd2955f0363d1dcb01cc52e"
+    },
+    {
+      "path": "hurshbintech-backend/app/api/endpoints/session_notes.py",
+      "bytes": 14481,
+      "sha256": "a2c40dcf53242eeba3d1d108b4d09d3526c01a1a274cff8b44dbf037bee9c99c"
+    },
+    {
+      "path": "hurshbintech-backend/app/api/endpoints/sessions.py",
+      "bytes": 73257,
+      "sha256": "587dd19228f9b3ed258205b8fcf8934bbbe555305efc425bffca30a926bcd90d"
+    },
+    {
+      "path": "hurshbintech-backend/app/api/endpoints/websocket.py",
+      "bytes": 48414,
+      "sha256": "7511abf44c9bb5446ab8f3aadc9f4bb351fcc51ccc45f601906ce4889af390ee"
+    },
+    {
+      "path": "hurshbintech-backend/app/core/config.py",
+      "bytes": 5889,
+      "sha256": "fb40a6415419111d0905867546238a9018a14727bfe777d442757072ad1fa73c"
+    },
+    {
+      "path": "hurshbintech-backend/app/core/deps.py",
+      "bytes": 20826,
+      "sha256": "69be2fd9ae7d9c40e381f130ad3805747a2cebbaebe2939ed290af1205c25359"
+    },
+    {
+      "path": "hurshbintech-backend/app/crud/learning_content_crud.py",
+      "bytes": 4336,
+      "sha256": "d90d44096b7b59b191ca1bf7c71dfbe75c5c8a10db6178613b1f6aecaf54ca60"
+    },
+    {
+      "path": "hurshbintech-backend/app/crud/session_crud.py",
+      "bytes": 19820,
+      "sha256": "2c7a76b88e20f9581393d29af1b261807a954a3d86e383330e5a11b71156f55f"
+    },
+    {
+      "path": "hurshbintech-backend/app/crud/session_notes_crud.py",
+      "bytes": 19055,
+      "sha256": "9c90a841016a3ef4b5761869627323a94d6a77e81f2bb966c09239f68e5302bd"
+    },
+    {
+      "path": "hurshbintech-backend/app/crud/whiteboard_crud.py",
+      "bytes": 17333,
+      "sha256": "8eb11cab192599ba2583a37cfd61cb67b1172c7dddfa7e57c4a95d9aa3e2b0dd"
+    },
+    {
+      "path": "hurshbintech-backend/app/db/session.py",
+      "bytes": 1595,
+      "sha256": "831d9a960bc7193ab4944dff1a511713edfcb7d083287cb60ee0eb6947a6282f"
+    },
+    {
+      "path": "hurshbintech-backend/app/models/Chat/chat_model.py",
+      "bytes": 4570,
+      "sha256": "4c67cfcc47337ac490920b328abe7ebe4a0e7d223ed39c668363532af342498b"
+    },
+    {
+      "path": "hurshbintech-backend/app/models/learning_content_model.py",
+      "bytes": 2171,
+      "sha256": "564fc1946a1c439d20efd978e8e15c559a570a6b1febac852fef87cc94b001c6"
+    },
+    {
+      "path": "hurshbintech-backend/app/models/session_feedback_model.py",
+      "bytes": 1210,
+      "sha256": "27bba44f6b9677ad302237643777205c51d25a998b2639da52ebdc0f64936efe"
+    },
+    {
+      "path": "hurshbintech-backend/app/models/session_model.py",
+      "bytes": 10557,
+      "sha256": "37519baca00086f6dad6def3508a98ec1cca343f0e2301b17e9ffffe41587acf"
+    },
+    {
+      "path": "hurshbintech-backend/app/models/session_notes_model.py",
+      "bytes": 2444,
+      "sha256": "3f2d0cd9144075c57b4a92e424b58866e07448abaad44928c188bb713e158653"
+    },
+    {
+      "path": "hurshbintech-backend/app/models/whiteboard_state_model.py",
+      "bytes": 2219,
+      "sha256": "6e664225896767f80c654077fb7d73ba0341835c32fa321ed05af1a7972ea69c"
+    },
+    {
+      "path": "hurshbintech-backend/app/schemas/learning_content.py",
+      "bytes": 2276,
+      "sha256": "c2bd1635c4a2a903c52ef30a32adf74ec6bb30e61c4cd4d71e0dc165316791c8"
+    },
+    {
+      "path": "hurshbintech-backend/app/schemas/session.py",
+      "bytes": 5383,
+      "sha256": "1279e7529817cba4d324f4fe399d4f7ec4e0761e96d326a529c2406770222011"
+    },
+    {
+      "path": "hurshbintech-backend/app/schemas/session_notes.py",
+      "bytes": 688,
+      "sha256": "9634d32d2d494d4002225ba0ff869c74292a9fc45aa0b5c6c5f3c0fc5309d831"
+    },
+    {
+      "path": "hurshbintech-backend/app/services/Chat/chat_connection_manager.py",
+      "bytes": 12869,
+      "sha256": "3bc0fcba85bdc5fa32c36d1159b8119ea3a09b95442b3aced18150b1f79910f6"
+    },
+    {
+      "path": "hurshbintech-backend/app/services/Chat/chat_service.py",
+      "bytes": 10367,
+      "sha256": "c2fa9811abc8757c6e909adee311ff7e59a49cebc617791e9c143604aed5d3c0"
+    },
+    {
+      "path": "hurshbintech-backend/app/services/recording_merge_service.py",
+      "bytes": 19243,
+      "sha256": "b85b2e0df3eb515346be99b8d7fca74b458c97692bc1c8c4e67f0b916a5ad986"
+    },
+    {
+      "path": "hurshbintech-backend/app/services/recording_storage/base.py",
+      "bytes": 2593,
+      "sha256": "fe47800f6f344a70a9a1b597b8aeb0a42f1900a9ff84107af4f91459479c066b"
+    },
+    {
+      "path": "hurshbintech-backend/app/services/recording_storage/factory.py",
+      "bytes": 2810,
+      "sha256": "ed0101fda05d40c56fe67559efb3d9c469a8a325e2da71aa3204fb77ce1323d8"
+    },
+    {
+      "path": "hurshbintech-backend/app/services/recording_storage/local_storage.py",
+      "bytes": 5291,
+      "sha256": "d843a7cb970ef50b4b2d4e75fec28905d78409b7c0242bb60e2cfeef375d5a28"
+    },
+    {
+      "path": "hurshbintech-backend/app/utils/file_handler.py",
+      "bytes": 2608,
+      "sha256": "6c43a7df31b4b5d8a98804dbe65f84be72dfe69ad1b1ba424ce00161f326d608"
+    },
+    {
+      "path": "hurshbintech-backend/app/utils/s3_utils.py",
+      "bytes": 15187,
+      "sha256": "e4fc24bf9b5ab4d7b23cdd7afce46347208373b515839e66a57ec1e2389ddb96"
+    },
+    {
+      "path": "hurshbintech-backend/requirements.txt",
+      "bytes": 640,
+      "sha256": "f03203801e4cd65275d7189f2158b90d11c57f855b26550816478ada2b31cb05"
+    }
+  ],
+  "locked_frontend_versions": {
+    "@vitejs/plugin-react": "5.1.1",
+    "autoprefixer": "10.4.22",
+    "axios": "1.13.2",
+    "lucide-react": "0.546.0",
+    "pdfjs-dist": "4.10.38",
+    "postcss": "8.5.6",
+    "prop-types": "15.8.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "react-icons": "5.5.0",
+    "react-router-dom": "7.13.0",
+    "react-toastify": "11.0.5",
+    "tailwindcss": "3.4.18",
+    "twemoji": "14.0.2",
+    "vite": "7.2.6"
+  },
+  "incoming_protocol_types": {
+    "whiteboardService.js": [
+      "animation_popped",
+      "background_music",
+      "background_music_volume",
+      "bucket_added",
+      "bucket_update",
+      "calculator_clear",
+      "calculator_operation",
+      "calculator_permission",
+      "calculator_result",
+      "calculator_sync",
+      "clear",
+      "clear_canvas",
+      "comment_update",
+      "comments_toggle",
+      "draw",
+      "erase_pen",
+      "exercise_answer_update",
+      "exercise_closed",
+      "exercise_response",
+      "exercise_update",
+      "feedback_message",
+      "floating_animations",
+      "image",
+      "item_remove",
+      "item_selected",
+      "item_update",
+      "items_unselected",
+      "media_control",
+      "participant_joined",
+      "pdf_clear_annotations",
+      "pdf_draw",
+      "pen_size_update",
+      "ping",
+      "prompt_update",
+      "session_ended",
+      "stopwatch_sync",
+      "text_added",
+      "text_box_added",
+      "text_box_removed",
+      "text_box_update",
+      "tool_access",
+      "video_state",
+      "waiting_message",
+      "whiteboard_restore",
+      "youtube_open",
+      "youtube_popup_closed",
+      "youtube_popup_created",
+      "youtube_split"
+    ],
+    "videoConferenceService.js": [
+      "answer",
+      "freeze",
+      "ice-candidate",
+      "message",
+      "observer_joined",
+      "observer_left",
+      "offer",
+      "peer_disconnected",
+      "peer_ready",
+      "ping",
+      "pong",
+      "prompt_meter",
+      "prompt_text",
+      "reinforcement_meter",
+      "reinforcement_visibility",
+      "screen_share_stopped",
+      "trainer_disconnected"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "source_python": "3.12.8",
+  "purpose": "Installed source-environment reference for selecting and pinning standalone backend requirements; do not copy the LMS virtual environment.",
+  "selected_runtime_versions": {
+    "fastapi": "0.165.0",
+    "starlette": "1.10.0",
+    "uvicorn": "0.54.0",
+    "sqlalchemy": "2.1.9",
+    "asyncpg": "0.32.0",
+    "alembic": "1.20.1",
+    "pydantic": "2.14.4",
+    "pydantic-settings": "2.16.3",
+    "python-dotenv": "1.2.4",
+    "python-multipart": "0.0.34",
+    "websockets": "17.4",
+    "python-jose": "3.5.0",
+    "cryptography": "50.0.2",
+    "httpx": "0.28.1",
+    "aiohttp": "3.14.5",
+    "Pillow": "13.0.0",
+    "opencv-python": "5.1.0.95",
+    "numpy": "2.5.5"
+  },
+  "note": "Use only packages required by extracted functionality. Resolve and lock their transitive dependencies in the new project; this file is not a complete pip lockfile."
+}
