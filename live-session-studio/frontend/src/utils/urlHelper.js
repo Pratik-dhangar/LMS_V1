@@ -13,17 +13,25 @@ const getBackendBaseUrl = () => {
 
 export const getFileUrl = (url) => {
   if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:')) {
+  if (url.startsWith('data:') || url.startsWith('blob:')) {
+    return url;
+  }
+  // If pointing to our backend (port 8002), convert to relative /api path so Vite proxies it as same-origin
+  if (url.startsWith('http://localhost:8002') || url.startsWith('http://127.0.0.1:8002')) {
+    const path = url.replace(/^http:\/\/(localhost|127\.0\.0\.1):8002/, '');
+    return path.startsWith('/api/') ? path : `/api${path}`;
+  }
+  if (url.startsWith('http://') || url.startsWith('https://')) {
     return url;
   }
   if (url.startsWith('/api/')) {
-    return `${getBackendBaseUrl()}${url}`;
+    return url;
   }
   if (url.startsWith('/uploads/')) {
-    return `${API_BASE_URL}${url}`;
+    return `/api${url}`;
   }
   const clean = url.replace(/^\/+/, '');
-  return `${API_BASE_URL}/uploads/${clean}`;
+  return `/api/uploads/${clean}`;
 };
 
 export const getProfilePictureUrl = (profilePictureUrl) => {

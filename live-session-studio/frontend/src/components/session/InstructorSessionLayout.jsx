@@ -2911,7 +2911,8 @@ export const createContentDragPayload = (content) => {
     }
 
     // Normalize file URL to a usable browser URL and set accurate mimeType
-    const resolvedUrl = content.file_url ? learningContentService.getFileUrl(content.file_url) : null;
+    const rawUrl = content.file_url || content.url || null;
+    const resolvedUrl = rawUrl ? learningContentService.getFileUrl(rawUrl) : null;
     let mime = content.mime_type || null;
     if (!mime) {
         if (content.content_type === 'image') mime = 'image/jpeg';
@@ -2925,7 +2926,7 @@ export const createContentDragPayload = (content) => {
         title: content.title,
         type: content.is_youtube ? 'youtube' : content.content_type,
         url: resolvedUrl,
-        thumbnail: content.thumbnail_url || null,
+        thumbnail: content.thumbnail_url || (content.content_type === 'image' ? resolvedUrl : null),
         mimeType: mime,
         originalFilename: content.title,
         is_youtube: content.is_youtube || false,
@@ -3235,6 +3236,9 @@ export const InstructorSessionPage = ({
                         overflow: 'hidden',
                         display: 'flex',
                         flexDirection: 'column',
+                        flex: 'none',
+                        flexShrink: 0,
+                        height: 'auto',
                     }}>
                         {/* Header Badge */}
                         <div style={{
@@ -3303,6 +3307,9 @@ export const InstructorSessionPage = ({
                         overflow: 'hidden',
                         display: 'flex',
                         flexDirection: 'column',
+                        flex: 'none',
+                        flexShrink: 0,
+                        height: 'auto',
                     }}>
                         {/* Header Badge */}
                         <div style={{

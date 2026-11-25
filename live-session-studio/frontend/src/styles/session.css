@@ -123,9 +123,10 @@
   }
 
   .session-left-sidebar> :nth-child(2) {
-    flex: 1;
+    flex: none !important;
     min-height: 0;
-    max-height: 100%;
+    max-height: none;
+    height: auto !important;
   }
 
   .session-center-area {

@@ -323,7 +323,6 @@ const ImageOverlay = React.memo(({
         <img
             src={item.src}
             alt={item.title || 'Image'}
-            crossOrigin="anonymous"
             style={{
                 width: '100%',
                 height: '100%',
@@ -332,8 +331,7 @@ const ImageOverlay = React.memo(({
                 userSelect: 'none'
             }}
             onError={(e) => {
-                // console.error('[Whiteboard] Failed to load image:', item.src);
-                e.target.style.display = 'none';
+                console.error('[Whiteboard] Failed to load image:', item.src);
             }}
             draggable={false}
         />
@@ -735,7 +733,7 @@ const Whiteboard = ({
             }
 
             const img = new Image();
-            img.crossOrigin = 'anonymous';
+            // Do not force crossOrigin; local proxy and same-origin paths load naturally without CORS blocks
 
             img.onload = () => {
                 imageCacheRef.current.set(src, img);
@@ -3005,30 +3003,32 @@ const Whiteboard = ({
         }
 
         // Handle external learning content drop
-        if (droppedData && droppedData.url) {
+        if (droppedData && (droppedData.url || droppedData.src || droppedData.fileUrl)) {
             // Construct full URL properly - handle both relative and absolute URLs
-            let fullUrl = droppedData.url;
+            let fullUrl = droppedData.url || droppedData.src || droppedData.fileUrl;
             let fileUrl = fullUrl; // Store canonical fileUrl for learning content API
 
-            // Handle S3 URLs through backend proxy (avoids CORS)
-            if (fullUrl.startsWith('s3://')) {
+            // Handle localhost backend URLs through Vite proxy (avoids CORS)
+            if (fullUrl.startsWith('http://localhost:8002') || fullUrl.startsWith('http://127.0.0.1:8002')) {
+                const path = fullUrl.replace(/^http:\/\/(localhost|127\.0\.0\.1):8002/, '');
+                fullUrl = path.startsWith('/api/') ? path : `/api${path}`;
+                fileUrl = fullUrl;
+            } else if (fullUrl.startsWith('s3://')) {
                 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
                 const parts = fullUrl.replace('s3://', '').split('/');
                 const key = parts.slice(1).join('/');
                 fullUrl = `${apiBaseUrl}/media/s3/${key}`;
                 fileUrl = fullUrl;
             } else if (fullUrl.startsWith('/api/')) {
-                // Backend proxy URL from API response
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
-                const backendUrl = apiBaseUrl.replace('/api', '');
-                fullUrl = `${backendUrl}${fullUrl}`;
+                // Keep relative URL through Vite proxy for same-origin loading
+                fileUrl = fullUrl;
+            } else if (fullUrl.startsWith('/uploads/')) {
+                fullUrl = `/api${fullUrl}`;
                 fileUrl = fullUrl;
             } else if (!fullUrl.startsWith('http')) {
-                // It's a relative URL like /uploads/learning_content/file.png
-                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hurshbin.com/api';
-                const backendUrl = apiBaseUrl.replace('/api', ''); // Remove /api to get base URL
-                fullUrl = `${backendUrl}${fullUrl}`;
-                fileUrl = fullUrl; // Store full URL
+                const clean = fullUrl.replace(/^\/+/, '');
+                fullUrl = `/api/uploads/${clean}`;
+                fileUrl = fullUrl;
             }
 
             // console.log('[Whiteboard] Dropping content on trainer canvas:', {
@@ -3104,7 +3104,7 @@ const Whiteboard = ({
             // For non-video items, add to canvas as overlay
             const newItem = {
                 id: Date.now(),
-                src: droppedData.thumbnail ? resolveMediaUrl(droppedData.thumbnail) : fullUrl,
+                src: resolveMediaUrl(droppedData.thumbnail || fullUrl),
                 x: x - 50,
                 y: y - 50,
                 width: droppedBucket ? 40 : 100,  // Shrink if in bucket
