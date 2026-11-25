@@ -1,0 +1,8 @@
+[project]
+name = "live-session-studio-backend"
+version = "1.0.0"
+description = "Standalone Live Session Studio - FastAPI backend"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.backends.legacy:build"

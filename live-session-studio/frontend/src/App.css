@@ -1,0 +1,227 @@
+/* ============================================================================
+   APP.CSS - Root Application Layout
+   Responsive layout system using CSS Grid and Flexbox
+   ============================================================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+code {
+  font-family: var(--font-family-mono);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/* ============================================================================
+   MAIN LAYOUT STRUCTURE
+   Desktop: Full sidebar + content area
+   Tablet: Reduced sidebar + content
+   Mobile: Hidden sidebar (hamburger menu), full-width content
+   ============================================================================ */
+
+.app-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: var(--navbar-height) 1fr;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.app-layout__navbar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.app-layout__sidebar {
+  grid-column: 1;
+  grid-row: 2;
+  background: var(--color-bg-primary);
+  border-right: 1px solid var(--color-gray-200);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: sticky;
+  top: var(--navbar-height);
+  height: calc(100vh - var(--navbar-height));
+}
+
+.app-layout__content {
+  grid-column: 2;
+  grid-row: 2;
+  padding: var(--container-padding);
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ============================================================================
+   RESPONSIVE: TABLET LANDSCAPE (813px - 1366px)
+   ============================================================================ */
+@media (min-width: 813px) and (max-width: 1366px) {
+  .app-layout {
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  .app-layout__content {
+    padding: var(--spacing-lg);
+  }
+
+  /* Adjust sidebar for tablet - narrower but still visible */
+  .app-layout__sidebar {
+    width: var(--sidebar-width);
+  }
+}
+
+/* ============================================================================
+   RESPONSIVE: MOBILE LANDSCAPE (max-width: 812px)
+   ============================================================================ */
+@media (max-width: 812px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: var(--navbar-height) 1fr;
+  }
+
+  .app-layout__navbar {
+    grid-column: 1;
+  }
+
+  /* Hide sidebar on mobile - should be implemented as drawer/hamburger menu */
+  .app-layout__sidebar {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: var(--navbar-height);
+    width: 280px;
+    height: calc(100vh - var(--navbar-height));
+    background: var(--color-bg-primary);
+    box-shadow: var(--shadow-xl);
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform var(--transition-base);
+  }
+
+  .app-layout__sidebar--open {
+    display: block;
+    transform: translateX(0);
+  }
+
+  .app-layout__content {
+    grid-column: 1;
+    padding: var(--spacing-md);
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* Overlay when mobile sidebar is open */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 150;
+    display: none;
+  }
+
+  .sidebar-overlay--visible {
+    display: block;
+  }
+}
+
+/* ============================================================================
+   ORIENTATION-SPECIFIC ADJUSTMENTS
+   Portrait vs Landscape responsive design
+   ============================================================================ */
+
+/* Mobile Landscape Orientation */
+@media (max-width: 812px) and (orientation: landscape) {
+  html {
+    font-size: 14px;
+  }
+
+  body {
+    overflow-y: auto;
+  }
+
+  #root {
+    min-height: auto;
+  }
+
+  .app-layout {
+    min-height: 100vh;
+    grid-template-rows: var(--navbar-height) 1fr;
+  }
+
+  .app-layout__navbar {
+    height: var(--navbar-height);
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+
+  .app-layout__content {
+    padding: var(--spacing-sm);
+    height: calc(100vh - var(--navbar-height));
+    overflow-y: auto;
+  }
+}
+
+/* Tablet Landscape Orientation */
+@media (min-width: 813px) and (max-width: 1366px) and (orientation: landscape) {
+  .app-layout {
+    grid-template-rows: var(--navbar-height) 1fr;
+  }
+
+  .app-layout__content {
+    padding: var(--spacing-lg);
+    height: calc(100vh - var(--navbar-height));
+    overflow-y: auto;
+  }
+}
+
+/* Mobile Portrait Orientation */
+@media (max-width: 812px) and (orientation: portrait) {
+  #root {
+    min-height: 100vh;
+  }
+
+  .app-layout {
+    min-height: 100vh;
+  }
+
+  .app-layout__content {
+    padding: var(--spacing-md);
+    min-height: calc(100vh - var(--navbar-height));
+  }
+}
+
+/* Tablet Portrait Orientation */
+@media (min-width: 813px) and (max-width: 1366px) and (orientation: portrait) {
+  .app-layout {
+    grid-template-columns: var(--sidebar-width) 1fr;
+  }
+
+  .app-layout__content {
+    padding: var(--spacing-lg);
+    height: auto;
+    min-height: calc(100vh - var(--navbar-height));
+  }
+}

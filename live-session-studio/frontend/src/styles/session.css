@@ -1,0 +1,2370 @@
+/* ============================================================================
+   SESSION.CSS - Session-specific Styles
+   Responsive design for video sessions and chat
+   ============================================================================ */
+
+.session-page {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  min-height: 100vh;
+}
+
+.session-main-layout {
+  background-color: #ffffff !important;
+}
+
+/* ============================================================================
+   LAYOUT STRUCTURE - 80-20 Split for Mobile/Tablet
+   ============================================================================ */
+
+/* Session Header - Auto-hide on mobile/tablet after 5 seconds */
+.session-header {
+  transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  cursor: pointer;
+  background: #2a3f5f;
+  color: white;
+  padding: clamp(0.5rem, 1.5vw, 1rem);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+}
+
+/* Desktop: Always show header */
+@media (min-width: 1024px) {
+  .session-header {
+    display: block;
+    transform: translateY(0);
+    opacity: 1;
+    position: relative;
+  }
+}
+
+/* Mobile/Tablet: Auto-hide after 5 seconds */
+@media (max-width: 1023px) {
+  .session-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(0);
+    opacity: 1;
+    width: 100%;
+    height: auto;
+    visibility: visible;
+  }
+
+  /* When header is hidden - completely remove from view */
+  .session-header.navbar-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    height: 0;
+    overflow: hidden;
+  }
+
+  /* No padding when navbar is hidden - content fills entire screen */
+  .session-main-layout {
+    padding-top: 0;
+    margin-top: 0;
+    transition: padding-top 0.3s ease-in-out;
+  }
+
+  /* Add padding only when navbar is visible */
+  .navbar-is-visible .session-main-layout {
+    padding-top: 3.5rem;
+    transition: padding-top 0.3s ease-in-out;
+  }
+
+  /* Hide video overlay labels (Trainer badge & connection status) when navbar is hidden */
+  .navbar-hidden {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+}
+
+/* Main Layout Container */
+.session-main-layout {
+  display: flex;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  margin: clamp(0.75rem, 2vw, 1.5rem);
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+}
+
+/* Desktop: 3-column layout (Left sidebar + Center + Right sidebar) */
+@media (min-width: 1024px) {
+  .session-main-layout {
+    flex-direction: row;
+  }
+
+  .session-left-sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 18rem;
+    flex-shrink: 0;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    max-height: calc(100vh - 8rem);
+    height: 100%;
+  }
+
+  /* Left sidebar components spacing */
+  .session-left-sidebar>* {
+    flex-shrink: 0;
+  }
+
+  .session-left-sidebar> :first-child {
+    max-height: 45rem;
+  }
+
+  .session-left-sidebar> :nth-child(2) {
+    flex: 1;
+    min-height: 0;
+    max-height: 100%;
+  }
+
+  .session-center-area {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .session-right-column {
+    display: flex;
+    flex-direction: column;
+    width: 18rem;
+    flex-shrink: 0;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+    /* overflow-y: auto; */
+    padding-left: 0.5rem;
+  }
+
+  /* Hide video conferencing and learning program on desktop (they stay in left sidebar) */
+  .video-section-container,
+  .learning-program-container {
+    display: none !important;
+  }
+
+  /* Hide mobile-only components on desktop */
+  .session-mobile-video,
+  .session-mobile-program {
+    display: none;
+  }
+}
+
+/* Mobile-only layout (screen width < 768px) */
+@media (max-width: 767px) {
+  .session-main-layout {
+    flex-direction: row;
+    gap: clamp(0.5rem, 1.5vw, 1rem);
+    margin: clamp(0.5rem, 1.5vw, 1rem);
+  }
+
+  /* Hide desktop left sidebar on tablet/mobile */
+  .session-left-sidebar {
+    display: none !important;
+  }
+
+  /* Center area - 70% width */
+  .session-center-area {
+    width: 70%;
+    flex-shrink: 0;
+  }
+
+  /* Right column - 30% width, stacked components */
+  .session-right-column {
+    width: 30%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.5rem, 1vw, 0.75rem);
+    overflow-y: auto;
+    height: calc(100vh - 8rem);
+  }
+
+  /* Show mobile components */
+  .session-mobile-video,
+  .session-mobile-program {
+    display: block;
+    width: 100%;
+  }
+
+  /* Compact video section for mobile */
+  .session-mobile-video {
+    min-height: clamp(8rem, 20vh, 12rem);
+    max-height: clamp(20rem, 35vh, 25rem);
+  }
+
+  /* Scrollable program section */
+  .session-mobile-program {
+    overflow-y: auto;
+    max-height: clamp(20rem, 40vh, 30rem);
+  }
+
+  /* 30% height for each section container */
+  .session-right-column {
+    /* border: 3px solid red; */
+    height: 30%;
+  }
+
+  .section-container {
+    height: 10%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid #e5e7eb;
+    background: white;
+    border: 2px solid red;
+  }
+
+  /* 30% height for video conference container */
+  .session-right-column>.video-section-container {
+    /* height: 0%; */
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 1px solid #e5e7eb;
+    background: #000;
+  }
+
+  /* Stopwatch at bottom - dynamic height */
+  .session-right-column>.stopwatch-display {
+    flex: 1;
+    min-height: 5%;
+    overflow: hidden;
+  }
+}
+
+/* ============================================================================
+   SECTION CONTAINERS - Always Visible Layout
+   ============================================================================ */
+
+.section-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(0.2rem, 0.6vw, 0.25rem);
+  background: linear-gradient(135deg, #DB9D32 0%, #9C4D0B 100%);
+  color: white;
+  font-weight: bold;
+  font-size: clamp(0.45rem, 0.9vw, 0.55rem);
+  flex-shrink: 0;
+  min-height: auto;
+  height: clamp(1.5rem, 4vh, 2rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+}
+
+.section-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: white;
+  padding: clamp(0.15rem, 0.5vw, 0.2rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.05rem, 0.3vw, 0.1rem);
+}
+
+/* Video Section - Always visible */
+.video-section-container .section-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Learning Program - Always visible */
+.learning-program-container .section-header {
+  background: linear-gradient(135deg, #DB9D32 0%, #9C4D0B 100%);
+}
+
+/* Learning Content - Always visible */
+.learning-content-container .section-header {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+/* Desktop: Learning content container styling */
+@media (min-width: 1024px) {
+  .learning-content-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+
+  .learning-content-container .section-header {
+    flex-shrink: 0;
+  }
+
+  .learning-content-container .section-content {
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+/* Tablet/Mobile: Learning Content and Learning Program containers */
+@media (max-width: 1023px) {
+
+  .learning-content-container,
+  .learning-program-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background: white;
+  }
+
+  .learning-content-container .section-header,
+  .learning-program-container .section-header {
+    flex-shrink: 0;
+  }
+
+  .learning-content-container .section-content,
+  .learning-program-container .section-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  /* Hide video section container on tablet/mobile */
+  .video-section-container {
+    display: none !important;
+  }
+}
+
+/* Drawer Container Base */
+.drawer-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Drawer Header - Collapsible button */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(0.25rem, 1vw, 0.375rem);
+  background: linear-gradient(135deg, #DB9D32 0%, #9C4D0B 100%);
+  color: white;
+  font-weight: bold;
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem) clamp(0.2rem, 0.8vw, 0.25rem) 0 0;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  min-height: clamp(1.75rem, 4vh, 2.25rem);
+}
+
+.drawer-header:hover {
+  background: linear-gradient(135deg, #9C4D0B 0%, #7A2C2C 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.drawer-header-title {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.25rem, 1vw, 0.375rem);
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.drawer-toggle-icon {
+  transition: transform 0.3s ease;
+  font-size: clamp(0.625rem, 1.2vw, 0.75rem);
+  flex-shrink: 0;
+}
+
+.drawer-toggle-icon.open {
+  transform: rotate(180deg);
+}
+
+/* Drawer Content - Hidden (not used in new layout) */
+.drawer-content {
+  display: none;
+}
+
+/* Video Conference Container - Fixed Display */
+.video-conference-container {
+  border: 1px solid #d1d5db;
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem);
+  overflow: hidden;
+  background: #000;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-conference-header {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.25rem, 1vw, 0.375rem);
+  padding: clamp(0.25rem, 1vw, 0.375rem);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-weight: bold;
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: clamp(1.75rem, 4vh, 2.25rem);
+}
+
+/* Video Section - Mobile optimized */
+.session-mobile-video {
+  border: clamp(1px, 0.2vw, 2px) solid #d1d5db;
+  border-radius: clamp(0.375rem, 1vw, 0.5rem);
+  overflow: hidden;
+  background: #000;
+}
+
+.video-section {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1f2937;
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem);
+  overflow: hidden;
+}
+
+.video-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(0.15rem, 0.6vw, 0.25rem);
+  background: #0f172a;
+  border-bottom: 1px solid #374151;
+  flex-shrink: 0;
+}
+
+.video-title {
+  color: white;
+  font-weight: bold;
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
+  display: none;
+}
+
+.video-controls {
+  display: flex;
+  gap: clamp(0.15rem, 0.6vw, 0.25rem);
+}
+
+.media-control {
+  padding: clamp(0.2rem, 0.8vw, 0.25rem);
+  border-radius: clamp(0.15rem, 0.4vw, 0.2rem);
+  border: none;
+  cursor: pointer;
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
+  transition: all 0.2s ease;
+}
+
+.media-control-on {
+  background: #10b981;
+  color: white;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.media-control-off {
+  background: #ef4444;
+  color: white;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+}
+
+.media-control:hover {
+  transform: scale(1.1);
+}
+
+.video-session-info {
+  padding: clamp(0.15rem, 0.4vw, 0.2rem);
+  background: #111827;
+  color: #9ca3af;
+  font-size: clamp(0.425rem, 0.9vw, 0.5rem);
+  border-bottom: 1px solid #374151;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.video-container {
+  flex: 1;
+  display: flex;
+  background: #000;
+  position: relative;
+}
+
+.video-remote {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.video-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(0.15rem, 0.4vw, 0.2rem);
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: clamp(0.425rem, 0.9vw, 0.5rem);
+  flex-shrink: 0;
+}
+
+.video-label-text {
+  font-weight: bold;
+}
+
+.video-status {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: clamp(0.425rem, 0.9vw, 0.5rem);
+}
+
+.video-status-connected {
+  color: #10b981;
+}
+
+.video-status-waiting {
+  color: #f59e0b;
+}
+
+.video-player-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  position: relative;
+}
+
+.video-player {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.video-placeholder {
+  color: #9ca3af;
+  font-size: clamp(0.5rem, 1vw, 0.625rem);
+  text-align: center;
+  padding: clamp(0.25rem, 1vw, 0.375rem);
+}
+
+/* Responsive video container height for tablets and mobile */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .video-container {
+    flex: none;
+    height: 200px;
+  }
+}
+
+@media (max-width: 767px) {
+  .video-container {
+    flex: none;
+    height: 150px;
+  }
+}
+
+/* Learning Content Sidebar - Drawer layout */
+.sidebar-container {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem);
+  background: white;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-container.sidebar-drag-over {
+  border-color: #DB9D32;
+  background: #fef3e2;
+  box-shadow: 0 0 8px rgba(219, 157, 50, 0.3);
+}
+
+.sidebar-header {
+  padding: clamp(0.25rem, 0.8vw, 0.35rem);
+  font-weight: bold;
+  font-size: clamp(0.7rem, 1vw, 0.9rem);
+  border-radius: clamp(0.2rem, 0.8vw, 0.25rem) clamp(0.2rem, 0.8vw, 0.25rem) 0 0;
+  color: white;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  min-height: clamp(1.5rem, 3.2vh, 1.9rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-header-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.sidebar-header:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-search-box {
+  position: relative;
+  padding: clamp(0.06rem, 0.25vw, 0.1rem);
+  flex-shrink: 0;
+}
+
+.sidebar-search-input {
+  width: 100%;
+  padding: clamp(0.1rem, 0.35vw, 0.125rem);
+  border: 1px solid #d1d5db;
+  border-radius: clamp(0.12rem, 0.5vw, 0.15rem);
+  font-size: clamp(0.55rem, 0.85vw, 0.7rem);
+  transition: all 0.2s ease;
+}
+
+.sidebar-search-input:focus {
+  outline: none;
+  border-color: #DB9D32;
+  box-shadow: 0 0 6px rgba(219, 157, 50, 0.3);
+}
+
+.sidebar-search-spinner {
+  position: absolute;
+  right: clamp(0.375rem, 1vw, 0.5rem);
+  top: 50%;
+  transform: translateY(-50%);
+  animation: spin 1s linear infinite;
+  font-size: clamp(0.625rem, 1.2vw, 0.75rem);
+}
+
+@keyframes spin {
+  from {
+    transform: translateY(-50%) rotate(0deg);
+  }
+
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+.sidebar-section-title {
+  padding: clamp(0.15rem, 0.6vw, 0.2rem) clamp(0.2rem, 0.8vw, 0.3rem);
+  font-weight: bold;
+  font-size: clamp(0.6rem, 0.9vw, 0.75rem);
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.sidebar-content-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: clamp(0.2rem, 0.8vw, 0.25rem);
+}
+
+.sidebar-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(0.5rem, 1.5vw, 0.75rem);
+  gap: clamp(0.25rem, 1vw, 0.375rem);
+}
+
+.sidebar-loading-spinner {
+  animation: spin 1s linear infinite;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+}
+
+.sidebar-loading-text {
+  font-size: clamp(0.425rem, 1vw, 0.525rem);
+  color: #6b7280;
+}
+
+/* ========================================
+   UNIFIED WHITEBOARD CONTAINER STYLES
+   Used by both Trainer & Learner Sessions
+   ======================================== */
+
+.session-whiteboard-container {
+  background: #f9fafb;
+  border: clamp(2px, 0.3vw, 4px) solid #d1d5db;
+  border-radius: clamp(0.5rem, 1vw, 1rem);
+  margin: clamp(0.5rem, 1.5vw, 1rem);
+  position: relative;
+  width: calc(100% - clamp(1rem, 3vw, 3rem));
+  /* margin-left: auto;
+  margin-right: auto; */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  min-height: 300px;
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS FOR WHITEBOARDS
+   Mobile, Tablet, Desktop
+   ======================================== */
+
+/* MOBILE: 0px - 640px */
+@media (max-width: 640px) {
+  .session-whiteboard-container {
+    height: 280px;
+    max-width: 100%;
+  }
+}
+
+/* SMALL MOBILE: 641px - 767px */
+@media (min-width: 641px) and (max-width: 767px) {
+  .session-whiteboard-container {
+    height: 320px;
+    max-width: 100%;
+  }
+}
+
+/* TABLET: 768px - 1023px */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .session-whiteboard-container {
+    height: 360px;
+    max-width: 100%;
+  }
+}
+
+/* SMALL LAPTOP/DESKTOP: 1024px - 1365px */
+@media (min-width: 1024px) and (max-width: 1365px) {
+  .session-whiteboard-container {
+    height: 420px;
+    max-width: 67.875rem;
+    /* 1086px */
+  }
+}
+
+/* LARGE DESKTOP: 1366px and up */
+@media (min-width: 1366px) {
+  .session-whiteboard-container {
+    height: 520px;
+    /* max-width: 67.875rem; */
+    /* 1086px */
+  }
+}
+
+/* Video element styles */
+.session-video {
+  width: 100%;
+  height: 100%;
+  background: #000;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  display: block;
+}
+
+/* Loader animation */
+.session-loader {
+  border: 4px solid #fef3e2;
+  border-top-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  width: 3rem;
+  height: 3rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hover transitions for buttons and items */
+.session-hover-transition {
+  transition: all var(--transition-base);
+}
+
+/* Message bubble styles */
+.message-bubble {
+  padding: 0.375rem 0.75rem;
+  margin-bottom: var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+.message-bubble-sent {
+  background-color: #d1fae5;
+}
+
+.message-bubble-received {
+  background-color: var(--color-gray-50);
+}
+
+/* Scrollbar styles for sidebars */
+.session-sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.session-sidebar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.session-sidebar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.session-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Tool icon active state */
+.tool-icon-active {
+  border-color: var(--color-primary) !important;
+  background-color: #fef3e2 !important;
+}
+
+/* Permission status indicators */
+.permission-allowed {
+  background-color: #c6f6d5;
+  color: #22543d;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+
+.permission-blocked {
+  background-color: #fed7d7;
+  color: #742a2a;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+}
+
+/* Media controls */
+.media-control-on {
+  background-color: var(--color-success);
+}
+
+.media-control-off {
+  background-color: var(--color-error);
+}
+
+/* Video waiting overlay */
+.video-waiting-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gray-300);
+  font-size: var(--font-size-sm);
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: var(--radius-md);
+}
+
+/* ============================================================================
+   RESPONSIVE BREAKPOINTS
+   - Mobile: up to 812px
+   - Tablet: 813px to 1366px
+   - Desktop: 1367px and above
+   ============================================================================ */
+
+/* ============================================================================
+   MOBILE STYLES (max-width: 812px)
+   ============================================================================ */
+@media (max-width: 812px) {
+  .session-video {
+    border-radius: var(--radius-sm);
+  }
+
+  .message-bubble {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .session-loader {
+    width: 2rem;
+    height: 2rem;
+    border-width: 3px;
+  }
+
+  .session-sidebar::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .video-waiting-overlay {
+    font-size: 0.75rem;
+  }
+
+  .permission-allowed,
+  .permission-blocked {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  /* Mobile-specific action icons */
+  .action-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Mobile-specific media controls */
+  .media-control-on,
+  .media-control-off {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* TABLET STYLES (813px - 1366px) - Now same as Desktop (consolidated below) */
+
+/* Tablet and Desktop share same styling */
+@media (min-width: 813px) {
+  .message-bubble {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+  }
+
+  .session-loader {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .video-waiting-overlay {
+    font-size: 1rem;
+  }
+
+  .action-icon {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+/* ============================================================================
+   HAMBURGER MENU & RESPONSIVE SIDEBAR STYLES
+   ============================================================================ */
+
+/* Hamburger button styling - MOBILE ONLY */
+.hamburger-btn {
+  position: fixed;
+  z-index: 999;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: var(--spacing-md);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  min-width: 44px;
+  min-height: 44px;
+  display: none;
+  /* Hidden by default - only show on mobile */
+  align-items: center;
+  justify-content: center;
+}
+
+.hamburger-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+.hamburger-btn:active {
+  transform: scale(0.95);
+}
+
+/* Mobile: Show hamburger button ONLY */
+@media (max-width: 812px) {
+  .hamburger-btn {
+    display: flex !important;
+    padding: 0.625rem;
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+/* Tablet and Desktop: Hide hamburger */
+@media (min-width: 813px) {
+  .hamburger-btn {
+    display: none !important;
+  }
+}
+
+/* Overlay backdrop for mobile sidebars ONLY */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 998;
+  animation: fadeIn 0.3s ease-in-out;
+  display: none;
+  /* Hidden by default */
+}
+
+/* Mobile: Show overlay */
+@media (max-width: 812px) {
+  .sidebar-overlay {
+    display: block !important;
+  }
+}
+
+/* Tablet and Desktop: Hide overlay */
+@media (min-width: 813px) {
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* Responsive sidebar - slides in from left/right on mobile and tablet */
+.responsive-sidebar {
+  transition: transform var(--transition-base);
+  will-change: transform;
+}
+
+.responsive-sidebar-left {
+  position: fixed;
+  top: 80px;
+  left: 0;
+  bottom: 0;
+  width: 85%;
+  max-width: 400px;
+  z-index: 999;
+  background: white;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+  /* Hidden by default */
+}
+
+.responsive-sidebar-right {
+  position: fixed;
+  top: 80px;
+  right: 0;
+  bottom: 0;
+  width: 85%;
+  max-width: 400px;
+  z-index: 999;
+  background: white;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+  /* Hidden by default */
+}
+
+/* Mobile: Show right sidebar */
+@media (max-width: 812px) {
+  .responsive-sidebar-right {
+    display: block !important;
+    top: 70px;
+    width: 90%;
+    max-width: 320px;
+  }
+}
+
+/* Tablet and Desktop: Show as permanent sidebar */
+@media (min-width: 813px) {
+  .responsive-sidebar-right {
+    display: block !important;
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
+
+  .responsive-sidebar-left {
+    display: block !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* Slide animations */
+.sidebar-slide-left-enter {
+  transform: translateX(-100%);
+}
+
+.sidebar-slide-left-open {
+  transform: translateX(0);
+}
+
+.sidebar-slide-right-enter {
+  transform: translateX(100%);
+}
+
+.sidebar-slide-right-open {
+  transform: translateX(0);
+}
+
+/* Prevent body scroll when sidebar is open */
+body.sidebar-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* ============================================================================
+   DESKTOP LAYOUT REFINEMENTS (1024px+)
+   ============================================================================ */
+@media (min-width: 1024px) {
+
+  /* Left sidebar with video and learning program */
+  .session-left-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+  }
+
+  /* VideoSection wrapper in left sidebar - fixed height */
+  .session-left-sidebar>div:has(> video),
+  .session-left-sidebar>.video-section-wrapper {
+    flex-shrink: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    background: #000;
+  }
+
+  /* Learning program container in left sidebar - flexible height */
+  .session-left-sidebar>.bg-gray-50 {
+    flex: 1;
+    min-height: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    max-height: none !important;
+    height: auto;
+  }
+
+  /* Learning content in right column - full height */
+  .session-right-column {
+    height: fit-content;
+    gap: clamp(0.75rem, 1.5vw, 1rem);
+  }
+
+  /* Center area whiteboard container */
+  .session-center-area {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Hide specific height constraints on desktop */
+  .session-left-sidebar>.bg-gray-50 {
+    max-height: none !important;
+  }
+}
+
+/* ============================================================================
+   COMPREHENSIVE RESPONSIVE BUTTON & COMPONENT STYLES
+   ============================================================================ */
+
+/* Session Header Buttons - Responsive */
+.btn-session {
+  padding: clamp(0.375rem, 1vw, 0.625rem) clamp(0.625rem, 1.5vw, 1rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-session-end {
+  background: #dc2626;
+  color: white;
+}
+
+.btn-session-settings {
+  background: #475569;
+  color: white;
+}
+
+.btn-session-active {
+  background: #10b981;
+  color: white;
+}
+
+/* Video Control Buttons - Responsive */
+.media-control {
+  padding: clamp(0.375rem, 1.2vw, 0.625rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  border: none;
+  cursor: pointer;
+  font-size: clamp(0.75rem, 1.8vw, 1rem);
+  transition: all 0.2s ease;
+  min-width: clamp(2rem, 5vw, 2.5rem);
+  min-height: clamp(2rem, 5vw, 2.5rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Whiteboard Drawing Tools Section */
+.session-whiteboard-tools {
+  width: 100%;
+  margin-bottom: clamp(0.5rem, 1.5vw, 1rem);
+}
+
+.session-whiteboard-tools button {
+  padding: clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.5rem, 1.5vw, 1rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(2rem, 5vw, 2.5rem);
+}
+
+/* Whiteboard Tools & Learner Access Buttons */
+.session-tools-section button {
+  padding: clamp(0.375rem, 1.2vw, 0.625rem) clamp(0.5rem, 1.5vw, 1rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(2rem, 5vw, 2.5rem);
+  min-width: clamp(4rem, 10vw, 5rem);
+}
+
+/* Timers, Stopwatch, Feedback Section Buttons */
+.session-interactive-buttons button {
+  padding: clamp(0.25rem, 1vw, 0.5rem) clamp(0.375rem, 1.2vw, 0.75rem);
+  font-size: clamp(0.5rem, 1.2vw, 0.75rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(1.75rem, 4.5vw, 2.25rem);
+}
+
+
+
+/* Session Notes & Message Box */
+.session-notes-section textarea {
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  padding: clamp(0.375rem, 1vw, 0.625rem);
+  min-height: clamp(60px, 15vw, 80px);
+}
+
+.session-message-box input {
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  padding: clamp(0.375rem, 1vw, 0.625rem);
+}
+
+.session-message-box button {
+  padding: clamp(0.375rem, 1vw, 0.625rem) clamp(0.75rem, 2vw, 1.25rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+}
+
+/* Section Headers - Responsive */
+.session-section-header {
+  padding: clamp(0.375rem, 1vw, 0.625rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  margin-bottom: clamp(0.5rem, 1.2vw, 0.75rem);
+}
+
+/* Save Session Button */
+.session-save-button {
+  padding: clamp(0.5rem, 1.5vw, 0.75rem) clamp(1rem, 2.5vw, 1.5rem);
+  font-size: clamp(0.625rem, 1.4vw, 0.875rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(2.25rem, 5.5vw, 2.75rem);
+}
+
+/* End Session & Pause Buttons */
+.session-control-buttons button {
+  padding: clamp(0.375rem, 1vw, 0.625rem) clamp(0.625rem, 1.8vw, 1rem);
+  font-size: clamp(0.5rem, 1.2vw, 0.75rem);
+  border-radius: clamp(0.25rem, 0.5vw, 0.375rem);
+  min-height: clamp(1.75rem, 4.5vw, 2.25rem);
+}
+
+/* Tablet-specific adjustments (768px to 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .btn-session {
+    padding: clamp(0.5rem, 1.2vw, 0.625rem) clamp(0.75rem, 1.8vw, 1rem);
+    font-size: clamp(0.75rem, 1.6vw, 0.875rem);
+  }
+
+  .media-control {
+    min-width: clamp(2.25rem, 5.5vw, 2.75rem);
+    min-height: clamp(2.25rem, 5.5vw, 2.75rem);
+  }
+
+  .session-whiteboard-tools button,
+  .session-tools-section button {
+    padding: clamp(0.5rem, 1.4vw, 0.625rem) clamp(0.75rem, 1.8vw, 1rem);
+    font-size: clamp(0.75rem, 1.6vw, 0.875rem);
+  }
+}
+
+/* Mobile-specific adjustments (< 768px) */
+@media (max-width: 767px) {
+  .btn-session {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.625rem;
+  }
+
+  .media-control {
+    min-width: 2rem;
+    min-height: 2rem;
+    font-size: 0.75rem;
+  }
+
+  .session-whiteboard-tools button,
+  .session-tools-section button,
+  .session-interactive-buttons button {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.625rem;
+    min-height: 1.75rem;
+  }
+
+  .session-notes-section textarea {
+    font-size: 0.625rem;
+    min-height: 60px;
+  }
+
+  .session-message-box input,
+  .session-message-box button {
+    font-size: 0.625rem;
+    padding: 0.375rem 0.625rem;
+  }
+
+  .session-save-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.625rem;
+    min-height: 2rem;
+  }
+
+  /* Make emoji and feedback buttons smaller on mobile */
+  .session-interactive-buttons button {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.5rem;
+    min-height: 1.5rem;
+    min-width: 2.5rem;
+  }
+}
+
+/* Extra small mobile (< 375px) */
+@media (max-width: 374px) {
+  .btn-session {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.5rem;
+  }
+
+  .media-control {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    font-size: 0.625rem;
+  }
+
+  .session-whiteboard-tools button,
+  .session-tools-section button {
+    padding: 0.25rem 0.375rem;
+    font-size: 0.5rem;
+    min-height: 1.5rem;
+  }
+
+  .session-interactive-buttons button {
+    padding: 0.2rem 0.3rem;
+    font-size: 0.45rem;
+    min-height: 1.25rem;
+    min-width: 2rem;
+  }
+}
+
+/* Session Info Bar pinned to bottom */
+.session-info-bar {
+  position: static;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(0.5rem, 1.5vw, 1rem);
+  padding: clamp(0.5rem, 1.2vw, 0.75rem) clamp(0.75rem, 2vw, 1rem);
+  background: #0f172a;
+  /* darker slate to match theme */
+  color: #ffffff;
+  box-shadow: 0 -2px 8px rgba(2, 6, 23, 0.2);
+  margin: 0;
+  /* ensure no surrounding space */
+  border-radius: 0;
+  /* flush to edges */
+  width: 100%;
+}
+
+.session-info-bar .session-info-text {
+  font-size: clamp(0.6rem, 1.2vw, 0.9rem);
+  color: #ffffff;
+  /* ensure visibility on dark background */
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-info-bar .session-info-actions {
+  display: flex;
+  gap: clamp(0.4rem, 1vw, 0.75rem);
+}
+
+.session-info-bar .btn-end-session,
+.session-info-bar .btn-pause-session,
+.session-info-bar .btn-freeze-session {
+  background: transparent;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  padding: clamp(0.35rem, 0.9vw, 0.55rem) clamp(0.6rem, 1.6vw, 0.9rem);
+  font-size: clamp(0.6rem, 1.1vw, 0.85rem);
+  border-radius: 0.375rem;
+  transition: background 0.3s ease;
+}
+
+.session-info-bar .btn-end-session:hover {
+  background: red;
+}
+
+.session-info-bar .btn-pause-session:hover {
+  background: rgb(149, 206, 229);
+}
+
+.session-info-bar .btn-freeze-session:hover {
+  background: rgb(233, 163, 44);
+}
+
+.session-info-bar .btn-freeze-session.active {
+  background: rgb(239, 68, 68);
+}
+
+.session-info-bar .btn-freeze-session.active:hover {
+  background: rgb(220, 38, 38);
+}
+
+/* Ensure content can scroll beneath the fixed bar without leaving extra gap */
+.session-main-layout {
+  /* no forced bottom margin; allow overlap under the fixed session-info-bar */
+  /* intentionally left minimal to avoid extra spacing at page bottom */
+  margin-bottom: 0;
+}
+
+@media (max-width: 480px) {
+  .session-info-bar {
+    padding: clamp(0.4rem, 1.8vw, 0.6rem);
+  }
+
+  .session-info-bar .session-info-text {
+    font-size: clamp(0.55rem, 1.1vw, 0.75rem);
+    color: #ffffff;
+    /* mobile override */
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* ============================================================================
+   TOUCH DRAG & DROP ENHANCEMENTS - Mobile/Tablet
+   ============================================================================ */
+
+/* Touch targets - minimum 44x44px for accessibility */
+@media (max-width: 1023px) {
+  .sidebar-container .border-2 {
+    min-height: 88px;
+    touch-action: none;
+    /* Prevent browser gestures during drag */
+  }
+
+  /* Larger touch targets for buttons */
+  .session-control-buttons button,
+  .session-header-controls button,
+  .wbBtnBase,
+  .wbSmallBtnBase {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Drop zone active state - highlight when dragging over */
+.touch-drop-zone-active {
+  position: relative;
+  animation: dropZonePulse 1s ease-in-out infinite;
+}
+
+.touch-drop-zone-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 4px dashed #DB9D32;
+  border-radius: 8px;
+  background: rgba(219, 157, 50, 0.1);
+  pointer-events: none;
+  z-index: 1;
+  animation: dropZoneShimmer 2s linear infinite;
+}
+
+.touch-drop-zone-active::after {
+  content: '📥 Drop Here';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(219, 157, 50, 0.95);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: bold;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+/* Sidebar drop zone styling */
+.sidebar-container.touch-drop-zone-active::after {
+  content: '↩️ Return to Content';
+  font-size: 0.75rem;
+}
+
+/* Ghost element animations */
+#touch-drag-ghost,
+#touch-drag-back-ghost {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  will-change: left, top;
+}
+
+/* Whiteboard canvas drop zone */
+canvas[data-whiteboard="true"].touch-drop-zone-active {
+  outline: 4px dashed #10b981;
+  outline-offset: -4px;
+  background-color: rgba(16, 185, 129, 0.05);
+}
+
+/* Animations */
+@keyframes dropZonePulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes dropZoneShimmer {
+  0% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}
+
+/* Touch feedback - vibration substitute visual */
+@media (max-width: 1023px) {
+  .touch-success-feedback {
+    animation: touchSuccessPulse 0.4s ease-out;
+  }
+}
+
+@keyframes touchSuccessPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* Long-press hint for touch draggable items */
+@media (max-width: 1023px) {
+  .sidebar-container .border-2::after {
+    content: '👆 Drag to whiteboard';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 9px;
+    color: rgba(59, 130, 246, 0.6);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .sidebar-container .border-2:active::after {
+    opacity: 1;
+  }
+}
+
+/* Improved touch scrolling */
+@media (max-width: 1023px) {
+
+  .section-content,
+  .sidebar-container,
+  .learning-content-container,
+  .learning-program-container {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Prevent text selection during drag */
+.sidebar-container [draggable="true"],
+canvas[data-whiteboard="true"] {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Touch-friendly whiteboard controls */
+@media (max-width: 1023px) {
+  .whiteboard-controls {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: white;
+    padding: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Ensure whiteboard items are touch-friendly */
+  .absolute.group {
+    min-width: 60px;
+    min-height: 60px;
+  }
+}
+
+/* ============================================================================
+   GESTURE HINTS TUTORIAL - First Time User Experience
+   ============================================================================ */
+
+.gesture-hints-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: fadeIn 0.3s ease-out;
+  backdrop-filter: blur(4px);
+}
+
+.gesture-hints-container {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease-out;
+  position: relative;
+}
+
+.gesture-hints-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #f3f4f6;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+.gesture-hints-close:hover {
+  background: #e5e7eb;
+  transform: rotate(90deg);
+  color: #374151;
+}
+
+.gesture-hints-title {
+  font-size: 1.75rem;
+  font-weight: bold;
+  margin: 0 0 1.5rem 0;
+  color: #1f2937;
+  text-align: center;
+}
+
+.gesture-hints-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.gesture-hint-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 12px;
+  border: 2px solid #bae6fd;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gesture-hint-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(59, 130, 246, 0.15);
+}
+
+.gesture-hint-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+.gesture-hint-text {
+  flex: 1;
+}
+
+.gesture-hint-text strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #9c6a08;
+  margin-bottom: 0.25rem;
+}
+
+.gesture-hint-text p {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.gesture-hints-got-it {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #DB9D32 0%, #9C4D0B 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(219, 157, 50, 0.3);
+}
+
+.gesture-hints-got-it:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(219, 157, 50, 0.4);
+}
+
+.gesture-hints-got-it:active {
+  transform: scale(0.98);
+}
+
+/* Mobile-specific gesture hints */
+@media (max-width: 640px) {
+  .gesture-hints-container {
+    padding: 1.5rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .gesture-hints-title {
+    font-size: 1.5rem;
+  }
+
+  .gesture-hints-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .gesture-hint-icon {
+    font-size: 1.5rem;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ============================================================================
+   PINCH-TO-RESIZE INDICATOR
+   ============================================================================ */
+
+.pinch-resize-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(59, 130, 246, 0.95);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: bold;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 9998;
+  animation: pulseScale 0.5s ease-in-out infinite;
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+}
+
+@keyframes pulseScale {
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
+
+/* ============================================================================
+   MULTI-TOUCH SELECTION FEEDBACK
+   ============================================================================ */
+
+.multi-touch-selection-indicator {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: bold;
+  font-size: 0.875rem;
+  pointer-events: none;
+  z-index: 9997;
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+  animation: slideUpFade 0.3s ease-out;
+}
+
+@keyframes slideUpFade {
+  from {
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* ============================================================================
+   LEARNER SESSION - RESPONSIVE DESIGN FOR MOBILE & TABLET
+   ============================================================================ */
+
+/* Hide Navbar on Mobile/Tablet for Learner Session */
+@media (max-width: 1023px) {
+  .learner-session-page nav {
+    display: none !important;
+  }
+
+  .learner-session-page .session-header {
+    top: 0;
+  }
+}
+
+/* ============================================================================
+   MOBILE - SMALL (max-width: 640px)
+   Portrait orientation - Full width stacked layout
+   ============================================================================ */
+@media (max-width: 640px) {
+  .learner-responsive-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem;
+    margin: 0.5rem;
+    padding: 0.5rem;
+    min-height: calc(100vh - 70px) !important;
+  }
+
+  /* Whiteboard First */
+  .learner-responsive-main-area {
+    width: 100% !important;
+    order: 1 !important;
+    flex: 1;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .learner-responsive-main-area .session-whiteboard-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  /* Control Sections Below */
+  .learner-responsive-sidebar-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    position: static !important;
+    height: auto !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column;
+    background: white;
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    padding: 1rem 0.75rem !important;
+    margin: 0;
+    overflow: visible;
+    transform: none !important;
+    z-index: auto;
+    gap: 0.75rem;
+  }
+
+  /* Trainer Video - Compact for mobile */
+  .learner-responsive-sidebar-left [style*="border: 1px solid rgba(217, 119, 6"]:first-child {
+    max-height: 200px;
+  }
+
+  .learner-responsive-sidebar-left video {
+    max-height: 180px;
+    width: auto;
+  }
+
+  /* Collapsible Sections - Compact */
+  .learner-responsive-sidebar-left>div {
+    margin-bottom: 0.5rem;
+  }
+
+  .learner-responsive-sidebar-left h3 {
+    font-size: 0.875rem !important;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .learner-responsive-sidebar-left p {
+    font-size: 0.75rem !important;
+    margin: 0;
+  }
+
+  /* Buttons - Touch-friendly */
+  .learner-responsive-sidebar-left button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    min-height: 36px;
+    border-radius: 0.5rem;
+  }
+
+  /* Message and Input Areas */
+  .learner-responsive-sidebar-left textarea,
+  .learner-responsive-sidebar-left input {
+    font-size: 0.875rem !important;
+    padding: 0.75rem !important;
+  }
+
+  .learner-responsive-sidebar-left .max-h-\[120px\] {
+    max-height: 120px !important;
+  }
+
+  /* Hide sidebar toggle button */
+  .session-sidebar-toggles {
+    display: none !important;
+  }
+
+  /* Hide sidebar overlay */
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   MOBILE - MEDIUM (641px - 767px)
+   Portrait & Landscape - Flexible stacked layout
+   ============================================================================ */
+@media (min-width: 641px) and (max-width: 767px) {
+  .learner-responsive-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem;
+    margin: 0.75rem;
+    padding: 0.75rem;
+    min-height: calc(100vh - 70px) !important;
+  }
+
+  /* Whiteboard First */
+  .learner-responsive-main-area {
+    width: 100% !important;
+    order: 1 !important;
+    flex: 1;
+    min-height: 350px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .learner-responsive-main-area .session-whiteboard-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  /* Control Sections Below */
+  .learner-responsive-sidebar-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    position: static !important;
+    height: auto !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column;
+    background: white;
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    padding: 1rem !important;
+    margin: 0;
+    overflow: visible;
+    transform: none !important;
+    z-index: auto;
+    gap: 0.75rem;
+  }
+
+  .learner-responsive-sidebar-left video {
+    max-height: 200px;
+  }
+
+  .learner-responsive-sidebar-left h3 {
+    font-size: 0.95rem !important;
+    font-weight: 600;
+  }
+
+  .learner-responsive-sidebar-left button {
+    padding: 0.6rem 1rem !important;
+    font-size: 0.8rem !important;
+    min-height: 38px;
+  }
+
+  .session-sidebar-toggles {
+    display: none !important;
+  }
+
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   TABLET - SMALL (768px - 1023px) - PORTRAIT MODE
+   Stacked layout with better spacing
+   ============================================================================ */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: portrait) {
+  .learner-responsive-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.25rem;
+    margin: 1rem;
+    padding: 1rem;
+    min-height: calc(100vh - 70px) !important;
+  }
+
+  /* Whiteboard - Takes 60% of space */
+  .learner-responsive-main-area {
+    width: 100% !important;
+    order: 1 !important;
+    flex: 0 0 60%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 400px;
+  }
+
+  .learner-responsive-main-area .session-whiteboard-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  /* Control Sections - Takes 40% of space */
+  .learner-responsive-sidebar-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    position: static !important;
+    height: auto !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column;
+    background: white;
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    padding: 1rem !important;
+    margin: 0;
+    overflow-y: auto;
+    max-height: 40vh;
+    transform: none !important;
+    z-index: auto;
+    gap: 0.75rem;
+  }
+
+  .learner-responsive-sidebar-left video {
+    max-height: 220px;
+  }
+
+  .learner-responsive-sidebar-left h3 {
+    font-size: 1rem !important;
+    font-weight: 600;
+  }
+
+  .learner-responsive-sidebar-left button {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.85rem !important;
+    min-height: 40px;
+  }
+
+  .session-sidebar-toggles {
+    display: none !important;
+  }
+
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   TABLET - LARGE (768px - 1023px) - LANDSCAPE MODE
+   Optimized horizontal layout with whiteboard on top, controls below
+   ============================================================================ */
+@media (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  .learner-responsive-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem;
+    margin: 0.75rem;
+    padding: 0.75rem;
+    min-height: calc(100vh - 70px) !important;
+  }
+
+  /* Whiteboard - Takes 65% height */
+  .learner-responsive-main-area {
+    width: 100% !important;
+    order: 1 !important;
+    flex: 0 0 65%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    min-height: 350px;
+  }
+
+  .learner-responsive-main-area .session-whiteboard-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+  }
+
+  /* Control Sections - Takes 35% height, scrollable */
+  .learner-responsive-sidebar-left {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    position: static !important;
+    height: auto !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: column;
+    background: white;
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    padding: 0.75rem 1rem !important;
+    margin: 0;
+    overflow-y: auto;
+    max-height: 35vh;
+    transform: none !important;
+    z-index: auto;
+    gap: 0.5rem;
+  }
+
+  /* Trainer Video - Compact in landscape */
+  .learner-responsive-sidebar-left video {
+    max-height: 150px;
+  }
+
+  /* Compact text sizing for landscape */
+  .learner-responsive-sidebar-left h3 {
+    font-size: 0.85rem !important;
+    font-weight: 600;
+  }
+
+  .learner-responsive-sidebar-left p {
+    font-size: 0.75rem !important;
+  }
+
+  /* Compact buttons */
+  .learner-responsive-sidebar-left button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.7rem !important;
+    min-height: 34px;
+  }
+
+  /* Compact sections */
+  .learner-responsive-sidebar-left>div {
+    margin-bottom: 0.25rem;
+  }
+
+  .session-sidebar-toggles {
+    display: none !important;
+  }
+
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* ============================================================================
+   SMOOTH TRANSITIONS
+   ============================================================================ */
+@media (max-width: 1023px) {
+
+  .learner-responsive-layout,
+  .learner-responsive-main-area,
+  .learner-responsive-sidebar-left {
+    transition: all 0.3s ease-in-out;
+  }
+
+  /* Scrollbar styling for mobile */
+  .learner-responsive-sidebar-left::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .learner-responsive-sidebar-left::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .learner-responsive-sidebar-left::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 2px;
+  }
+
+  .learner-responsive-main-area::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .learner-responsive-main-area::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .learner-responsive-main-area::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 2px;
+  }
+}
+
+
+/* Live Session Studio: Program panel removed; remote video and canvas retained */
+.learning-program-container,
+.session-mobile-program,
+.session-program-sidebar {
+    display: none !important;
+}

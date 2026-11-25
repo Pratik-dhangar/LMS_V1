@@ -1,0 +1,18 @@
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Gradient definition -->
+  <defs>
+    <radialGradient id="pinkBubbleGradient" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFD6E5"></stop>
+      <stop offset="60%" stop-color="#F4A6C1"></stop>
+      <stop offset="100%" stop-color="#E48FB0"></stop>
+    </radialGradient>
+  </defs>
+
+  <!-- Main bubble -->
+  <circle cx="150" cy="150" r="100" fill="url(#pinkBubbleGradient)" stroke="#D97FA0" stroke-width="4"></circle>
+
+  <!-- Bubble highlight -->
+  <ellipse cx="110" cy="100" rx="30" ry="20" fill="white" opacity="0.35"></ellipse>
+
+</svg>

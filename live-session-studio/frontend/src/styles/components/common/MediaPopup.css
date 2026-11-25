@@ -1,0 +1,423 @@
+/* ============================================================================
+   MEDIA POPUP - Responsive Video/PDF Viewer
+   Full-featured media player with responsive controls
+   ============================================================================ */
+
+.media-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: var(--spacing-md);
+}
+
+.media-popup-overlay.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0;
+}
+
+.media-popup-container {
+    background: var(--color-bg-primary);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-width: 90vw;
+    max-height: 90vh;
+    width: 900px;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Header */
+.media-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    flex-shrink: 0;
+}
+
+.media-popup-title {
+    color: white;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin: 0;
+}
+
+.media-popup-close-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: background-color var(--transition-fast);
+}
+
+.media-popup-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Content */
+.media-popup-content {
+    flex: 1;
+    overflow: auto;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.video-player-wrapper {
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+.video-player-wrapper video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.pdf-viewer-wrapper {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    position: relative;
+}
+
+.pdf-loading {
+    color: var(--color-gray-600);
+    font-size: var(--font-size-base);
+    text-align: center;
+}
+
+.pdf-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    margin: auto;
+    display: block;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Controls */
+.media-popup-controls {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background: var(--color-gray-50);
+    border-top: 1px solid var(--color-gray-200);
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.video-controls {
+    display: flex;
+    gap: var(--spacing-xs);
+    align-items: center;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.video-controls .control-btn {
+    background: #667eea;
+    border: none;
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    font-weight: 500;
+}
+
+.video-controls .control-btn:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+}
+
+.video-controls .control-btn:active {
+    transform: translateY(0);
+}
+
+.time-display {
+    color: var(--color-gray-900);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    min-width: 80px;
+    text-align: center;
+}
+
+.progress-bar {
+    flex: 1;
+    min-width: 100px;
+    height: 6px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #667eea, #764ba2);
+    outline: none;
+    border-radius: var(--radius-sm);
+}
+
+.progress-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: white;
+    cursor: pointer;
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-fast);
+}
+
+.progress-bar::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.progress-bar::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: white;
+    cursor: pointer;
+    border: none;
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-fast);
+}
+
+.progress-bar::-moz-range-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* PDF Controls */
+.pdf-controls {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: center;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.pdf-controls .control-btn {
+    background: #667eea;
+    border: none;
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    font-weight: 500;
+}
+
+.pdf-controls .control-btn:hover:not(:disabled) {
+    background: #5568d3;
+    transform: translateY(-2px);
+}
+
+.pdf-controls .control-btn:disabled {
+    background: var(--color-gray-400);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.page-display {
+    color: var(--color-gray-900);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    min-width: 100px;
+    text-align: center;
+}
+
+.zoom-display {
+    color: var(--color-gray-900);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    min-width: 50px;
+    text-align: center;
+}
+
+/* View-only indicator */
+.view-only-indicator {
+    padding: var(--spacing-xs) var(--spacing-lg);
+    background: #fef3c7;
+    border-top: 1px solid #fcd34d;
+    color: #92400e;
+    font-size: var(--font-size-xs);
+    text-align: center;
+    font-weight: 500;
+}
+
+/* ============================================================================
+   RESPONSIVE: TABLET LANDSCAPE (813px - 1366px)
+   ============================================================================ */
+@media (min-width: 813px) and (max-width: 1366px) {
+    .media-popup-container {
+        width: 85vw;
+        height: 60vh;
+    }
+
+    .media-popup-header {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .media-popup-title {
+        font-size: 1rem;
+    }
+
+    .media-popup-controls {
+        padding: var(--spacing-xs) var(--spacing-md);
+        gap: var(--spacing-xs);
+    }
+
+    .video-controls .control-btn,
+    .pdf-controls .control-btn {
+        padding: 0.4rem 0.6rem;
+        min-width: 36px;
+        height: 36px;
+        font-size: 0.8rem;
+    }
+
+    .time-display,
+    .page-display {
+        font-size: 0.8rem;
+        min-width: 70px;
+    }
+
+    .zoom-display {
+        font-size: 0.8rem;
+        min-width: 45px;
+    }
+}
+
+/* ============================================================================
+   RESPONSIVE: MOBILE LANDSCAPE (max-width: 812px)
+   ============================================================================ */
+@media (max-width: 812px) {
+    .media-popup-overlay {
+        padding: var(--spacing-xs);
+    }
+
+    .media-popup-container {
+        width: 95vw;
+        height: 70vh;
+        max-width: 95vw;
+        max-height: 80vh;
+        border-radius: var(--radius-lg);
+    }
+
+    .media-popup-header {
+        padding: 0.5rem 0.75rem;
+    }
+
+    .media-popup-title {
+        font-size: 0.9rem;
+    }
+
+    .media-popup-close-btn {
+        width: 28px;
+        height: 28px;
+        font-size: 20px;
+    }
+
+    .media-popup-controls {
+        padding: 0.4rem 0.75rem;
+        gap: 0.3rem;
+    }
+
+    .video-controls,
+    .pdf-controls {
+        gap: 0.3rem;
+    }
+
+    .video-controls .control-btn,
+    .pdf-controls .control-btn {
+        padding: 0.3rem 0.5rem;
+        min-width: 32px;
+        height: 32px;
+        font-size: 0.75rem;
+    }
+
+    .time-display,
+    .page-display {
+        font-size: 0.75rem;
+        min-width: 60px;
+    }
+
+    .zoom-display {
+        font-size: 0.75rem;
+        min-width: 40px;
+    }
+
+    .progress-bar {
+        min-width: 80px;
+        height: 5px;
+    }
+
+    .progress-bar::-webkit-slider-thumb {
+        width: 14px;
+        height: 14px;
+    }
+
+    .progress-bar::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+    }
+
+    .view-only-indicator {
+        font-size: 0.7rem;
+        padding: 0.4rem 0.75rem;
+    }
+}

@@ -1,0 +1,2960 @@
+/* ============================================================================
+    WHITEBOARD.CSS - Interactive Whiteboard Component
+    Responsive whiteboard with video split view, drawing tools, and animations
+    ============================================================================ */
+
+:root {
+    --color-baby-rose: #8A7666;
+    --color-baby-blue: #f0c566;
+    --color-baby-lilac: #b37bff;
+}
+
+.whiteboard-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.whiteboard-main-wrapper {
+    display: flex;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    align-items: stretch;
+    gap: 0;
+    position: relative;
+    min-height: 400px;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.whiteboard-split-video {
+    flex: 0 0 50%;
+    width: 50%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    border-right: 2px solid var(--color-primary);
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.split-media-minimized-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-width: 1px !important;
+    min-height: 1px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    z-index: -1 !important;
+    flex: 0 0 auto !important;
+}
+
+.whiteboard-split-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    border: none;
+    margin: 0;
+    padding: 0;
+}
+
+.whiteboard-split-video.youtube-split-video {
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+}
+
+.whiteboard-split-video .youtube-container {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+}
+
+.whiteboard-split-video .youtube-container iframe {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.whiteboard-split-video.pdf-split-view {
+    align-items: stretch;
+    justify-content: stretch;
+    background: transparent;
+}
+
+.pdf-split-iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    background: #fff;
+}
+
+/* Inline PDF container used when rendering PDF pages as canvases */
+.pdf-inline-container {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 12px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.inline-pdf-page-canvas {
+    display: block;
+    margin: 8px 0;
+    max-width: 100%;
+    height: auto !important;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+    border-radius: 2px;
+    background: #fff;
+}
+
+.youtube-interaction-blocker {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: auto;
+    background: transparent;
+    touch-action: none;
+}
+
+.youtube-controls-container {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 999;
+    padding: 6px 8px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.4));
+    width: 100%;
+    box-sizing: border-box;
+    overflow: visible;
+    max-height: 120px;
+    display: flex;
+    flex-direction: column;
+    pointer-events: auto;
+}
+
+.youtube-controls-single-line {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px 0;
+    min-height: 36px;
+    overflow-y: auto;
+    max-height: 70px;
+}
+
+.youtube-title-text {
+    color: #fff;
+    font-size: max(10px, 11px);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 80px;
+    max-width: 300px;
+}
+
+/**
+ * YouTube Volume Control
+ * Mute button + volume slider + percentage text
+ */
+.youtube-volume-control {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+    padding: 2px 0;
+}
+
+.youtube-volume-slider {
+    width: clamp(40px, 60px, 80px);
+    height: 3px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #3b82f6 0%, #3b82f6 50%, #4b5563 50%, #4b5563 100%);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.youtube-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.youtube-volume-slider::-webkit-slider-thumb:hover {
+    width: 12px;
+    height: 12px;
+    background: #60a5fa;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+.youtube-volume-slider::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.youtube-volume-slider::-moz-range-thumb:hover {
+    width: 12px;
+    height: 12px;
+    background: #60a5fa;
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+}
+
+.youtube-volume-text {
+    color: #fff;
+    font-size: max(9px, 10px);
+    font-weight: 600;
+    min-width: 28px;
+    text-align: right;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    flex-shrink: 0;
+}
+
+.youtube-attendee-readonly-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: transparent;
+}
+
+.minimized-media-pill {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(17, 24, 39, 0.85);
+    backdrop-filter: blur(4px);
+}
+
+.minimized-media-title {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.whiteboard-split-canvas {
+    flex: 0 0 50%;
+    width: 50%;
+    height: 100%;
+    position: relative;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.whiteboard-full-canvas {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.whiteboard-split-canvas .canvas-container {
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    flex: 1;
+    position: relative;
+    min-height: 0;
+}
+
+.whiteboard-split-canvas .whiteboard {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    border-left: none;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+}
+
+/* Ensure consistent box-sizing so borders/padding don't affect sizing */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Explicitly ensure canvas container stretches to fill parent */
+.canvas-container,
+.whiteboard,
+.whiteboard-split-video,
+.whiteboard-split-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.canvas-container {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.whiteboard {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    touch-action: none;
+    cursor: auto;
+    pointer-events: auto;
+}
+
+/* Fade-in animation for text messages */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 0.95;
+        transform: translateY(0);
+    }
+}
+
+@keyframes selectionPulse {
+    0% {
+        transform: translateZ(0);
+    }
+
+    50% {
+        transform: translateZ(0) scale(1.03);
+    }
+
+    100% {
+        transform: translateZ(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.toolbar {
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    background-color: var(--color-gray-100);
+    display: flex;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.tool-btn {
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+    padding: var(--spacing-xs);
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--color-bg-primary);
+    cursor: pointer;
+}
+
+.tool-btn:hover {
+    transform: scale(1.05);
+    background: var(--color-gray-200);
+}
+
+.tool-btn:active {
+    transform: scale(0.95);
+}
+
+.tool-btn.active {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    padding: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: var(--radius-sm);
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-gray-200);
+    outline: none;
+    min-width: 100px;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    cursor: pointer;
+}
+
+/* Style for the brush preview (dot/square indicator adjacent to slider) */
+.brush-preview {
+    display: inline-block;
+    align-self: center;
+    vertical-align: middle;
+}
+
+/* Stronger, more visible track + larger thumb for the custom slider */
+.brush-size-slider {
+    align-self: center;
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(90deg, var(--color-primary) var(--pct, 0%), var(--color-gray-200) var(--pct, 0%));
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 120px;
+}
+
+.brush-size-slider::-webkit-slider-runnable-track {
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: transparent;
+}
+
+.brush-size-slider::-moz-range-track {
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: transparent;
+}
+
+.brush-size-slider::-ms-track {
+    height: 8px;
+    border-radius: var(--radius-full);
+    background: transparent;
+}
+
+.brush-size-slider:focus {
+    outline: none;
+}
+
+.brush-size-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    border: 2px solid white;
+    box-shadow: var(--shadow-sm);
+    margin-top: -5px;
+}
+
+.brush-size-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    border: 2px solid white;
+    transform: translateY(-4px);
+}
+
+.brush-size-slider::-ms-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    border: 2px solid white;
+}
+
+.images-group img {
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    max-width: 100%;
+    height: auto;
+}
+
+/* ==================== TOOL ANIMATIONS ==================== */
+
+/* PAUSE OVERLAY - Semi-transparent screen blocking all interactions */
+@keyframes pausePulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.pause-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.pause-overlay-content {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 30px 50px;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    color: #1f2937;
+    animation: pausePulse 1.5s ease-in-out infinite;
+}
+
+/* FREEZE OVERLAY - Indicates learner whiteboard is frozen */
+.freeze-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(100, 200, 255, 0.2);
+    z-index: 900;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 10px;
+    pointer-events: none;
+}
+
+.freeze-indicator {
+    background: #4cacff;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* WAIT OVERLAY - Semi-transparent screen with wait message */
+.wait-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 850;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.wait-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.wait-spinner-wheel {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.wait-text {
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* TIMER DISPLAY - Shows countdown time */
+.timer-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 15px;
+    font-size: 48px;
+    font-weight: bold;
+    z-index: 100;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    min-width: 150px;
+}
+
+.timer-display.warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    animation: timerWarning 0.5s ease-in-out infinite;
+}
+
+@keyframes timerWarning {
+
+    0%,
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+}
+
+/* STOPWATCH DISPLAY - Shows elapsed time */
+.stopwatch-display {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 15px;
+    font-size: 42px;
+    font-weight: bold;
+    z-index: 100;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    min-width: 150px;
+    font-family: 'Courier New', monospace;
+}
+
+/* BUBBLE ANIMATION - Floating bubbles */
+@keyframes bubbleRise {
+    0% {
+        transform: translateY(100%);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-300px);
+        opacity: 0;
+    }
+}
+
+@keyframes bubbleFloat {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    50% {
+        transform: translateX(20px);
+    }
+}
+
+.bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    pointer-events: none;
+    z-index: 30;
+}
+
+.bubble {
+    animation: bubbleRise 4s ease-out forwards,
+        bubbleFloat 2s ease-in-out infinite;
+}
+
+.bubble:nth-child(1) {
+    width: 100px;
+    height: 100px;
+    left: 10%;
+    animation-delay: 0s, 0s;
+}
+
+.bubble:nth-child(2) {
+    width: 100px;
+    height: 100px;
+    left: 30%;
+    animation-delay: 0.3s, 0.3s;
+}
+
+.bubble:nth-child(3) {
+    width: 100px;
+    height: 100px;
+    left: 50%;
+    animation-delay: 0.6s, 0.6s;
+}
+
+.bubble:nth-child(4) {
+    width: 100px;
+    height: 100px;
+    left: 70%;
+    animation-delay: 0.9s, 0.9s;
+}
+
+.bubble:nth-child(5) {
+    width: 100px;
+    height: 100px;
+    left: 85%;
+    animation-delay: 1.2s, 1.2s;
+}
+
+/* SMILEY ANIMATION - Multiple smiling faces */
+@keyframes smileyPop {
+    0% {
+        transform: scale(0) rotate(-180deg);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1) rotate(0deg) translateY(-200px);
+        opacity: 0;
+    }
+}
+
+.smiley {
+    position: absolute;
+    font-size: 50px;
+    pointer-events: none;
+    z-index: 30;
+    animation: smileyPop 3s ease-out forwards;
+}
+
+.smiley:nth-child(1) {
+    left: 20%;
+    animation-delay: 0s;
+}
+
+.smiley:nth-child(2) {
+    left: 40%;
+    animation-delay: 0.2s;
+}
+
+.smiley:nth-child(3) {
+    left: 60%;
+    animation-delay: 0.4s;
+}
+
+.smiley:nth-child(4) {
+    left: 80%;
+    animation-delay: 0.6s;
+}
+
+.star {
+    position: absolute;
+    font-size: 30px;
+    pointer-events: none;
+    z-index: 30;
+}
+
+/* Smooth drag-back animation for items */
+@keyframes dragBackToSidebar {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+}
+
+.dragging-back {
+    animation: dragBackToSidebar 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+}
+
+/* Drop animation - Triggered when item is dropped into bucket */
+@keyframes dropIntoBucket {
+    0% {
+        opacity: 0;
+        transform: scale(0.3) translateY(-30px);
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.bucket-drop-animation {
+    animation: dropIntoBucket 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+}
+
+/* Bucket wiggle effect - When item is dropped */
+@keyframes bucketWiggle {
+
+    0%,
+    100% {
+        transform: rotateZ(0deg);
+    }
+
+    25% {
+        transform: rotateZ(-2deg);
+    }
+
+    75% {
+        transform: rotateZ(2deg);
+    }
+}
+
+.bucket-wiggle {
+    animation: bucketWiggle 0.4s ease-in-out 1;
+}
+
+/* Ripple effect inside bucket */
+@keyframes bucketRipple {
+    0% {
+        r: 0;
+        opacity: 0.8;
+    }
+
+    100% {
+        r: 40px;
+        opacity: 0;
+    }
+}
+
+.bucket-ripple {
+    animation: bucketRipple 0.6s ease-out forwards !important;
+}
+
+/* Pulse animation for wait emoji */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Fade in and out animation for feedback messages */
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+
+    10% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    90% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+}
+
+/* Bounce animation for feedback messages - fun for babies */
+@keyframes bounce {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3);
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    70% {
+        transform: translate(-50%, -50%) scale(0.95);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* Spin animation for waiting spinner */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Gentle pulse animation for waiting message */
+@keyframes gentlePulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.85;
+    }
+}
+
+/* Feedback  styling for young children - gentle pastel tones */
+.feedback-bubble {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #db9d32;
+    color: #FFFFFF;
+    /* white text for readability on dark background */
+    padding: 28px 40px;
+    border-radius: 22px;
+    font-size: 38px;
+    font-weight: 900;
+    z-index: 9999;
+    pointer-events: none;
+    box-shadow: 0 10px 30px rgba(45, 42, 68, 0.6), inset 0 -4px 10px rgba(0, 0, 0, 0.3);
+    animation: fadeInOut 3s ease-in-out;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    text-align: center;
+    white-space: nowrap;
+    font-family: 'Comic Sans MS', 'Baloo 2', 'Poppins', cursive, sans-serif;
+}
+
+.feedback-bubble .feedback-text {
+    display: inline-block;
+    transform: translateZ(0);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    color: #FFFFFF;
+    /* white text for high contrast on dark background */
+    padding: 0 4px;
+}
+
+/* Waitingstyling - similar to feedback but with spinner */
+.waiting-bubble {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #db9d32;
+    color: #FFFFFF;
+    padding: 28px 40px;
+    border-radius: 22px;
+    font-size: 28px;
+    font-weight: 900;
+    z-index: 9999;
+    pointer-events: none;
+    box-shadow: 0 10px 30px rgba(150, 180, 240, 0.3), inset 0 -4px 10px rgba(255, 255, 255, 0.7);
+    animation: fadeInOut 3s ease-in-out, gentlePulse 1.5s ease-in-out infinite;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    text-align: center;
+    white-space: nowrap;
+    font-family: 'Comic Sans MS', 'Baloo 2', 'Poppins', cursive, sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.waiting-spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #FFFFFF;
+    border-right-color: #E0E0E0;
+    animation: spin 1.2s linear infinite;
+}
+
+.waiting-bubble .waiting-text {
+    display: inline-block;
+    transform: translateZ(0);
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.3);
+    color: #FFFFFF;
+    padding: 0 4px;
+}
+
+/* Decorative confetti dots - pastel, light, tiny */
+.confetti-container {
+    position: absolute;
+    top: -12px;
+    left: -20px;
+    right: -20px;
+    bottom: -12px;
+    pointer-events: none;
+    z-index: 10000;
+}
+
+.confetti-dot {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    opacity: 0.95;
+    transform-origin: center;
+}
+
+.confetti-1 {
+    background: #FFDCE6;
+    left: 8%;
+    top: 10%;
+    animation: confettiFloat 2.8s ease-in-out infinite;
+}
+
+.confetti-2 {
+    background: #FFF4D6;
+    left: 20%;
+    top: 5%;
+    animation: confettiFloat 2.6s ease-in-out infinite;
+}
+
+.confetti-3 {
+    background: #E8FDF5;
+    left: 65%;
+    top: 12%;
+    animation: confettiFloat 3s ease-in-out infinite;
+}
+
+.confetti-4 {
+    background: #EEE6FF;
+    left: 80%;
+    top: 8%;
+    animation: confettiFloat 2.4s ease-in-out infinite;
+}
+
+.confetti-5 {
+    background: #FFECEF;
+    left: 50%;
+    top: 6%;
+    animation: confettiFloat 2.7s ease-in-out infinite;
+}
+
+@keyframes confettiFloat {
+    0% {
+        transform: translateY(0) scale(0.9);
+        opacity: 1
+    }
+
+    50% {
+        transform: translateY(-10px) scale(1.1);
+        opacity: 0.95
+    }
+
+    100% {
+        transform: translateY(0) scale(0.95);
+        opacity: 1
+    }
+}
+
+/* Responsive adjustments - keep visuals readable on mobile */
+@media (max-width: 640px) {
+    .feedback-bubble {
+        font-size: 28px;
+        padding: 16px 22px;
+        border-radius: 18px;
+    }
+
+    .confetti-dot {
+        width: 10px;
+        height: 10px
+    }
+}
+
+/* ========================================================================
+   FLOATING ANIMATIONS (Bubbles, Smileys, Balloons, Stars)
+   Baby-Friendly Design: Soft pastel colors, gentle movements, large size
+   ======================================================================== */
+
+.floating-animation {
+    position: absolute;
+    --floating-emoji-size: clamp(60px, 2vw, 120px);
+    font-size: var(--floating-emoji-size);
+    animation: floatUp calc(var(--animation-duration, 10000) * 1ms) ease-in-out forwards;
+    animation-delay: calc(var(--animation-delay, 0) * 1ms);
+    z-index: 100;
+    will-change: transform, opacity;
+    cursor: pointer;
+}
+
+/* Hover effect for learner interaction */
+.floating-animation:hover {
+    transform: scale(1.15);
+}
+
+.floating-animation.popped {
+    animation: none !important;
+    cursor: default;
+}
+
+.floating-animation.popped.star {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.floating-emoji {
+    display: inline-block;
+    position: relative;
+    font-size: inherit;
+}
+
+.floating-animation img {
+    width: var(--floating-emoji-size);
+    height: var(--floating-emoji-size);
+    display: block;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+/* Add pastel glow backgrounds for each type */
+
+.popped-emoji {
+    display: inline-block;
+    font-size: 180px;
+    animation: explode 0.7s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+    filter: drop-shadow(0 0 20px rgba(255, 200, 100, 0.8));
+}
+
+/* Gentle bounce animation for floating emojis */
+@keyframes gentleBounce {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateY(-8px) scale(1.05);
+    }
+}
+
+/* Soft glow pulse animation */
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.9;
+        transform: scale(1.1);
+    }
+}
+
+/* Float from bottom to top with gentle sway - optimized for performance */
+@keyframes floatUp {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 0, 0) scale(0.7);
+    }
+
+    15% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translate3d(calc(var(--drift-x, 20px) * 0.6), calc(var(--drift-y, -45px) * 0.55), 0) scale(1.05);
+    }
+
+    90% {
+        opacity: 0.9;
+        transform: translate3d(calc(var(--drift-x, 20px) * 0.9), calc(var(--drift-y, -45px) * 0.85), 0) scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate3d(var(--drift-x, 20px), var(--drift-y, -45px), 0) scale(0.85);
+    }
+}
+
+/* Pop effect with sparkle */
+@keyframes popEffect {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+        filter: brightness(1);
+    }
+
+    30% {
+        transform: scale(1.3) rotate(5deg);
+        opacity: 1;
+        filter: brightness(1.3);
+    }
+
+    60% {
+        transform: scale(1.6) rotate(-5deg);
+        opacity: 0.7;
+        filter: brightness(1.5) hue-rotate(20deg);
+    }
+
+    100% {
+        transform: scale(0.1) rotate(180deg);
+        opacity: 0;
+        filter: brightness(2) hue-rotate(40deg);
+    }
+}
+
+/* Explosion effect with colorful burst */
+@keyframes explode {
+    0% {
+        transform: scale(0.6) rotate(0deg);
+        opacity: 1;
+        filter: brightness(1) saturate(1);
+    }
+
+    20% {
+        transform: scale(1.2) rotate(60deg);
+        opacity: 1;
+        filter: brightness(1.5) saturate(1.5);
+    }
+
+    40% {
+        transform: scale(2) rotate(180deg);
+        opacity: 0.9;
+        filter: brightness(2) saturate(2) hue-rotate(30deg);
+    }
+
+    70% {
+        transform: scale(2.8) rotate(300deg);
+        opacity: 0.5;
+        filter: brightness(2.5) saturate(2.5) hue-rotate(60deg);
+    }
+
+    100% {
+        transform: scale(3.5) rotate(480deg);
+        opacity: 0;
+        filter: brightness(3) saturate(3) hue-rotate(90deg);
+    }
+}
+
+/* Type-specific drift and timing variations */
+.floating-animation.bubble {
+    --floating-emoji-size: 7rem;
+    animation-duration: 5.8s;
+    animation-timing-function: linear;
+    will-change: transform, opacity;
+}
+
+.floating-animation.bubble .floating-emoji {
+    animation: none;
+}
+
+.floating-animation.smiley {
+    --floating-emoji-size: 6rem;
+    animation-duration: 6.3s;
+    animation-timing-function: linear;
+    will-change: transform, opacity;
+}
+
+.floating-animation.smiley .floating-emoji {
+    animation: none;
+}
+
+.floating-animation.balloon {
+    animation-duration: 6.8s;
+    animation-timing-function: linear;
+    will-change: transform, opacity;
+    --floating-emoji-size: 9rem;
+    /* change to desired size */
+}
+
+.floating-animation.balloon .floating-emoji {
+    animation: none;
+}
+
+.floating-animation.star {
+    --floating-emoji-size: 6rem;
+    animation-duration: 6.4s;
+    animation-timing-function: linear;
+    will-change: transform, opacity;
+}
+
+.floating-animation.star .floating-emoji {
+    animation: none;
+}
+
+/* ============================================================================
+   STAR SPARKLE EFFECT - Production-Ready, Baby-Friendly Animation
+   - Hardware-accelerated transforms for 60fps performance
+   - Single burst effect with auto-removal
+   - Diamond-shaped sparkles with light golden glow
+   =========================================================================== */
+
+/* Diamond Sparkle Shape - Using pseudo-elements */
+.sparkle-particle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 12px;
+    height: 12px;
+    animation: diamondSparkleShoot 1s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+    animation-delay: var(--delay, 0s);
+    will-change: transform, opacity;
+}
+
+.sparkle-particle::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg,
+            #FFF9E6 0%,
+            #FFF4D4 25%,
+            #FFEFC2 50%,
+            #FFE8A1 75%,
+            #FFE69E 100%);
+    transform: rotate(45deg);
+    border-radius: 2px;
+    border: 2px solid rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 8px rgba(255, 245, 200, 0.7),
+        0 0 15px rgba(255, 240, 180, 0.5),
+        0 0 25px rgba(255, 235, 160, 0.3),
+        inset 0 0 8px rgba(255, 255, 255, 0.6),
+        inset 0 0 4px rgba(255, 215, 0, 0.5);
+}
+
+.sparkle-particle::after {
+    content: '';
+    position: absolute;
+    width: 150%;
+    height: 150%;
+    top: -25%;
+    left: -25%;
+    background: radial-gradient(circle,
+            rgba(255, 255, 255, 0.5) 0%,
+            rgba(255, 250, 220, 0.3) 30%,
+            transparent 70%);
+}
+
+@keyframes diamondSparkleShoot {
+    0% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0) scale(0);
+        opacity: 0;
+    }
+
+    20% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(var(--distance)) scale(var(--size, 1.5)) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Secondary Wave - Smaller Diamond Sparkles */
+.sparkle-wave-2 {
+    width: 10px;
+    height: 10px;
+    animation: diamondSparkleShoot2 1.2s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+    animation-delay: var(--delay, 0s);
+}
+
+@keyframes diamondSparkleShoot2 {
+    0% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0) scale(0);
+        opacity: 0;
+    }
+
+    20% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0) scale(1);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) rotate(var(--angle)) translateX(var(--distance)) scale(var(--size, 1.2)) rotate(-270deg);
+        opacity: 0;
+    }
+}
+
+/* Performance Optimization - Reduce animations on low-end devices */
+@media (prefers-reduced-motion: reduce) {
+
+    .sparkle-particle,
+    .sparkle-wave-2 {
+        animation-duration: 2s;
+    }
+}
+
+/* Mobile optimization - Smaller effects on smaller screens */
+@media (max-width: 640px) {
+    .sparkle-particle {
+        width: 10px;
+        height: 10px;
+    }
+
+    .sparkle-wave-2 {
+        width: 8px;
+        height: 8px;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+    .sparkle-particle {
+        width: 8px;
+        height: 8px;
+    }
+
+    .sparkle-wave-2 {
+        width: 6px;
+        height: 6px;
+    }
+}
+
+/* Star sprinkles effect when popped - LEGACY (keep for compatibility) */
+.star-pop-container {
+    pointer-events: none;
+    z-index: 9999;
+    width: 300px;
+    height: 300px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.popped-star {
+    position: absolute;
+    font-size: 80px;
+    z-index: 10000;
+    animation: starPulseGlow 1s ease-in-out infinite;
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.9)) drop-shadow(0 0 40px rgba(255, 215, 0, 0.6));
+}
+
+@keyframes starPulseGlow {
+
+    0%,
+    100% {
+        transform: scale(1) rotate(0deg);
+        filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.9)) drop-shadow(0 0 40px rgba(255, 215, 0, 0.6));
+    }
+
+    50% {
+        transform: scale(1.1) rotate(10deg);
+        filter: drop-shadow(0 0 30px rgba(255, 215, 0, 1)) drop-shadow(0 0 60px rgba(255, 215, 0, 0.8)) drop-shadow(0 0 80px rgba(255, 255, 0, 0.5));
+    }
+}
+
+.star-sprinkles {
+    pointer-events: none;
+    z-index: 9999;
+    width: 300px;
+    height: 300px;
+    display: block !important;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.sprinkle {
+    position: absolute;
+    font-size: 36px;
+    opacity: 1;
+    will-change: transform, opacity;
+    display: block !important;
+    left: 50%;
+    top: 50%;
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
+}
+
+.sprinkle-1 {
+    animation: sprinkleBurst1 1s ease-out infinite;
+}
+
+.sprinkle-2 {
+    animation: sprinkleBurst2 1s ease-out infinite;
+    animation-delay: 0.08s;
+}
+
+.sprinkle-3 {
+    animation: sprinkleBurst3 1s ease-out infinite;
+    animation-delay: 0.16s;
+}
+
+.sprinkle-4 {
+    animation: sprinkleBurst4 1s ease-out infinite;
+    animation-delay: 0.24s;
+}
+
+.sprinkle-5 {
+    animation: sprinkleBurst5 1s ease-out infinite;
+    animation-delay: 0.32s;
+}
+
+.sprinkle-6 {
+    animation: sprinkleBurst6 1s ease-out infinite;
+    animation-delay: 0.4s;
+}
+
+.sprinkle-7 {
+    animation: sprinkleBurst7 1s ease-out infinite;
+    animation-delay: 0.48s;
+}
+
+.sprinkle-8 {
+    animation: sprinkleBurst8 1s ease-out infinite;
+    animation-delay: 0.56s;
+}
+
+.sprinkle-9 {
+    animation: sprinkleBurst9 1s ease-out infinite;
+    animation-delay: 0.64s;
+}
+
+.sprinkle-10 {
+    animation: sprinkleBurst10 1s ease-out infinite;
+    animation-delay: 0.72s;
+}
+
+.sprinkle-11 {
+    animation: sprinkleBurst11 1s ease-out infinite;
+    animation-delay: 0.8s;
+}
+
+.sprinkle-12 {
+    animation: sprinkleBurst12 1s ease-out infinite;
+    animation-delay: 0.88s;
+}
+
+@keyframes sprinkleBurst1 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% + 90px), calc(-50% + 0px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst2 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% + 78px), calc(-50% - 45px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst3 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% + 45px), calc(-50% - 78px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst4 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% + 0px), calc(-50% - 90px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst5 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% - 45px), calc(-50% - 78px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst6 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% - 78px), calc(-50% - 45px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst7 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% - 90px), calc(-50% + 0px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst8 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% - 78px), calc(-50% + 45px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst9 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% - 45px), calc(-50% + 78px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst10 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% + 0px), calc(-50% + 90px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst11 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% + 45px), calc(-50% + 78px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes sprinkleBurst12 {
+    0% {
+        transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(calc(-50% + 78px), calc(-50% + 45px)) scale(1.2) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Special twinkle animation for stars */
+@keyframes starTwinkle {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1) rotate(0deg);
+        filter: brightness(1);
+    }
+
+    25% {
+        transform: translateY(-6px) scale(1.1) rotate(10deg);
+        filter: brightness(1.3);
+    }
+
+    50% {
+        transform: translateY(-10px) scale(1.05) rotate(0deg);
+        filter: brightness(1.5);
+    }
+
+    75% {
+        transform: translateY(-6px) scale(1.1) rotate(-10deg);
+        filter: brightness(1.3);
+    }
+}
+
+/* ============================================================================
+   RESPONSIVE BREAKPOINTS - Whiteboard Specific Styles
+   ============================================================================ */
+
+/* TABLET LANDSCAPE (813px - 1366px) */
+@media (min-width: 813px) and (max-width: 1366px) {
+    .whiteboard-main-wrapper {
+        min-height: 350px;
+    }
+
+    .whiteboard {
+        min-height: 350px;
+    }
+
+    .toolbar {
+        padding: 0.4rem;
+        gap: 0.3rem;
+    }
+
+    .tool-btn {
+        min-width: 40px;
+        min-height: 40px;
+        padding: 0.3rem;
+    }
+
+    .brush-size-slider {
+        min-width: 100px;
+        height: 6px;
+    }
+
+    .brush-size-slider::-webkit-slider-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    .brush-size-slider::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+    }
+
+    input[type="color"] {
+        width: 40px;
+        height: 40px;
+    }
+
+    .floating-animation {
+        font-size: 60px;
+    }
+
+    /* Larger balloons on tablet/desktop range */
+    .floating-animation.balloon {
+        --floating-emoji-size: 120px;
+    }
+
+    .popped-emoji {
+        font-size: 75px;
+    }
+
+    .feedback-bubble {
+        font-size: 32px;
+        padding: 20px 30px;
+    }
+
+    .waiting-bubble {
+        font-size: 24px;
+        padding: 20px 30px;
+    }
+
+    .timer-display,
+    .stopwatch-display {
+        font-size: 36px;
+        padding: 16px 32px;
+    }
+}
+
+/* MOBILE LANDSCAPE (max-width: 812px) */
+@media (max-width: 812px) {
+    .whiteboard-main-wrapper {
+        min-height: 260px;
+        flex-direction: column;
+    }
+
+    /* Stack video and canvas vertically on mobile */
+    .whiteboard-split-video,
+    .whiteboard-split-canvas {
+        flex: 1 1 auto;
+        width: 100%;
+        height: 50%;
+        border-right: none;
+        border-bottom: 2px solid var(--color-primary);
+    }
+
+    .whiteboard-split-canvas {
+        border-bottom: none;
+    }
+
+    .whiteboard {
+        min-height: 240px;
+        border-radius: var(--radius-sm);
+    }
+
+    .toolbar {
+        padding: 0.3rem;
+        gap: 0.25rem;
+    }
+
+    .tool-btn {
+        min-width: 36px;
+        min-height: 36px;
+        padding: 0.25rem;
+        font-size: 0.8rem;
+    }
+
+    .brush-size-slider {
+        min-width: 80px;
+        height: 6px;
+    }
+
+    .brush-size-slider::-webkit-slider-thumb {
+        width: 14px;
+        height: 14px;
+    }
+
+    .brush-size-slider::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+    }
+
+    input[type="color"] {
+        width: 36px;
+        height: 36px;
+    }
+
+    input[type="range"] {
+        min-width: 80px;
+    }
+
+    .floating-animation {
+        font-size: 45px;
+    }
+
+    /* Slightly smaller balloons on mobile */
+    .floating-animation.balloon {
+        --floating-emoji-size: 90px;
+    }
+
+    .popped-emoji {
+        font-size: 60px;
+    }
+
+    .feedback-bubble {
+        font-size: 24px;
+        padding: 16px 24px;
+        border-radius: 18px;
+    }
+
+    .waiting-bubble {
+        font-size: 20px;
+        padding: 16px 24px;
+        border-radius: 18px;
+    }
+
+    .timer-display,
+    .stopwatch-display {
+        font-size: 28px;
+        padding: 12px 24px;
+        min-width: 120px;
+    }
+
+    .confetti-dot {
+        width: 8px;
+        height: 8px;
+    }
+
+    .sparkle-particle {
+        width: 10px;
+        height: 10px;
+    }
+
+    .sparkle-wave-2 {
+        width: 8px;
+        height: 8px;
+    }
+
+    /* Reduce animation complexity on mobile for performance */
+    .pause-overlay-content {
+        font-size: 20px;
+        padding: 20px 35px;
+    }
+
+    .freeze-indicator {
+        font-size: 11px;
+        padding: 6px 12px;
+    }
+
+    .wait-spinner-wheel {
+        width: 40px;
+        height: 40px;
+    }
+
+    .wait-text {
+        font-size: 16px;
+    }
+
+    /* Responsive stopwatch for mobile */
+    .stopwatch-overlay {
+        top: 8px;
+        right: 8px;
+    }
+
+    .mechanical-stopwatch.lg {
+        zoom: 0.85;
+    }
+
+    .mechanical-stopwatch.md {
+        zoom: 0.75;
+    }
+}
+
+/* ============================================================================
+   ADDITIONAL UTILITY STYLES FOR OVERLAYS AND INDICATORS
+   ============================================================================ */
+
+/* Stopwatch overlay (top right corner for digital clock) */
+.stopwatch-overlay {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 50;
+    pointer-events: auto;
+}
+
+.stopwatch-overlay-inner {
+    background-color: transparent;
+    color: white;
+    padding: 0.25rem;
+    border-radius: 0.5rem;
+    box-shadow: none;
+    border: none;
+}
+
+.stopwatch-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Text messages display (top center) */
+.text-messages-container {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.text-message {
+    background-color: #b8790a;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: fadeIn 0.3s ease-out;
+    border: 2px solid #f0c566;
+    opacity: 0.95;
+}
+
+.text-message-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.text-message-body {
+    flex: 1;
+    text-align: center;
+}
+
+.text-message-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.text-message-icon {
+    font-size: 1.5rem;
+}
+
+.text-message-sender {
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.text-message-text {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.625;
+}
+
+.text-message-close {
+    color: white;
+    font-size: 1.5rem;
+    line-height: 1;
+    font-weight: bold;
+    padding: 0 0.5rem;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.text-message-close:hover {
+    color: #fecaca;
+}
+
+/* PDF overlay content */
+.pdf-overlay-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom, #f3f4f6, #e5e7eb);
+}
+
+.pdf-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.pdf-filename {
+    text-align: center;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.pdf-hint {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+}
+
+/* Selection indicators */
+.selection-indicator {
+    position: absolute;
+    top: -1.5rem;
+    left: 0;
+    color: #22c55e;
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+
+/* Video close button */
+.video-close-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background-color: #ef4444;
+    color: white;
+    border-radius: 9999px;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    z-index: 30;
+}
+
+.video-close-button:hover {
+    background-color: #dc2626;
+}
+
+/* Resize handles */
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 1rem;
+    height: 1rem;
+    background-color: #db9d32;
+    border: 2px solid white;
+    cursor: se-resize;
+}
+
+/* Delete buttons for items */
+.item-delete-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #ef4444;
+    color: white;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+}
+
+.item-delete-button:hover {
+    background-color: #dc2626;
+}
+
+/* Bucket label */
+.bucket-label {
+    position: absolute;
+    top: 1px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.bucket-input {
+    color: white;
+    padding: 0 0.25rem;
+    border: none;
+    outline: none;
+    width: 6rem;
+}
+
+/* ============================================================================
+   RESPONSIVE MEDIA QUERIES FOR YOUTUBE CONTROLS
+   Ensures all controls remain visible and properly sized on all devices
+   ============================================================================ */
+
+/* Extra Small Devices (Mobile - up to 480px) */
+@media (max-width: 480px) {
+    .youtube-controls-container {
+        padding: 4px 6px;
+        gap: 4px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 4px;
+        padding: 2px 0;
+    }
+
+    .youtube-title-text {
+        font-size: 9px;
+        max-width: 120px;
+        padding: 0 2px;
+    }
+
+    .video-control-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 3px;
+    }
+
+    .video-time-text {
+        font-size: 10px;
+        padding: 0 2px;
+    }
+
+    .youtube-volume-control {
+        gap: 2px;
+    }
+
+    .youtube-volume-slider {
+        width: 40px;
+    }
+
+    .youtube-volume-text {
+        font-size: 9px;
+        min-width: 24px;
+    }
+}
+
+/* Small Devices (Tablets Portrait - 481px to 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    .youtube-controls-container {
+        padding: 6px 8px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 5px;
+    }
+
+    .youtube-title-text {
+        font-size: 10px;
+        max-width: 150px;
+    }
+
+    .video-control-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+    }
+
+    .video-time-text {
+        font-size: 11px;
+        padding: 0 3px;
+    }
+
+    .youtube-volume-slider {
+        width: 50px;
+    }
+
+    .youtube-volume-text {
+        font-size: 10px;
+        min-width: 26px;
+    }
+}
+
+/* Medium Devices (Tablets Landscape - 769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .youtube-controls-container {
+        padding: 6px 10px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 6px;
+    }
+
+    .youtube-title-text {
+        font-size: 11px;
+        max-width: 200px;
+    }
+
+    .video-control-btn {
+        width: 33px;
+        height: 33px;
+    }
+
+    .video-time-text {
+        font-size: 12px;
+        padding: 0 4px;
+    }
+
+    .youtube-volume-slider {
+        width: 60px;
+    }
+
+    .youtube-volume-text {
+        font-size: 10px;
+    }
+}
+
+/* Large Devices (Desktop - 1025px and above) */
+@media (min-width: 1025px) {
+    .youtube-controls-container {
+        padding: 8px 12px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 8px;
+    }
+
+    .youtube-title-text {
+        font-size: 12px;
+    }
+}
+
+/* ============================================================================
+    CONTENT OVERFLOW & RESPONSIVE ALIGNMENT
+    Ensure controls remain visible and properly aligned when content is large
+    ========================================================================== */
+
+/* Improve layout stability with large content */
+.whiteboard-main-wrapper {
+    min-height: 300px;
+}
+
+.canvas-container {
+    overflow: hidden !important;
+}
+
+.whiteboard {
+    overflow: hidden !important;
+    touch-action: none;
+}
+
+/* Text box responsive sizing */
+.text-box-container textarea {
+    resize: none;
+    line-height: 1.4;
+    font-size: clamp(12px, 1.5vw, 18px);
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Ensure text messages don't overlap controls */
+.text-messages-container {
+    max-height: 40vh;
+    overflow-y: auto;
+    pointer-events: auto;
+    top: clamp(4px, 1vh, 10px);
+}
+
+/* Improve video control visibility */
+.video-controls-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    padding: 6px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5));
+    z-index: 1000;
+}
+
+.video-progress-bar {
+    width: 100%;
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    padding: 4px 0;
+    box-sizing: border-box;
+}
+
+.video-progress-input {
+    width: 100%;
+    min-height: 14px;
+    cursor: pointer;
+}
+
+.video-controls-single-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding: 2px 0;
+    min-height: 32px;
+}
+
+.video-control-btn {
+    flex-shrink: 0;
+    min-width: clamp(26px, 4vw, 36px);
+    min-height: clamp(26px, 4vw, 36px);
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-time-text {
+    flex-shrink: 0;
+    font-size: clamp(10px, 1.5vw, 12px);
+    min-width: fit-content;
+    padding: 0 4px;
+    white-space: nowrap;
+}
+
+/* Mobile responsiveness - ensure no overflow */
+@media (max-width: 640px) {
+    .whiteboard-main-wrapper {
+        flex-direction: column;
+        min-height: 600px;
+    }
+
+    .whiteboard-split-video,
+    .whiteboard-split-canvas {
+        flex: none;
+        width: 100%;
+        height: 50%;
+    }
+
+    .whiteboard-split-video {
+        border-right: none;
+        border-bottom: 2px solid var(--color-primary);
+    }
+
+    .youtube-controls-container {
+        max-height: 100px;
+        overflow-y: auto;
+    }
+
+    .youtube-controls-single-line {
+        gap: 4px;
+        min-height: 32px;
+    }
+
+    .text-messages-container {
+        width: 95%;
+        max-width: 100%;
+        top: auto;
+        bottom: auto;
+    }
+
+    .video-controls-single-line {
+        gap: 3px;
+        min-height: 30px;
+    }
+
+    .text-box-container textarea {
+        font-size: clamp(11px, 2vw, 14px);
+    }
+}
+
+/* Tablet responsiveness */
+@media (min-width: 641px) and (max-width: 1024px) {
+    .youtube-controls-container {
+        max-height: 110px;
+        overflow-y: auto;
+    }
+
+    .youtube-controls-single-line {
+        gap: 5px;
+        min-height: 34px;
+    }
+
+    .video-controls-single-line {
+        gap: 4px;
+        min-height: 32px;
+    }
+}
+
+/* Large desktop - comfortable spacing */
+@media (min-width: 1025px) {
+    .youtube-controls-container {
+        max-height: 120px;
+    }
+
+    .youtube-controls-single-line {
+        gap: 8px;
+        min-height: 36px;
+    }
+
+    .video-controls-single-line {
+        gap: 6px;
+        min-height: 36px;
+    }
+}
+
+
+.video-control-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+}
+
+.video-time-text {
+    font-size: 13px;
+    padding: 0 8px;
+}
+
+.youtube-volume-slider {
+    width: 75px;
+}
+
+.youtube-volume-text {
+    font-size: 11px;
+}
+
+
+/* Ensure all controls don't wrap and stay visible */
+@media (max-width: 600px) {
+    .youtube-controls-single-line {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .youtube-title-text {
+        display: none;
+        /* Hide title on very small screens to save space */
+    }
+}
+
+.bucket-close-button {
+    color: white;
+    font-size: 1.125rem;
+    line-height: 1;
+    font-weight: bold;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.bucket-close-button:hover {
+    color: #fecaca;
+}
+
+.bucket-color-indicator {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    border: 2px solid white;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Utility classes */
+.absolute {
+    position: absolute;
+}
+
+.group {
+    /* Group class for hover effects - handled by CSS */
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== VIDEO CONTROLS ==================== */
+
+/**
+ * Video Controls Container - Overlay controls for video player
+ * Positioned at bottom of video, contains progress bar and button controls
+ */
+.video-controls-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.5));
+    padding: 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 50;
+    pointer-events: auto;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/**
+ * Progress Bar Container
+ * Spans full width with range input for seeking
+ */
+.video-progress-bar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+}
+
+/**
+ * Progress Input (Range Slider)
+ * Styled with gradient background showing playback progress
+ */
+.video-progress-input {
+    width: 100%;
+    height: 14px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    display: block;
+    vertical-align: middle;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+
+
+.video-progress-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #3b82f6;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    transition: all 0.2s ease;
+    margin-top: -5px;
+}
+
+.video-progress-input::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.6);
+}
+
+.video-progress-input::-webkit-slider-thumb:active {
+    transform: scale(1.2);
+}
+
+/* Firefox */
+.video-progress-input::-moz-range-track {
+    background: linear-gradient(to right, #3b82f6 0%, #3b82f6 50%, #4b5563 50%, #4b5563 100%);
+    height: 6px;
+    border-radius: 3px;
+    border: none;
+}
+
+.video-progress-input::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #3b82f6;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    transition: all 0.2s ease;
+}
+
+.video-progress-input::-moz-range-thumb:hover {
+    transform: scale(1.3);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.6);
+}
+
+.video-progress-input::-moz-range-thumb:active {
+    transform: scale(1.2);
+}
+
+.video-progress-input:hover {
+    /* Keep consistent on hover */
+}
+
+/**
+ * Controls Row - Single line with play/pause, time, volume
+ */
+.video-controls-single-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 0 4px;
+}
+
+/**
+ * Individual Control Button
+ * Play, Pause, Mute, Volume, Fullscreen buttons
+ */
+.video-control-btn {
+    background: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    width: clamp(28px, 5vw, 36px);
+    height: clamp(28px, 5vw, 36px);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+    font-size: clamp(12px, 2vw, 14px);
+}
+
+.video-control-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.05);
+}
+
+.video-control-btn:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.video-control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/**
+ * Time Display Text
+ * Shows current time / total duration
+ */
+.video-time-text {
+    color: white;
+    font-size: clamp(10px, 2vw, 13px);
+    font-weight: 500;
+    white-space: nowrap;
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    letter-spacing: 0.3px;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+/**
+ * Volume Control Input (Range Slider)
+ */
+.video-volume-input {
+    width: 80px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(to right, #10b981 0%, #10b981 50%, #4b5563 50%, #4b5563 100%);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0;
+    padding: 0;
+}
+
+.video-volume-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #10b981;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.video-volume-input::-webkit-slider-thumb:hover {
+    transform: scale(1.25);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
+}
+
+.video-volume-input::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #10b981;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.video-volume-input::-moz-range-thumb:hover {
+    transform: scale(1.25);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
+}
+
+.video-volume-input::-moz-range-track {
+    background: transparent;
+    border: none;
+}
+
+/**
+ * Forward/Backward Buttons (Skip buttons)
+ */
+.video-skip-btn {
+    background: rgba(59, 130, 246, 0.3);
+    border: 1px solid rgba(59, 130, 246, 0.6);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+.video-skip-btn:hover {
+    background: rgba(59, 130, 246, 0.5);
+    border-color: rgba(59, 130, 246, 0.8);
+    transform: scale(1.08);
+}
+
+.video-skip-btn:active {
+    transform: scale(0.92);
+}
+
+/**
+ * Fullscreen Button
+ */
+.video-fullscreen-btn {
+    background: rgba(102, 51, 153, 0.3);
+    border: 1px solid rgba(102, 51, 153, 0.6);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.video-fullscreen-btn:hover {
+    background: rgba(102, 51, 153, 0.5);
+    border-color: rgba(102, 51, 153, 0.8);
+    transform: scale(1.08);
+}
+
+.video-fullscreen-btn:active {
+    transform: scale(0.92);
+}
+
+/**
+ * Video Controls Spacer - Pushes elements apart
+ */
+.video-controls-spacer {
+    flex: 1;
+    min-width: 8px;
+}

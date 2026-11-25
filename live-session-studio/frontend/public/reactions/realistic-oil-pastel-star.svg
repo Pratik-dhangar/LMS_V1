@@ -1,0 +1,15 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+  <defs>
+    <radialGradient id="starGrad" cx="50%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#FFFDF0" />
+      <stop offset="60%" stop-color="#FFD700" />
+      <stop offset="100%" stop-color="#E6B800" />
+    </radialGradient>
+  </defs>
+  <path d="M50 5 L63 38 L98 40 L72 63 L80 95 L50 78 L20 95 L28 63 L2 40 L37 38 Z" 
+        fill="url(#starGrad)" 
+        stroke="#DAA520" 
+        stroke-width="1" />
+  <path d="M50 20 L57 40 L80 42 L63 55 L68 75 L50 65 L32 75 L37 55 L20 42 L43 40 Z" 
+        fill="white" opacity="0.3" />
+</svg>

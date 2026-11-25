@@ -1,0 +1,55 @@
+<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <!-- Base skin volume -->
+    <radialGradient id="skinBase" cx="40%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#FFF7E8"></stop>
+      <stop offset="45%" stop-color="#F3DEAA"></stop>
+      <stop offset="100%" stop-color="#E6C97A"></stop>
+    </radialGradient>
+
+    <!-- Ambient shadow -->
+    <radialGradient id="edgeShadow" cx="50%" cy="60%" r="65%">
+      <stop offset="70%" stop-color="#000" stop-opacity="0"></stop>
+      <stop offset="100%" stop-color="#000" stop-opacity="0.12"></stop>
+    </radialGradient>
+
+    <!-- Cheek blood flow -->
+    <radialGradient id="cheekFlush" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#EFA0A8" stop-opacity="0.45"></stop>
+      <stop offset="100%" stop-color="#EFA0A8" stop-opacity="0"></stop>
+    </radialGradient>
+
+    <!-- Nose depth -->
+    <radialGradient id="noseShade" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#E2B97A" stop-opacity="0.35"></stop>
+      <stop offset="100%" stop-color="#E2B97A" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs>
+
+  <!-- Face base -->
+  <circle cx="150" cy="150" r="115" fill="url(#skinBase)"></circle>
+
+  <!-- Edge depth -->
+  <circle cx="150" cy="160" r="115" fill="url(#edgeShadow)"></circle>
+
+  <!-- Eyes (slightly asymmetrical) -->
+  <ellipse cx="115" cy="140" rx="7" ry="9" fill="#444"></ellipse>
+  <ellipse cx="185" cy="142" rx="6.5" ry="8.5" fill="#444"></ellipse>
+
+  <!-- Eye moisture highlight -->
+  <circle cx="113" cy="137" r="2" fill="#FFF" opacity="0.6"></circle>
+  <circle cx="183" cy="139" r="2" fill="#FFF" opacity="0.6"></circle>
+
+  <!-- Nose (very subtle, no outline) -->
+  <ellipse cx="150" cy="165" rx="10" ry="7" fill="url(#noseShade)"></ellipse>
+
+  <!-- Mouth (realistic infant smile, not curved emoji) -->
+  <path d="M125 185
+           C140 195, 160 195, 175 185" fill="none" stroke="#6B5E4A" stroke-width="2.8" stroke-linecap="round"></path>
+
+  <!-- Cheek volume -->
+  <ellipse cx="105" cy="175" rx="24" ry="18" fill="url(#cheekFlush)"></ellipse>
+  <ellipse cx="195" cy="175" rx="24" ry="18" fill="url(#cheekFlush)"></ellipse>
+
+</svg>
