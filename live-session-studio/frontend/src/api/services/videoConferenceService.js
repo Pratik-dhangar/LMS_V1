@@ -603,7 +603,7 @@ class VideoConferenceService {
                             this.hasCreatedOffer = false;
                             this.pendingPeerReady = false;
                             this.pendingIceCandidates = [];
-                            if (this.onParticipantJoinRequest) {
+                            if (this.onParticipantJoinRequest && !message.already_admitted) {
                                 // Admit/reject flow — show modal to instructor
                                 this.pendingPeerReady = true;
                                 this.onParticipantJoinRequest(message);
@@ -733,10 +733,8 @@ class VideoConferenceService {
      * Call this when instructor clicks "Admit" in the admission modal.
      */
     async admitParticipant() {
-        if (this.pendingPeerReady) {
-            this.pendingPeerReady = false;
-            await this.createOffer();
-        }
+        this.pendingPeerReady = false;
+        await this.createOffer();
     }
 
     /**

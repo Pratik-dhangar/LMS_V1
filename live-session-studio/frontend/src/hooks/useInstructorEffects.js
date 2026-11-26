@@ -126,6 +126,7 @@ export const useInstructorEffects = ({
     useEffect(() => {
         if (remoteVideoRef.current && remoteStream) {
             remoteVideoRef.current.srcObject = remoteStream;
+            remoteVideoRef.current.play?.().catch(e => console.warn('Remote video play warning:', e));
         }
     }, [remoteStream, remoteVideoRef]);
 

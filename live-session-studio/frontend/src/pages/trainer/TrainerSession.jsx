@@ -238,22 +238,42 @@ const TrainerSession = () => {
   };
 
   // Admission modal handlers
-  const handleAdmitLearner = () => {
+  const handleAdmitLearner = async () => {
     setPendingAdmission(null);
-    if (state.videoService) state.videoService.admitParticipant();
+    try {
+      await sessionService.admitLearner(sessionId);
+    } catch (err) {
+      console.error('[TrainerSession] Failed to admit learner via API:', err);
+    }
+    if (state.whiteboardService) {
+      state.whiteboardService.send('admission_granted', { sessionId });
+    }
+    if (state.videoService) {
+      await state.videoService.admitParticipant();
+    }
   };
 
-  const handleRejectLearner = () => {
+  const handleRejectLearner = async () => {
     setPendingAdmission(null);
+    try {
+      await sessionService.rejectLearner(sessionId);
+    } catch (err) {
+      console.error('[TrainerSession] Failed to reject learner via API:', err);
+    }
     if (state.whiteboardService) {
       state.whiteboardService.send('waiting_message', { text: '__ADMISSION_REJECTED__' });
     }
   };
 
   // Remove learner from ongoing session
-  const handleRemoveLearner = () => {
+  const handleRemoveLearner = async () => {
     const learnerName = state.sessionInfo?.learner_name || 'Learner';
     if (window.confirm(`Exit ${learnerName} from the session?`)) {
+      try {
+        await sessionService.removeLearner(sessionId);
+      } catch (err) {
+        console.error('[TrainerSession] Failed to remove learner via API:', err);
+      }
       state.whiteboardService?.send('waiting_message', { text: '__REMOVED_FROM_SESSION__' });
       toast.info(`${learnerName} has been removed from the session`);
     }

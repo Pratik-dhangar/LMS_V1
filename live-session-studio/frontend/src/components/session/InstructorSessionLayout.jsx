@@ -3275,7 +3275,19 @@ export const InstructorSessionPage = ({
                         {/* Video / Placeholder */}
                         <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3', backgroundColor: '#020617', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <video
-                                ref={remoteVideoRef}
+                                ref={el => {
+                                    if (remoteVideoRef) {
+                                        if (typeof remoteVideoRef === 'function') {
+                                            remoteVideoRef(el);
+                                        } else {
+                                            remoteVideoRef.current = el;
+                                        }
+                                    }
+                                    if (el && remoteStream && el.srcObject !== remoteStream) {
+                                        el.srcObject = remoteStream;
+                                        el.play?.().catch(e => console.warn('Learner video autoplay prevented:', e));
+                                    }
+                                }}
                                 autoPlay
                                 playsInline
                                 style={{

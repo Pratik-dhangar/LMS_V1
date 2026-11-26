@@ -25,7 +25,11 @@ from app.models.rooms import Room
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-UPLOAD_BASE = Path(settings.UPLOADS_DIR)
+UPLOAD_BASE = (
+    Path(settings.UPLOADS_DIR).resolve()
+    if Path(settings.UPLOADS_DIR).is_absolute()
+    else (Path(__file__).resolve().parents[3] / settings.UPLOADS_DIR).resolve()
+)
 
 
 def _resolve_path(file_key: str) -> Optional[Path]:

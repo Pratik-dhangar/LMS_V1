@@ -16,6 +16,21 @@ const sessionService = {
     return response.data;
   },
 
+  admitLearner: async (sessionId) => {
+    const response = await api.post(`/rooms/${sessionId}/admit`);
+    return response.data;
+  },
+
+  rejectLearner: async (sessionId) => {
+    const response = await api.post(`/rooms/${sessionId}/reject`);
+    return response.data;
+  },
+
+  removeLearner: async (sessionId) => {
+    const response = await api.post(`/rooms/${sessionId}/remove`);
+    return response.data;
+  },
+
   endSession: async (sessionId, notes = '') => {
     const response = await api.post(`/rooms/${sessionId}/end`, { notes });
     return response.data;

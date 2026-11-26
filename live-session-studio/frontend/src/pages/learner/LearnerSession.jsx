@@ -238,6 +238,7 @@ const LearnerSession = () => {
     }
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play?.().catch(e => console.warn('Trainer video play warning:', e));
     }
   }, [remoteStream, awaitingAdmission]);
 

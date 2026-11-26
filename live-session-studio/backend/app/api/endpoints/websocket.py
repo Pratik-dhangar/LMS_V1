@@ -28,10 +28,11 @@ HEARTBEAT_TIMEOUT = 300
 
 
 class ConnectionInfo:
-    def __init__(self, websocket: WebSocket, role: str, session_id: str):
+    def __init__(self, websocket: WebSocket, role: str, session_id: str, user_id: Optional[int] = None):
         self.websocket = websocket
         self.role = role
         self.session_id = session_id
+        self.user_id = user_id
         self.last_heartbeat = datetime.utcnow()
         self.is_alive = True
         self.heartbeat_task: Optional[asyncio.Task] = None
@@ -190,7 +191,7 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
         if session_id not in rtc_connections:
             rtc_connections[session_id] = {}
 
-        conn_info = ConnectionInfo(websocket, role, session_id)
+        conn_info = ConnectionInfo(websocket, role, session_id, user_id=user_id)
         rtc_connections[session_id][role] = conn_info
         conn_info.heartbeat_task = asyncio.create_task(send_heartbeat(conn_info))
 
@@ -213,7 +214,17 @@ async def websocket_rtc_endpoint(websocket: WebSocket, session_id: str):
             logger.info(f"[RTC] Both peers present - signaling trainer for session {session_id}")
             trainer_conn = rtc_connections[session_id].get("trainer")
             if trainer_conn and trainer_conn.is_alive:
-                await trainer_conn.websocket.send_json({"type": "peer_ready", "role": "both_connected"})
+                learner_conn = rtc_connections[session_id].get("learner")
+                learner_uid = getattr(learner_conn, "user_id", None)
+                already_admitted = False
+                if learner_uid:
+                    mem_state = await _get_membership_state(session_id, learner_uid)
+                    already_admitted = (mem_state == "admitted")
+                await trainer_conn.websocket.send_json({
+                    "type": "peer_ready",
+                    "role": "both_connected",
+                    "already_admitted": already_admitted,
+                })
 
         # Message loop
         try:
@@ -346,7 +357,7 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
         if session_id not in whiteboard_connections:
             whiteboard_connections[session_id] = {}
 
-        conn_info = ConnectionInfo(websocket, role, session_id)
+        conn_info = ConnectionInfo(websocket, role, session_id, user_id=user_id)
         whiteboard_connections[session_id][role] = conn_info
         conn_info.heartbeat_task = asyncio.create_task(send_heartbeat(conn_info))
 
@@ -408,8 +419,28 @@ async def websocket_whiteboard_endpoint(websocket: WebSocket, session_id: str):
 
                 # Admission grant: board restore on first admit
                 if msg_type == "admission_granted" and role == "trainer":
-                    # Trainer signals that learner was admitted - restore board to learner
+                    # Ensure database membership state is updated to admitted
                     learner_conn = whiteboard_connections.get(session_id, {}).get("learner")
+                    learner_uid = getattr(learner_conn, "user_id", None)
+                    if learner_uid:
+                        try:
+                            async with AsyncSessionLocal() as db:
+                                r = await db.execute(select(Room).where(Room.session_id == session_id))
+                                room = r.scalar_one_or_none()
+                                if room:
+                                    mr = await db.execute(
+                                        select(RoomMembership).where(
+                                            and_(RoomMembership.room_id == room.id, RoomMembership.learner_id == learner_uid)
+                                        )
+                                    )
+                                    mem = mr.scalar_one_or_none()
+                                    if mem and mem.state != "admitted":
+                                        mem.state = "admitted"
+                                        await db.commit()
+                        except Exception as e:
+                            logger.error(f"[WB] DB admit sync error: {e}")
+
+                    # Trainer signals that learner was admitted - restore board to learner
                     if learner_conn and learner_conn.is_alive:
                         try:
                             async with AsyncSessionLocal() as db:

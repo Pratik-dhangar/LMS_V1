@@ -2509,20 +2509,31 @@ export const AttendeeVideoPanel = ({
             boxSizing: 'border-box'
         }}>
             {/* Video Feed */}
-            {remoteStream ? (
-                <video
-                    ref={remoteVideoRef}
-                    autoPlay
-                    playsInline
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        backgroundColor: '#1a1a1a',
-                        display: 'block'
-                    }}
-                />
-            ) : (
+            <video
+                ref={el => {
+                    if (remoteVideoRef) {
+                        if (typeof remoteVideoRef === 'function') {
+                            remoteVideoRef(el);
+                        } else {
+                            remoteVideoRef.current = el;
+                        }
+                    }
+                    if (el && remoteStream && el.srcObject !== remoteStream) {
+                        el.srcObject = remoteStream;
+                        el.play().catch(e => console.warn('Trainer video autoplay prevented:', e));
+                    }
+                }}
+                autoPlay
+                playsInline
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    backgroundColor: '#1a1a1a',
+                    display: remoteStream ? 'block' : 'none'
+                }}
+            />
+            {!remoteStream && (
                 <div style={{
                     width: '100%',
                     height: '100%',
