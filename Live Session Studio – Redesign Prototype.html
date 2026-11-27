@@ -59,7 +59,7 @@ textarea{resize:none;min-height:90px}
 .lvv{position:absolute;left:18px;top:18px;width:150px;aspect-ratio:4/3;box-shadow:var(--sh);z-index:5}
 .prompt{position:absolute;left:50%;top:18px;transform:translateX(-50%);width:min(560px,calc(100% - 400px));background:var(--sf);border:1px solid var(--ln);border-radius:16px;box-shadow:var(--sh);padding:12px 16px;min-height:52px;display:flex;flex-direction:column;gap:8px;justify-content:center;z-index:5;text-align:center}
 .prompt.idle{color:var(--mut);font-size:13px;flex-direction:row;align-items:center;justify-content:center;gap:8px}
-@media(max-width:760px){.lvv{width:96px}.prompt{width:calc(100% - 36px);top:90px}}
+/* responsive rules at end of stylesheet */
 .pal{position:absolute;left:18px;bottom:76px;display:none;gap:6px;padding:8px;background:var(--sf);border:1px solid var(--ln);border-radius:99px;box-shadow:var(--sh);z-index:6}.l-draw .pal{display:flex}
 .lbar{position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center;gap:8px;z-index:6;pointer-events:none}.lbar button{pointer-events:auto;border-radius:99px;box-shadow:var(--sh)}
 .fl{position:absolute;bottom:-60px;border:0;background:none;animation:up 6s linear forwards;z-index:4;padding:0}
@@ -87,6 +87,26 @@ textarea{resize:none;min-height:90px}
 @container (max-width:150px){.bkn{max-width:calc(100% - 38px)}}
 .rz{position:absolute;right:7%;bottom:-8px;width:24px;height:24px;border-radius:50%;background:var(--c);border:3px solid var(--sf);cursor:nwse-resize;pointer-events:auto;touch-action:none}
 .item{z-index:2}.item.in{width:44px;height:44px}.item.in svg{width:34px;height:34px}.item.in.framed svg{width:26px;height:26px}
+.pip,.lvv{cursor:grab;touch-action:none;user-select:none}
+.prompt.idle{width:auto;max-width:calc(100% - 260px)}
+#tv{container-type:inline-size;container-name:tv}
+@container tv (max-width:1000px){.dock .lb{display:none}.pip .vid{width:124px}.pip.min .vid.lr{width:64px}.bar .hint{display:none}.dock{gap:4px}}
+@container tv (max-width:820px){.launch .lb{display:none}.bar button{padding:0 10px}}
+.tnote,.rot{display:none;position:absolute;inset:0;z-index:60;place-items:center;align-content:center;text-align:center;padding:24px;background:var(--sf);gap:8px}.tnote svg,.rot svg{width:44px;height:44px;margin-bottom:6px;color:var(--br)}
+@media(max-width:700px){#tv .tnote{display:grid}}
+@media(orientation:portrait) and (max-width:600px){#lv .rot{display:grid}}
+@media(max-width:1100px),(max-height:620px){#app{padding:4px;gap:4px}.view{border-radius:10px}.top{padding:4px 10px}.top .hint{display:none}.seg button{min-height:34px}.board{inset:4px}}
+@media(max-width:760px),(max-height:520px){.lvv{width:96px}.prompt{width:calc(100% - 260px);font-size:14px;padding:8px 12px}.lbar{bottom:10px}.pal{bottom:64px}.sw-chip{bottom:64px}.lbar button{min-height:40px}.item{width:64px;height:64px}.item svg{width:52px;height:52px}.banner{font-size:28px;padding:8px 18px}.banner svg{width:30px;height:30px}}
+@media(pointer:coarse){.rz{width:32px;height:32px;right:4%;bottom:-14px}.bkh button{min-height:34px;min-width:34px}}
+/* video cards */
+.pip{width:168px;gap:6px}.pip .vid{width:100%}.pip,.lvv{transition:left .22s,top .22s}
+.pph{display:flex;align-items:center;gap:4px;padding:3px 4px 3px 6px;min-height:36px;background:var(--sf);border:1px solid var(--ln);border-radius:12px;box-shadow:var(--sh);font-size:12px;font-weight:600}
+.pph .pt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pph .g{color:var(--mut);cursor:grab}
+.pph button{min-height:30px;min-width:30px;padding:0;border:0;background:transparent;border-radius:8px}.pph button.on{background:var(--br);color:#fff}.pph svg{width:16px;height:16px}
+.pip.min{width:auto}.pip.min .vid{display:none}.pip.min #pipc svg{transform:rotate(180deg)}.pip.nosel .vid.me{display:none}
+@container tv (max-width:1000px){.pip{width:132px}.pip.min{width:auto}}
+.lvt{position:absolute;top:4px;right:4px;min-height:28px;min-width:28px;padding:0;border:0;background:rgba(0,0,0,.45);color:#fff;border-radius:8px}.lvt svg{width:14px;height:14px}
+.lvv.min{width:56px;aspect-ratio:1;border-radius:50%}.lvv.min span,.lvv.min .lvt{display:none}.lvv.min::after{content:"";position:absolute;right:4px;bottom:4px;width:10px;height:10px;border-radius:50%;background:var(--ok);border:2px solid #fff}
 </style></head><body>
 <div class="top"><b>Live Session Studio</b><span class="hint">Redesign prototype v2</span>
 <button class="ghost" id="th" title="Toggle light / dark" style="margin-left:auto"></button>
@@ -94,14 +114,15 @@ textarea{resize:none;min-height:90px}
 <div id="app" data-m="s">
 
 <section class="view" id="tv">
+ <div class="tnote"><i data-i="grid"></i><b>Trainer view needs a tablet or desktop</b><span class="hint">Use a screen at least 768px wide. Learners can join from a phone in landscape.</span></div>
  <div class="bar"><span class="pill"><i class="dot"></i> Live · <span id="clk">00:00</span></span><span class="pill" id="recp"><i data-i="rec"></i> Not recording</span><span class="hint" style="margin-left:auto">Learner One · connected</span>
   <button id="frz"><i data-i="lock"></i> Freeze</button><button id="wt"><i data-i="hour"></i> Wait</button><button style="background:var(--bad);color:#fff;border-color:var(--bad)" id="end"><i data-i="power"></i> End</button></div>
  <div class="bw">
   <div class="board" id="b-t"><canvas></canvas><div class="layer"></div></div>
-  <div class="pip" id="pip"><button class="x" onclick="pip.classList.toggle('min')" title="Minimise videos"><i data-i="minus"></i></button>
+  <div class="pip" id="pip"><div class="pph"><i class="g" data-i="grip"></i><i class="dot"></i><span class="pt">Learner One</span><button id="pips" title="Hide your self-view"><i data-i="vidoff"></i></button><button id="pipc" title="Collapse / expand videos"><i data-i="chev"></i></button></div>
    <div class="vid lr" style="background:linear-gradient(135deg,#475569,#1e293b)"><i data-i="user"></i><span>Learner One · Live</span></div>
    <div class="vid me" style="background:linear-gradient(135deg,#7a2c2c,#3b1515)"><i data-i="user"></i><span>You</span></div></div>
-  <div class="launch" id="launch"><button data-p="c"><i data-i="folder"></i> Content</button><button data-p="q"><i data-i="msg"></i> Prompt</button><button data-p="n"><i data-i="note"></i> Notes</button></div>
+  <div class="launch" id="launch"><button data-p="c"><i data-i="folder"></i><span class="lb"> Content</span></button><button data-p="q"><i data-i="msg"></i><span class="lb"> Prompt</span></button><button data-p="n"><i data-i="note"></i><span class="lb"> Notes</span></button></div>
   <div class="ovp" id="ovp"><div class="ovh"><span id="ovt">Content</span><button class="ghost" id="ovx"><i data-i="x"></i></button></div>
    <div class="pane on" id="pn-c"><input type="text" placeholder="Search content…" id="srch"><div class="hint">Drag onto the board, or click to add.</div><div class="cards" id="cards"></div></div>
    <div class="pane" id="pn-q"><textarea id="pt" placeholder="Type a prompt or a question for the learner…"></textarea>
@@ -113,21 +134,22 @@ textarea{resize:none;min-height:90px}
    <button id="mic" class="on" title="Mic"></button><button id="cam" class="on" title="Camera"></button><button id="rec" title="Record"><i data-i="rec"></i></button><i class="sep"></i>
    <button id="pen" class="on" title="Pen (P)"><i data-i="pen"></i></button><button id="era" title="Eraser (E)"><i data-i="eraser"></i></button>
    <div class="dg"><button data-pop="p-style" title="Colour & size"><i data-i="palette"></i></button><div class="pop" id="p-style"><h4>Pen colour</h4><div class="row" id="cols"></div><h4>Size</h4><input type="range" id="sz" min="1" max="24" value="4" style="width:100%"></div></div><i class="sep"></i>
-   <div class="dg"><button data-pop="p-acc"><i data-i="user"></i> Learner can</button><div class="pop" id="p-acc"><h4>Learner access</h4>
+   <div class="dg"><button data-pop="p-acc" title="Learner access"><i data-i="user"></i><span class="lb">Learner can</span></button><div class="pop" id="p-acc"><h4>Learner access</h4>
     <div class="row"><span><i data-i="hand"></i> Select</span><button class="tg" data-perm="select"></button></div><div class="row"><span><i data-i="move"></i> Move items</span><button class="tg" data-perm="drag"></button></div><div class="row"><span><i data-i="pen"></i> Draw</span><button class="tg" data-perm="draw"></button></div></div></div>
-   <div class="dg"><button data-pop="p-eng"><i data-i="spark"></i> Engage</button><div class="pop" id="p-eng"><h4>Floating (poppable)</h4><div class="grid" id="stk"></div><h4 style="margin-top:10px">Praise</h4><div class="grid" id="prz"></div></div></div>
-   <div class="dg"><button data-pop="p-act"><i data-i="grid"></i> Activities</button><div class="pop" id="p-act"><h4>Activities</h4>
+   <div class="dg"><button data-pop="p-eng" title="Engage"><i data-i="spark"></i><span class="lb">Engage</span></button><div class="pop" id="p-eng"><h4>Floating (poppable)</h4><div class="grid" id="stk"></div><h4 style="margin-top:10px">Praise</h4><div class="grid" id="prz"></div></div></div>
+   <div class="dg"><button data-pop="p-act" title="Activities"><i data-i="grid"></i><span class="lb">Activities</span></button><div class="pop" id="p-act"><h4>Activities</h4>
     <div class="row"><span><i data-i="timer"></i> Stopwatch</span><button class="tg" id="swt"></button></div><div class="row"><span><i data-i="music"></i> Music</span><button class="tg" id="mus"></button></div></div></div>
-   <div class="dg"><button data-pop="p-bk"><i data-i="bucket"></i> Bucket</button><div class="pop" id="p-bk"><button class="on" style="width:100%;margin-bottom:10px" id="addb">Add bucket</button><h4>Colour (new or selected bucket)</h4><div class="row" id="bcols"></div></div></div>
+   <div class="dg"><button data-pop="p-bk" title="Buckets"><i data-i="bucket"></i><span class="lb">Bucket</span></button><div class="pop" id="p-bk"><button class="on" style="width:100%;margin-bottom:10px" id="addb">Add bucket</button><h4>Colour (new or selected bucket)</h4><div class="row" id="bcols"></div></div></div>
    <div class="dg"><button data-pop="p-clr" title="Clear"><i data-i="trash"></i></button><div class="pop" id="p-clr"><h4>Clear</h4><button style="width:100%;margin-bottom:6px" id="c1">Erase pen strokes</button><button style="width:100%;margin-bottom:6px" id="c3">Remove selected item</button><button style="width:100%;color:var(--bad)" id="c2">Clear everything</button></div></div>
   </div></div>
  </div>
 </section>
 
 <section class="view" id="lv">
+ <div class="rot"><i data-i="rotate"></i><b>Rotate your device</b><span class="hint">The board works best in landscape.</span></div>
  <div class="bw">
   <div class="board" id="b-l"><canvas></canvas><div class="layer"></div></div>
-  <div class="vid lvv" style="background:linear-gradient(135deg,#7a2c2c,#3b1515)"><i data-i="user"></i><span>Trainer · Live</span></div>
+  <div class="vid lvv" style="background:linear-gradient(135deg,#7a2c2c,#3b1515)"><i data-i="user"></i><span>Trainer · Live</span><button class="lvt" id="lvt" title="Minimise video"><i data-i="minus"></i></button></div>
   <div class="prompt idle" id="prm"><i data-i="msg"></i> Hi! Your trainer will share things here.</div>
   <div class="pal" id="pal"></div><div class="sw-chip" id="swc">00:00</div><div class="banner" id="ban"></div>
   <div class="lbar"><button id="lmic"></button><button id="lcam"></button><button><i data-i="leave"></i> Leave</button></div>
@@ -180,6 +202,7 @@ paw:'<circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20"
 car:'<path d="M5 17H3v-5l2-5h12l3 5h1v5h-2"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="16.5" cy="17.5" r="2"/><path d="M5 12h14"/>',
 film:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 3v18M17 3v18M3 8h4M3 16h4M17 8h4M17 16h4"/>'};
 P.bucket='<path d="M4 8h16l-1.6 11a2 2 0 0 1-2 1.7H7.6a2 2 0 0 1-2-1.7Z"/><path d="M3 8h18M8 8V6a4 4 0 0 1 8 0v2"/>';
+P.rotate='<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>';P.chev='<path d="m6 15 6-6 6 6"/>';P.grip='<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>';
 const svg=n=>`<svg viewBox="0 0 24 24">${P[n]}</svg>`;
 const setI=(el,n)=>el.innerHTML=svg(n);
 function icons(){$$('[data-i]').forEach(e=>e.innerHTML=svg(e.dataset.i))}
@@ -187,7 +210,7 @@ const S={strokes:[],items:[],buckets:[],bsel:null,bcolor:'#7a5c3f',perm:{select:
 const V={};['t','l'].forEach(k=>{const b=$('#b-'+k);V[k]={b,c:$('canvas',b),L:$('.layer',b),els:{}}});
 const INK=()=>document.documentElement.dataset.theme=='dark'?'#f3eee8':'#1f1b16';
 const COLS=['ink','#dc2626','#db9d32','#16a34a','#2563eb','#9333ea'];
-function fit(){for(const k in V){const v=V[k],r=v.b.getBoundingClientRect(),d=devicePixelRatio||1;v.c.width=r.width*d;v.c.height=r.height*d;v.w=r.width;v.h=r.height;v.d=d}redraw();syncItems()}
+function fit(){for(const k in V){const v=V[k],r=v.b.getBoundingClientRect(),d=devicePixelRatio||1;v.c.width=r.width*d;v.c.height=r.height*d;v.w=r.width;v.h=r.height;v.d=d}redraw();syncItems();placeAll()}
 function redraw(){for(const k in V){const v=V[k],x=v.c.getContext('2d');x.setTransform(v.d,0,0,v.d,0,0);x.clearRect(0,0,v.w,v.h);x.lineCap=x.lineJoin='round';
 S.strokes.forEach(s=>{x.strokeStyle=s.c=='ink'?INK():s.c;x.lineWidth=s.s;x.beginPath();s.p.forEach((p,i)=>{const X=p[0]*v.w/1000,Y=p[1]*v.h/1000;i?x.lineTo(X,Y):x.moveTo(X,Y)});if(s.p.length==1)x.lineTo(s.p[0][0]*v.w/1000+.1,s.p[0][1]*v.h/1000);x.stroke()})}}
 function erase(p){const n=S.strokes.length;S.strokes=S.strokes.filter(s=>!s.p.some(q=>Math.hypot(q[0]-p[0],q[1]-p[1])<22));if(n!=S.strokes.length)redraw()}
@@ -204,6 +227,10 @@ if(bk){const bw=bk.w*v.w/1000,bh=bk.h*v.h/1000,m=S.items.filter(x=>x.b==it.b),i=
 function bind(k,el,it){el.onpointerdown=e=>{if(k=='l'&&S.frozen)return;if(k=='t'||S.perm.select){S.sel=it.id;syncItems()}if(!(k=='t'||S.perm.drag))return;el.setPointerCapture(e.pointerId);const r=V[k].b.getBoundingClientRect();it.moved=0;if(it.b){const g=el.getBoundingClientRect();it.x=(g.left+g.width/2-r.left)/r.width*1000;it.y=(g.top+g.height/2-r.top)/r.height*1000;it.b=null;syncItems()}
 el.onpointermove=ev=>{it.moved=1;it.x=Math.max(40,Math.min(960,(ev.clientX-r.left)/r.width*1000));it.y=Math.max(40,Math.min(960,(ev.clientY-r.top)/r.height*1000));syncItems();hot(it)}};
 el.onpointerup=()=>{el.onpointermove=null;if(!it.moved)return;it.moved=0;const h=hit(it);for(const q in V)for(const id in V[q].bels||{})V[q].bels[id].classList.remove('hot');if(h){it.b=h.id;syncItems();if(k=='l')toast('Learner put '+(LIB.find(a=>a[0]==it.n)||[0,'item'])[1]+' in '+h.name)}}}
+const hits=(a,b,g)=>a[0]<b[0]+b[2]+g[0]&&a[0]+a[2]+g[0]>b[0]&&a[1]<b[1]+b[3]+g[1]&&a[1]+a[3]+g[1]>b[1];
+const clash=(b,x,y,w,h)=>S.buckets.some(o=>o!=b&&hits([x,y,w,h],[o.x,o.y,o.w,o.h],[0,0]));
+function spot(w,h){const R=V.t,O=S.buckets.map(b=>[b.x,b.y,b.w,b.h]),q=$('#pip').getBoundingClientRect(),B=R.b.getBoundingClientRect();if(!R.w)return[100,100,w,h];if(q.width)O.push([(q.left-B.left)/B.width*1000,(q.top-B.top)/B.height*1000,q.width/B.width*1000,q.height/B.height*1000]);const g=[14/R.w*1000,14/R.h*1000];
+for(let k=0;k<4;k++){const ww=w*(1-k*.15),hh=h*(1-k*.15);if(ww<120/R.w*1000)break;for(let y=40/R.h*1000;y<=1000-hh;y+=15)for(let x=0;x<=1000-ww;x+=15)if(!O.some(o=>hits([x,y,ww,hh],o,g)))return[x,y,ww,hh]}return null}
 const hit=it=>S.buckets.find(b=>it.x>=b.x&&it.x<=b.x+b.w&&it.y>=b.y&&it.y<=b.y+b.h);
 function hot(it){const h=hit(it);for(const k in V)for(const id in V[k].bels||{})V[k].bels[id].classList.toggle('hot',!!h&&h.id==id)}
 function syncBuckets(){for(const k in V){const v=V[k];v.bels=v.bels||{};S.buckets.forEach(b=>{let el=v.bels[b.id];if(!el){el=document.createElement('div');el.className='bk';el.innerHTML='<div class="bkhd"></div><svg class="bkb" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0 0H100L91 92Q90 100 82 100H18Q10 100 9 92Z"/></svg><div class="bkh"><span class="bkn" title="Double-click to rename"></span><span class="bkc"></span><button class="bx" title="Delete bucket">'+svg('x')+'</button></div><div class="rz"></div>';v.L.appendChild(el);v.bels[b.id]=el;if(k=='t')bindB(el,b)}
@@ -213,10 +240,10 @@ function bindB(el,b){const n=$('.bkn',el),h=$('.bkh',el),r=V.t.b;const ed=()=>{n
 h.ondblclick=e=>{if(!e.target.closest('button'))ed()};n.onblur=()=>{n.contentEditable=false;b.name=n.textContent.trim().slice(0,24)||'Bucket';syncItems()};n.onkeydown=e=>{if(e.key=='Enter'){e.preventDefault();n.blur()}};
 $('.bx',el).onclick=()=>{S.items.forEach(i=>{if(i.b==b.id){i.b=null;i.x=b.x+b.w/2;i.y=Math.min(940,b.y+b.h+60)}});S.buckets=S.buckets.filter(x=>x!=b);syncItems()};
 const drag=(t,fn)=>t.onpointerdown=e=>{if(e.target.closest('button')||(n.isContentEditable&&e.target==n))return;e.preventDefault();S.bsel=b.id;S.sel=null;t.setPointerCapture(e.pointerId);const R=r.getBoundingClientRect(),sx=e.clientX,sy=e.clientY,o={...b};t.onpointermove=ev=>{fn((ev.clientX-sx)/R.width*1000,(ev.clientY-sy)/R.height*1000,o);syncItems()};t.onpointerup=()=>t.onpointermove=null;syncItems()};
-drag(h,(dx,dy,o)=>{b.x=Math.max(0,Math.min(1000-b.w,o.x+dx));b.y=Math.max(34/V.t.h*1000,Math.min(1000-b.h,o.y+dy))});
-drag($('.rz',el),(dx,dy,o)=>{b.w=Math.max(120/V.t.w*1000,Math.min(1000-b.x,o.w+dx));b.h=Math.max(110/V.t.h*1000,Math.min(1000-b.y,o.h+dy))})}
+drag(h,(dx,dy,o)=>{const nx=Math.max(0,Math.min(1000-b.w,o.x+dx)),ny=Math.max(34/V.t.h*1000,Math.min(1000-b.h,o.y+dy));if(!clash(b,nx,b.y,b.w,b.h))b.x=nx;if(!clash(b,b.x,ny,b.w,b.h))b.y=ny});
+drag($('.rz',el),(dx,dy,o)=>{const nw=Math.max(120/V.t.w*1000,Math.min(1000-b.x,o.w+dx)),nh=Math.max(110/V.t.h*1000,Math.min(1000-b.y,o.h+dy));if(!clash(b,b.x,b.y,nw,b.h))b.w=nw;if(!clash(b,b.x,b.y,b.w,nh))b.h=nh})}
 ['#7a5c3f','#dc2626','#db9d32','#16a34a','#2563eb','#9333ea'].forEach(c=>{const s=document.createElement('button');s.className='sw'+(c==S.bcolor?' on':'');s.style.background=c;s.onclick=()=>{S.bcolor=c;$$('#bcols .sw').forEach(x=>x.classList.toggle('on',x==s));const b=S.buckets.find(x=>x.id==S.bsel);if(b){b.color=c;syncItems()}};$('#bcols').appendChild(s)});
-$('#addb').onclick=()=>{const b={id:'b'+Math.random().toString(36).slice(2),x:30+(S.buckets.length%4)*40,y:60+(S.buckets.length%4)*30,w:240,h:340,name:'Bucket',color:S.bcolor};S.buckets.push(b);S.bsel=b.id;syncItems();toast('Bucket added — drag its header, resize from the corner, double-click the name to rename')};
+$('#addb').onclick=()=>{const b={id:'b'+Math.random().toString(36).slice(2),x:0,y:0,w:240,h:340,name:'Bucket',color:S.bcolor};const sp=spot(b.w,b.h);if(!sp){toast('No free space — move or shrink a bucket first');return}b.x=sp[0];b.y=sp[1];b.w=sp[2];b.h=sp[3];S.buckets.push(b);S.bsel=b.id;syncItems();toast('Bucket added — drag its header, resize from the corner, double-click the name to rename')};
 function toast(m){const d=document.createElement('div');d.textContent=m;$('#toast-t').appendChild(d);setTimeout(()=>d.remove(),2600)}
 function burst(n,c){for(let i=0;i<8;i++)setTimeout(()=>{const el=document.createElement('button');el.className='fl';el.style.color=c;el.innerHTML=svg(n);el.style.left=6+Math.random()*84+'%';el.style.animationDuration=5+Math.random()*3+'s';
 el.onclick=()=>{el.classList.add('pop');toast('Learner popped one');setTimeout(()=>el.remove(),260)};el.onanimationend=()=>el.remove();V.l.b.appendChild(el)},i*220)}
@@ -258,5 +285,12 @@ $$('.seg button').forEach(b=>b.onclick=()=>{$$('.seg button').forEach(x=>x.class
 function theme(t){document.documentElement.dataset.theme=t;setI($('#th'),t=='dark'?'sun':'moon');redraw()}
 $('#th').onclick=()=>theme(document.documentElement.dataset.theme=='dark'?'light':'dark');
 icons();theme(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
-wire('t');wire('l');addEventListener('resize',fit);fit();S.buckets.push({id:'b0',x:40,y:90,w:240,h:340,name:'Fruits',color:'#16a34a'});addItem('apple',520,300);addItem('banana',700,330);addItem('paw',560,650);addItem('car',760,630);
+function place(p){const b=p.parentNode.getBoundingClientRect();if(!b.width)return;const w=p.offsetWidth,h=p.offsetHeight;p.style.left=(p._r?b.width-w-18:18)+'px';p.style.top=(p._b?b.height-h-p._bm:(p._r?p._tm:18))+'px'}
+function placeAll(){place($('#pip'));place($('.lvv'))}
+function mkDrag(p,bm,tm){p._bm=bm;p._tm=tm;p.onpointerdown=e=>{if(e.target.closest('button,input'))return;p._m=0;p.style.transition='none';p.setPointerCapture(e.pointerId);const b=p.parentNode.getBoundingClientRect(),r=p.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;p.onpointermove=ev=>{p._m=1;p.style.left=Math.max(0,Math.min(b.width-r.width,ev.clientX-b.left-dx))+'px';p.style.top=Math.max(0,Math.min(b.height-r.height,ev.clientY-b.top-dy))+'px'};p.onpointerup=()=>{p.onpointermove=null;p.style.transition='';if(p._m){p._r=p.offsetLeft+p.offsetWidth/2>b.width/2;p._b=p.offsetTop+p.offsetHeight/2>b.height/2;place(p)}}}}
+mkDrag($('#pip'),96,74);mkDrag($('.lvv'),76,18);
+$('#pipc').onclick=()=>{$('#pip').classList.toggle('min');place($('#pip'))};$('#pips').onclick=e=>{$('#pip').classList.toggle('nosel');e.currentTarget.classList.toggle('on');place($('#pip'))};
+const lv=$('.lvv');$('#lvt').onclick=()=>{lv.classList.add('min');place(lv)};lv.addEventListener('click',e=>{if(e.target.closest('#lvt'))return;if(lv.classList.contains('min')&&!lv._m){lv.classList.remove('min');place(lv)}});
+wire('t');wire('l');addEventListener('resize',fit);fit();
+$(`.seg button[data-m=${innerWidth<700?'l':innerWidth<1100?'t':'s'}]`).click();S.buckets.push({id:'b0',x:190,y:90,w:240,h:340,name:'Fruits',color:'#16a34a'});addItem('apple',520,300);addItem('banana',700,330);addItem('paw',560,650);addItem('car',760,630);
 </script></body></html>
